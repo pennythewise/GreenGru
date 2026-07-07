@@ -45,11 +45,103 @@ without at least the ✅ items in context.
 - **Status**: the guidance document (item 1) contains this at section 5.6 —
   extract it directly rather than re-fetching a different source.
 
+### 3. CBAM 2026 definitive-period mechanics (declarant obligations, phase-in factor)
+- **What it is**: confirmation, from multiple independent 2026 sources including a
+  European Parliament research-service (EPRS) briefing PDF and the European
+  Commission's own CBAM guidance/Q&A pages, of exactly how the definitive
+  period (from 1 Jan 2026) works: (a) it is the EU *importer* — via an
+  EU-established indirect customs representative if the importer itself is
+  non-EU — who must hold Authorized CBAM Declarant status, never the non-EU
+  exporter directly; (b) the number of certificates payable is reduced by a
+  "CBAM factor" that mirrors the EU ETS free-allocation phase-out: **2.5%
+  (2026), 5% (2027), 10% (2028), 22.5% (2029), 48.5% (2030), 61% (2031),
+  73.5% (2032), 86% (2033), 100% (2034+)**, per Regulation (EU) 2023/956
+  Art. 31(3) and Directive 2003/87/EC Art. 10a(1a).
+- **Why it matters**: (b) was **completely missing from `calculation_engine.py`**
+  before this research pass — the engine was charging the full un-phased-in
+  taxable emissions every year, overstating 2026-2033 tariff costs by
+  roughly 10-40x. Fixed in `calculation_engine.py` (see `CBAM_PHASE_IN_FACTOR_BY_YEAR`
+  and the new `gross_tariff_cost_eur_per_tonne` field) — this inventory
+  entry is the paper trail for why that field exists.
+- **Status**: mechanism and percentages corroborated across three independent
+  secondary sources that all cite the same primary legal basis, but **not
+  yet cross-checked against the delegated act's own formula text** (the
+  free-allocation-equivalent calculation methodology referenced by Art.
+  31(4)). Do not treat the exact percentages as immune from a future
+  correction until that primary text is obtained.
+- **Where to get it**: search for the Commission Delegated Regulation
+  supplementing Regulation (EU) 2023/956 on the calculation of the
+  free-allocation-equivalent (referenced from Art. 31(4)); cross-check
+  against the EPRS briefing at europarl.europa.eu (RegData/etudes/BRIE/2026/789377).
+- **Assign to**: whoever owns the calculation engine (§8.4) — same owner as
+  item 8 below, do both in the same pass since they're both about the
+  legally-binding numbers in `calculation_engine.py`.
+
+### 4. China steel export VAT rebate cancellation (2021)
+- **What it is**: 财政部 税务总局公告2021年第16号 (effective 1 May 2021, 146
+  steel tariff codes) and 公告2021年第25号 (effective 1 Aug 2021, 23 more
+  codes) — together cancelling export VAT rebates on 169 steel product
+  tariff codes. CN 7302 (railway track material, tariff line 73021000) is
+  confirmed present on the second announcement's own published list.
+- **Why it matters**: this is real, load-bearing context for the problem
+  statement (§1) — an SME on one of these codes is already absorbing a lost
+  ~13% VAT rebate before CBAM enters the picture, which strengthens (and
+  should inform the tone of) the advisory agent's framing of urgency.
+- **Status**: the two announcements themselves are confirmed real and dated
+  (gov.cn, mof.gov.cn primary sources), and CN 7302's presence on the
+  second list is confirmed via a reproduced list (dxtax.com). **The other 7
+  of this project's 8 CN codes have NOT been individually checked against
+  the full 169-code annex** — do not assume they are or aren't affected
+  without checking the actual PDF annexes.
+- **Where to get it**: the full annexes are linked as PDF attachments from
+  szs.mof.gov.cn/zhengcefabu/202104/t20210428_3694213.htm (16号) and
+  gov.cn/zhengce/zhengceku/2021-07/29/content_5628266.htm (25号).
+- **Assign to**: whoever owns the problem-statement/pitch material and the
+  advisory agent (§8.10) — this is narrative context, not a calculation
+  engine input, so it doesn't block the engine.
+
+### 5. PBOC 碳减排支持工具 (Carbon Emission Reduction Facility) 2026 expansion
+- **What it is**: the People's Bank of China's carbon-reduction refinancing
+  facility (est. Nov 2021), which as of a Jan 2026 policy briefing (PBOC
+  Deputy Governor 邹澜, reported via finance.sina.com.cn) explicitly expanded
+  its covered project types to include 节能改造/绿色升级/能源绿色低碳转型 —
+  directly applicable to a steel SME's decarbonization retrofit capex.
+- **Why it matters**: this is a real, current, citable subsidy_matches
+  candidate beyond the two already in PRD §6.2 (Quzhou tier logic, 零碳工厂
+  subsidy) — the financing report agent's program matcher should be able to
+  surface this for any SME whose advisory plan includes a retrofit path.
+- **Status**: confirmed via a Chinese financial news report of an official
+  PBOC briefing (secondary reporting of a primary announcement, not the
+  PBOC's own policy document text).
+- **Where to get the primary text**: PBOC official site (pbc.gov.cn),
+  search 碳减排支持工具 for the original policy document and its 2026
+  amendment/expansion notice.
+- **Assign to**: whoever owns the program matcher (§8.8)
+
+### 6. 中小微企业贷款贴息政策 (2026 SME loan interest subsidy)
+- **What it is**: a State Council/Ministry of Finance notice (关于实施中小微
+  企业贷款贴息政策的通知), effective for qualifying loans issued from 1 Jan
+  2026: a 1.5-percentage-point annual interest subsidy from central finance,
+  up to 2 years, capped at ¥50,000,000 loan principal per borrower, covering
+  several industry chains including 节能环保服务 (energy-saving/environmental
+  services).
+- **Why it matters**: another real, current, citable subsidy_matches
+  candidate — this one is a general SME financing-cost reducer rather than
+  green-specific, so the program matcher needs a rule for whether/how to
+  surface a non-green-specific-but-eligible program alongside green-specific
+  ones (recommend: only surface it if the SME's industry chain is explicitly
+  listed as eligible, and label it clearly as "general SME," not "green,"
+  in the financing report so it isn't mistaken for climate-specific credit).
+- **Status**: primary source is the State Council's own document repository
+  (gov.cn/zhengce/zhengceku), which is about as authoritative as a secondary
+  fetch gets short of the original PDF/red-header document scan.
+- **Assign to**: whoever owns the program matcher (§8.8)
+
 ---
 
 ## ⚠️ Needed but not yet in hand — assign to a team member
 
-### 3. The actual CBAM Communication Template (Excel file)
+### 7. The actual CBAM Communication Template (Excel file)
 - **What it is**: the EU's own Excel template that non-EU operators use to
   communicate embedded emissions to EU importers, referenced throughout the
   guidance document (§6.11, footnote references).
@@ -64,7 +156,7 @@ without at least the ✅ items in context.
   including iron & steel).
 - **Assign to**: whoever owns the CBAM passport agent (§8.6)
 
-### 4. EU IR 2025/2621 default values (the actual Excel annex, not the secondary reporting of it)
+### 8. EU IR 2025/2621 default values (the actual Excel annex, not the secondary reporting of it)
 - **What it is**: the legally binding default values and benchmarks — we've
   been citing numbers *about* this regulation (1.370, 0.481, 0.072 tCO2e/t)
   from secondary sources (industry press). The regulation's own Excel annex
@@ -77,7 +169,7 @@ without at least the ✅ items in context.
   provided alongside the legal text "for information purposes only."
 - **Assign to**: whoever owns the calculation engine (§8.4)
 
-### 5. China National GHG Emission Factor Database v2 — the DRI-EAF and scrap-EAF values
+### 9. China National GHG Emission Factor Database v2 — the DRI-EAF and scrap-EAF values
 - **What it is**: this is a live query portal (data.ncsc.org.cn/factories),
   not a single downloadable file. Confirmed the crude-steel BF-BOF intensity
   is in there; the DRI-EAF and scrap-EAF placeholders in
@@ -87,7 +179,7 @@ without at least the ✅ items in context.
   do it, since it can't be fetched by search/browse the way a static PDF can.
 - **Assign to**: whoever owns the calculation engine, week 1
 
-### 6. CISA 低碳排放钢 standard — exact tier boundary values (E through A)
+### 10. CISA 低碳排放钢 standard — exact tier boundary values (E through A)
 - **What it is**: the actual China Iron and Steel Association standard
   document defining the five carbon-efficiency tiers.
 - **Status**: existence confirmed via secondary industry reporting
@@ -105,7 +197,7 @@ without at least the ✅ items in context.
   the single highest-risk unresolved number in the whole project; escalate
   early if it's not resolved by end of week 1.
 
-### 7. Quzhou 碳账户金融 policy and 工信部联节〔2026〕13号 (零碳工厂 policy)
+### 11. Quzhou 碳账户金融 policy and 工信部联节〔2026〕13号 (零碳工厂 policy)
 - **What they are**: the original government policy notices behind the
   financing tier logic and subsidy amounts cited in PRD §6.2 and §9.2.
 - **Why it matters**: right now these numbers come from secondary reporting
