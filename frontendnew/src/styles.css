@@ -1,0 +1,178 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-steel: var(--steel);
+  --color-ember: var(--ember);
+  --color-carbon: var(--carbon);
+  --color-signal: var(--signal);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+}
+
+:root {
+  --radius: 0.5rem;
+
+  /* Paper & Ink — light editorial-industrial */
+  --background: oklch(0.985 0.004 90);         /* warm off-white */
+  --paper: oklch(0.985 0.004 90);
+  --foreground: oklch(0.20 0.02 250);          /* deep ink */
+  --ink: oklch(0.20 0.02 250);
+
+  --surface: oklch(0.975 0.006 90);
+  --surface-2: oklch(0.95 0.008 90);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.20 0.02 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.20 0.02 250);
+
+  /* Ember stays as the sole accent-fill for primary actions */
+  --primary: oklch(0.65 0.19 45);
+  --primary-foreground: oklch(0.99 0.003 90);
+
+  --secondary: oklch(0.95 0.008 250);
+  --secondary-foreground: oklch(0.20 0.02 250);
+  --muted: oklch(0.955 0.006 90);
+  --muted-foreground: oklch(0.45 0.02 250);
+  --accent: oklch(0.94 0.02 200);
+  --accent-foreground: oklch(0.20 0.02 250);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.99 0.003 90);
+  --border: oklch(0.88 0.01 250);
+  --input: oklch(0.92 0.008 250);
+  --ring: oklch(0.65 0.19 45);
+
+  --steel: oklch(0.55 0.03 250);
+  --ember: oklch(0.65 0.19 45);
+  --carbon: oklch(0.55 0.15 155);
+  --signal: oklch(0.52 0.15 230);
+  --warning: oklch(0.72 0.16 75);
+  --danger: oklch(0.58 0.22 25);
+
+  --chart-1: oklch(0.65 0.19 45);
+  --chart-2: oklch(0.55 0.15 155);
+  --chart-3: oklch(0.52 0.15 230);
+  --chart-4: oklch(0.72 0.16 75);
+  --chart-5: oklch(0.58 0.22 25);
+
+  --gradient-ember: linear-gradient(135deg, oklch(0.72 0.19 55), oklch(0.58 0.22 30));
+  --gradient-paper: linear-gradient(180deg, oklch(0.99 0.004 90), oklch(0.965 0.006 90));
+  --shadow-glow-ember: 0 8px 30px -12px oklch(0.65 0.19 45 / 45%);
+  --shadow-glow-carbon: 0 8px 30px -12px oklch(0.55 0.15 155 / 35%);
+  --shadow-card: 0 1px 2px 0 oklch(0.20 0.02 250 / 4%), 0 8px 24px -12px oklch(0.20 0.02 250 / 10%);
+  --shadow-lift: 0 1px 3px 0 oklch(0.20 0.02 250 / 6%), 0 20px 40px -20px oklch(0.20 0.02 250 / 18%);
+  --grid-line: oklch(0.20 0.02 250 / 4%);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html, body { background-color: var(--color-background); color: var(--color-foreground); }
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01", "ss03";
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, oklch(0.65 0.19 45 / 6%), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 100%, oklch(0.55 0.15 155 / 5%), transparent 60%),
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: auto, auto, 48px 48px, 48px 48px;
+    background-position: 0 0, 0 0, -1px -1px, -1px -1px;
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
+  .font-mono, code, kbd { font-family: var(--font-mono); }
+}
+
+@utility panel {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+
+@utility panel-lift {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lift);
+}
+
+@utility ember-glow {
+  box-shadow: var(--shadow-glow-ember);
+}
+
+@utility carbon-glow {
+  box-shadow: var(--shadow-glow-carbon);
+}
+
+@utility text-gradient-ember {
+  background: var(--gradient-ember);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility hairline {
+  background-image: linear-gradient(90deg, transparent, var(--color-border) 20%, var(--color-border) 80%, transparent);
+  height: 1px;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+}
+.pulse-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.shimmer { position: relative; overflow: hidden; }
+.shimmer::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, oklch(0.65 0.19 45 / 12%), transparent);
+  animation: shimmer 2s ease-in-out infinite;
+}
