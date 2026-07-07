@@ -18,8 +18,8 @@ A complete, runnable, end-to-end system:
   CBAM calculation engine, threshold scoring, bilingual PDF generation
   (WeasyPrint), and a mock LLM mode so the whole thing runs with **zero
   external configuration**.
-- **Frontend** (`frontend/`) — Next.js 14 (App Router) + TypeScript +
-  Tailwind, an intake form and a results dashboard with document downloads.
+- **Frontend** (`frontend/`) — Vite + React + TypeScript + Tailwind +
+  TanStack, with the new dashboard experience and UI components.
 - **Database** (`supabase/migrations/0001_init.sql`) — the full schema from
   PRD §6.3, including row-level security for the Baowu/Ansteel aggregate
   dashboard. The backend runs against a zero-config local SQLite file by
@@ -111,15 +111,20 @@ box this was built on).
 
 ### Frontend
 
+No separate requirements file is needed for the frontend. The dependency list is
+already in `frontend/package.json`.
+
 ```bash
 cd frontend
 npm install
-copy .env.local.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. Requires the backend running on port 8000
-(configurable via `NEXT_PUBLIC_API_BASE_URL`).
+Vite will print the local URL to open in the browser, usually
+`http://localhost:5173` or `http://localhost:8080`.
+
+If the app needs API settings, add them to a local `.env` or `.env.local` file
+in `frontendnew/` using the same variable names the app expects.
 
 ### Try it end-to-end
 
@@ -159,7 +164,7 @@ for the full list and what to do about each:
 
 ## Monorepo layout
 
-- `frontend/` — Next.js 14 (App Router) + TypeScript + Tailwind
+- `frontendnew/` — Vite + React + TypeScript + Tailwind + TanStack
 - `backend/` — Python 3.11+ + FastAPI
 - `supabase/migrations/` — SQL schema (source of truth; `backend/app/models_orm.py` mirrors it by hand)
 - `firmware/` — ESP32/EmonLib stub (optional, decoupled — see skill for why)
