@@ -75,6 +75,20 @@ def calculate_cbam_exposure(
     """Pure function. Same input always produces the same output —
     that reproducibility is the entire trust argument for this module."""
 
+    # Input guards (PRD §8.4) — raise, don't guess.
+    # Pre-2026 would otherwise silently take the 2028+ markup via the
+    # .get() fallback below; 2029+ correctly takes the 30% plateau.
+    if inp.year < 2026:
+        raise ValueError(f"CBAM definitive regime starts 2026; got year={inp.year}")
+    if inp.annual_export_tonnes < 0:
+        raise ValueError(f"annual_export_tonnes must be >= 0; got {inp.annual_export_tonnes}")
+    if inp.measured_intensity_tco2e_per_tonne is not None and inp.measured_intensity_tco2e_per_tonne <= 0:
+        raise ValueError(
+            f"measured intensity must be > 0; got {inp.measured_intensity_tco2e_per_tonne}"
+        )
+    if certificate_price_eur_per_tco2e <= 0:
+        raise ValueError(f"certificate price must be > 0; got {certificate_price_eur_per_tco2e}")
+
     # Step 1 — verified data always wins over the default value
     if inp.measured_intensity_tco2e_per_tonne is not None:
         intensity = inp.measured_intensity_tco2e_per_tonne

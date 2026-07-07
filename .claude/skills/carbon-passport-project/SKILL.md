@@ -59,7 +59,15 @@ product; breaking it anywhere breaks the pitch.
 - LLM: Qwen via Alibaba Cloud Model Studio (DashScope), OpenAI-compatible
   endpoint, **Beijing region pinned explicitly** — this is load-bearing for
   data sovereignty, not a default to leave unset. Qwen3-VL-Flash for intake,
-  Qwen-Flash for CN code classification, Qwen-Plus for the three writing agents.
+  Qwen-Flash for CN code classification (single escalation retry to Qwen-Plus
+  on low confidence — the only model-escalation path in the system),
+  Qwen-Plus for the three writing agents. Qwen-Max is deliberately unused;
+  disable thinking mode on every call. See PRD §4.1 before changing any
+  model assignment.
+- Optional Stage-0 pre-processing: local ModelScope models (DAMO OCR +
+  StructBERT zero-shot doc-type pre-screen), feature-flagged, never in the
+  trust path, pipeline must run with them disabled. RaNER, CSANMT
+  translation, and self-hosted LLMs were evaluated and rejected — PRD §4.2.
 - DB/Auth/Storage: Supabase
 - PDF generation: WeasyPrint (HTML/CSS → PDF, for clean CJK rendering)
 - Write agent integration code against the OpenAI-compatible client interface,
