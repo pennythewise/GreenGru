@@ -17,6 +17,9 @@ backend/app/static/fonts/*.ttf
 node_modules/
 .next/
 out/
+.vercel/
+.output/
+.nitro/
 .env.local
 .env.development.local
 .env.test.local
