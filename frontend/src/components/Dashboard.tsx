@@ -101,7 +101,7 @@ export function Dashboard() {
 
       <div className="grid md:grid-cols-3 gap-4">
         <StatCard n="a" zh="提交" icon={Layers} label="Submissions YTD" value={String(kpis.submissionsYtd)} unit="of 47 lifetime" delta="+3 this month" tone="signal" footnote="6 exposed · 4 needs-input · 2 signed today" />
-        <StatCard n="b" zh="等级" icon={Trophy} label="Latest CISA grade" value={kpis.cisaGrade} unit="/ A" delta={`gap +${kpis.benchmarkGap}% to B`} tone="warning" footnote="Path P1 lifts C → B in 14 months." />
+        <StatCard n="b" zh="等级" icon={Trophy} label="Latest CISA grade" value={kpis.cisaGrade} unit="/ A" delta={`gap +${kpis.benchmarkGap}% to D`} tone="warning" footnote="Path P1 lifts E → D in 14 months." />
         <StatCard n="c" zh="风险" icon={Ship} label="CBAM tier · latest" value="Exposed" delta={`€${kpis.netTariff}/t net · 2026`} tone="ember" footnote={`Gross 2034 €${kpis.grossTariff}/t — 40× escalation ahead`} />
       </div>
 

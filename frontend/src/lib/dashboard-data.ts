@@ -35,16 +35,22 @@ export const intensityTrend = [
   { m: "Mar", measured: 1.87, benchmark: 1.37, default: 3.51 },
 ];
 
+// Boundaries from the real CISA draft standard (T/CISA 452, 钢协科〔2024〕32号)
+// via backend/app/data/cisa_tiers.py's grade_for_intensity(): Table 1 crude-steel
+// boundary + Table 2 线棒材/bar-wire-rod ore-based alpha, at BF-BOF's nominal 0%
+// scrap ratio. Keep these in sync with cisa_tiers.py if that formula changes —
+// see this project's own rule against silently drifting demo data from the
+// engine that's supposed to be its source of truth.
 export const cisaGrades = [
-  { grade: "E", label: "Baseline", max: 2.5, color: "danger" as const },
-  { grade: "D", label: "Entry", max: 2.1, color: "warning" as const },
-  { grade: "C", label: "Improved", max: 1.75, color: "warning" as const },
-  { grade: "B", label: "Advanced", max: 1.35, color: "carbon" as const },
-  { grade: "A", label: "Near-zero", max: 0.4, color: "carbon" as const },
+  { grade: "E", label: "Baseline", max: 2.235, color: "danger" as const },
+  { grade: "D", label: "Entry", max: 1.675, color: "warning" as const },
+  { grade: "C", label: "Improved", max: 1.04, color: "warning" as const },
+  { grade: "B", label: "Advanced", max: 0.44, color: "carbon" as const },
+  { grade: "A", label: "Near-zero", max: 0.15, color: "carbon" as const },
 ];
 
 export const submissions = [
-  { id: "S-0417", cn: "7318 15 88", desc: "Hex bolt M12", tons: 1240, cbamTier: "Exposed", grade: "C", status: "Signed", date: "2026-03-14" },
+  { id: "S-0417", cn: "7318 15 88", desc: "Hex bolt M12", tons: 1240, cbamTier: "Exposed", grade: "E", status: "Signed", date: "2026-03-14" },
   { id: "S-0416", cn: "7318 15 42", desc: "Screw M8", tons: 860, cbamTier: "Exposed", grade: "C", status: "Signed", date: "2026-03-09" },
   { id: "S-0415", cn: "7326", desc: "Steel bracket", tons: 520, cbamTier: "High", grade: "D", status: "Needs input", date: "2026-03-05" },
   { id: "S-0414", cn: "7301", desc: "Welded angle", tons: 310, cbamTier: "High", grade: "D", status: "Signed", date: "2026-02-27" },
@@ -53,7 +59,7 @@ export const submissions = [
 ];
 
 export const products = submissions.slice(0, 4).map((s) => ({
-  cn: s.cn, desc: s.desc, tons: s.tons, intensity: s.grade === "C" ? 1.87 : 2.08, grade: s.grade,
+  cn: s.cn, desc: s.desc, tons: s.tons, intensity: s.id === "S-0417" ? 1.87 : 2.08, grade: s.grade,
   cbam2026: Math.round(s.tons * 78), cbam2034: Math.round(s.tons * 3123),
 }));
 
@@ -82,8 +88,11 @@ export const financing = [
 export const kpis = {
   intensity: 1.87,
   intensityDelta: -0.44,
-  benchmarkGap: 36.5,
-  cisaGrade: "C",
+  // Gap to the next achievable grade (D, boundary 1.675) — NOT to B. At the
+  // current CISA-E boundary, B is 4 tiers away; the %-gap framing only makes
+  // sense against the next rung. (1.87 - 1.675) / 1.675 * 100.
+  benchmarkGap: 11.6,
+  cisaGrade: "E",
   financingTier: "深绿",
   cbam2026: 236_980,
   cbam2034: 9_489_100,

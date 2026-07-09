@@ -13,7 +13,7 @@ requirements doc.
 
 ## Monorepo layout
 
-- `frontend/` — Next.js 14 (App Router) + TypeScript + Tailwind + shadcn/ui
+- `frontend/` — TanStack Start (Vite, React 19) + TypeScript + Tailwind + shadcn/ui
 - `backend/` — Python 3.11 + FastAPI
 - `firmware/` — ESP32/EmonLib stub (optional, decoupled — see skill for why)
 - `.claude/skills/carbon-passport-project/` — project skill: SKILL.md, PRD,

@@ -170,3 +170,33 @@ for the full list and what to do about each:
 - `firmware/` — ESP32/EmonLib stub (optional, decoupled — see skill for why)
 - `.claude/skills/carbon-passport-project/` — project skill: SKILL.md, PRD,
   calculation engine reference, and primary-source inventory
+
+## Supabase quick setup
+
+If you want to run the app against a real Postgres database (Supabase),
+follow these steps.
+
+1. Create a Supabase project in the Supabase dashboard.
+2. Open the SQL editor and run the SQL in `supabase/migrations/0001_init.sql`.
+    (Alternatively, use the helper script below.)
+3. In `backend`, create a `.env` file (you can copy the example):
+
+```bash
+cp backend/.env.supabase.example backend/.env
+# edit backend/.env and replace placeholders with your real values
+```
+
+4. Optional: apply the SQL schema from your workstation using the helper:
+
+```bash
+# ensure DATABASE_URL is exported; can be the same value you put in backend/.env
+export DATABASE_URL='postgresql+asyncpg://postgres:<PASSWORD>@db.<PROJECT_REF>.supabase.co:5432/postgres'
+./backend/scripts/apply_supabase_schema.sh
+```
+
+Notes:
+- The app expects `DATABASE_URL` in the `postgresql+asyncpg://...` form.
+- The helper script normalizes the URL for `psql` by removing `+asyncpg`.
+- If you prefer the Supabase dashboard, pasting the SQL directly into the
+   SQL editor is the simplest option.
+

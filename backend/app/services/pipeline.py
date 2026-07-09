@@ -159,7 +159,8 @@ async def run_score(session: AsyncSession, calculation_id: str) -> Score:
         gross_tariff_cost_eur_per_tonne=calc.gross_tariff_cost_eur_per_tonne,
         annual_exposure_eur=calc.annual_exposure_eur,
     )
-    scoring = score_calculation(result, annual_export_tonnes=product.annual_export_tonnes)
+    route = ProductionRoute(product.production_route) if product.production_route else default_route_for(product.cn_code)
+    scoring = score_calculation(result, annual_export_tonnes=product.annual_export_tonnes, route=route.value)
 
     score = Score(
         calculation_id=calculation_id,

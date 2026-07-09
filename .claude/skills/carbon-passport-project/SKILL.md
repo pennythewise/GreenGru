@@ -54,7 +54,7 @@ product; breaking it anywhere breaks the pitch.
 
 ## Tech stack (see PRD §4 for full rationale)
 
-- Frontend: Next.js 14 (App Router) + TypeScript + Tailwind + shadcn/ui
+- Frontend: TanStack Start (Vite, React 19) + TypeScript + Tailwind + shadcn/ui
 - Backend: Python 3.11 + FastAPI
 - LLM: Qwen via Alibaba Cloud Model Studio (DashScope), OpenAI-compatible
   endpoint, **Beijing region pinned explicitly** — this is load-bearing for
