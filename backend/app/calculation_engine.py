@@ -30,14 +30,35 @@ EU_BENCHMARK_TCO2E_PER_TONNE = {
     ProductionRoute.SCRAP_EAF: 0.072,
 }
 
-# Source: China National GHG Emission Factor Database v2
+# Source, BF-BOF: China National GHG Emission Factor Database v2
 # (data.ncsc.org.cn/factories). Default embedded-emissions intensity for
 # crude steel by production route, used only when the SME has no verified
 # installation-level measurement of their own.
+#
+# Source, DRI-EAF / scrap-EAF: data.ncsc.org.cn/factories is a live query
+# portal, not a fetchable document, so the exact China-specific route
+# averages still haven't been pulled (see primary-sources/INVENTORY.md item
+# 9). The two figures below are NOT that — they're worldsteel's global
+# production-weighted averages (Sustainability Indicators Report 2024,
+# worldsteel.org), used as a real, citable interim anchor in place of the
+# old un-sourced guesses (1.9 / 0.6). China's grid is materially more
+# carbon-intensive than the global average worldsteel blends into these
+# figures, so the true China-specific numbers are almost certainly HIGHER
+# than what's below — treat these as a conservative floor, not a ceiling,
+# until the actual factor-database values are obtained.
+#
+# A real bottom-up China estimate can be built once someone owns this: MEE's
+# own steel-industry GHG accounting guideline (全国碳排放权交易市场技术规范
+# CETS—AG—03.01—V01—2024, mee.gov.cn) gives official process-emission
+# factors for the carbon-bearing inputs an EAF consumes — DRI 0.073 tCO2/t,
+# scrap 0.037 tCO2/t, electrode 3.663 tCO2/t (Appendix A.2) — but combining
+# those with electricity/fuel consumption-per-tonne to get a full route
+# intensity still requires activity-rate assumptions (kWh/t, electrode kg/t)
+# that are NOT in that document and would need their own citation.
 CHINA_DEFAULT_INTENSITY_TCO2E_PER_TONNE = {
     ProductionRoute.BF_BOF: 3.506,
-    ProductionRoute.DRI_EAF: 1.9,    # placeholder — pull exact value from factor DB before launch
-    ProductionRoute.SCRAP_EAF: 0.6,  # placeholder — pull exact value from factor DB before launch
+    ProductionRoute.DRI_EAF: 1.47,    # worldsteel 2024 global average — NOT China-specific, see above
+    ProductionRoute.SCRAP_EAF: 0.69,  # worldsteel 2024 global average — NOT China-specific, see above
 }
 
 # Source: EU IR 2025/2621, Annex IV point 4.1 — mark-up applied to default

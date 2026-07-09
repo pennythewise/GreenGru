@@ -137,6 +137,31 @@ without at least the ✅ items in context.
   fetch gets short of the original PDF/red-header document scan.
 - **Assign to**: whoever owns the program matcher (§8.8)
 
+### 10. CISA 低碳排放钢 standard — tier boundary formula and values (E through A)
+- **What it is**: CISA's own draft standard — 钢协科〔2024〕32号, the public-
+  comment draft of T/CISA 452《低碳排放钢评价方法》(chinaisa.org.cn, draft
+  dated 2024-07-29, comment period closed 2024-08-30). Previously assumed to
+  sit behind a membership/purchase paywall; it doesn't — it's posted on
+  CISA's own public site as the comment-period draft.
+- **What it contains**: not a flat per-grade cutoff, but a formula —
+  `y_n = a_n - b_n × scrap_ratio + α_n` — where `a_n`/`b_n` (Table 1) define
+  a crude-steel-stage boundary linear in scrap ratio, and `α_n` (Table 2) is
+  a hot-rolled-product-specific add-on (separate columns for hot coil,
+  plate, bar/wire rod, seamless tube; ore-based vs scrap-based). Now
+  implemented in `backend/app/data/cisa_tiers.py`, using the 线棒材
+  (bar/wire rod) column since this project's 8 CN codes are downstream of
+  that category.
+- **Important caveat — still not fully closed**: this is the **comment
+  draft**, not the finalized text. CISA published the finalized T/CISA
+  452-2024 on 2024-10-17; the numbers above have NOT been individually
+  cross-checked against that finalized version. `is_provisional=True` stays
+  on every score produced from this table until that cross-check happens —
+  do not remove the provisional flag from any UI surface on the strength of
+  this entry alone.
+- **Assign to**: whoever owns the threshold scoring agent (§8.5) — next step
+  is confirming the finalized T/CISA 452-2024 text matches this draft
+  (or obtaining it if it doesn't), not re-deriving the formula from scratch.
+
 ---
 
 ## ⚠️ Needed but not yet in hand — assign to a team member
@@ -174,28 +199,30 @@ without at least the ✅ items in context.
   not a single downloadable file. Confirmed the crude-steel BF-BOF intensity
   is in there; the DRI-EAF and scrap-EAF placeholders in
   `calculation_engine.py` still need pulling from this portal directly.
+- **Partial progress (still not the actual China-specific route average)**:
+  two things were found by search that improve on the old un-sourced
+  1.9 / 0.6 guesses, but neither one *is* the missing number:
+  1. worldsteel's Sustainability Indicators Report 2024 (worldsteel.org)
+     gives global production-weighted averages — DRI-EAF 1.47 tCO2/t,
+     scrap-EAF 0.69 tCO2/t. Now wired into `calculation_engine.py` as the
+     interim default, explicitly flagged in-code as a global (not
+     China-specific) proxy that likely *understates* the true China figure,
+     since China's grid is more carbon-intensive than the global blend
+     worldsteel uses.
+  2. MEE's own steel-industry GHG accounting guideline (全国碳排放权交易
+     市场技术规范 CETS—AG—03.01—V01—2024, mee.gov.cn) gives official
+     process-emission factors for EAF input materials — DRI 0.073 tCO2/t,
+     scrap 0.037 tCO2/t, electrode 3.663 tCO2/t (Appendix A.2) — real and
+     China-specific, but only the *carbon-content-of-the-input* piece of a
+     route intensity, not a full route average. Building a defensible
+     bottom-up China number from these still needs electricity/fuel
+     consumption-per-tonne assumptions that aren't in that document either.
 - **Why it matters**: these are the two open TODOs already flagged in PRD §6.2 —
   this inventory doesn't add new information, it's the reminder to actually
   do it, since it can't be fetched by search/browse the way a static PDF can.
-- **Assign to**: whoever owns the calculation engine, week 1
-
-### 10. CISA 低碳排放钢 standard — exact tier boundary values (E through A)
-- **What it is**: the actual China Iron and Steel Association standard
-  document defining the five carbon-efficiency tiers.
-- **Status**: existence confirmed via secondary industry reporting
-  (csteelnews.com), but the standard document itself may sit behind a CISA
-  membership/purchase paywall — could not confirm free public access.
-- **Fallback if unobtainable in time**: BHP's own case study (already in this
-  project's context) cites a real, citable anchor point for the *top* tier:
-  IEA's near-zero threshold of 0.40 tCO2e per tonne of crude steel for
-  100%-ore-based production, as implemented in ResponsibleSteel's
-  International Standard V2.0 (performance level 4, "near zero"). Use this
-  as the Grade-A boundary if the CISA document itself can't be obtained
-  before launch, and mark it clearly in code as a substitute source until
-  CISA's exact figures are confirmed.
-- **Assign to**: whoever owns the threshold scoring agent (§8.5) — this is
-  the single highest-risk unresolved number in the whole project; escalate
-  early if it's not resolved by end of week 1.
+- **Assign to**: whoever owns the calculation engine — query the portal
+  directly for the actual China-specific DRI-EAF/scrap-EAF averages; the two
+  interim sources above are a better floor than before, not a resolution.
 
 ### 11. Quzhou 碳账户金融 policy and 工信部联节〔2026〕13号 (零碳工厂 policy)
 - **What they are**: the original government policy notices behind the

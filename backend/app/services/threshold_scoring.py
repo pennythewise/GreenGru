@@ -34,8 +34,8 @@ def _cbam_risk_tier(taxable_emissions_tco2e_per_tonne: float, gross_tariff_cost_
     return "exposed"
 
 
-def score_calculation(result: CBAMResult, annual_export_tonnes: float) -> ScoringResult:
-    grade_result = grade_for_intensity(result.intensity_tco2e_per_tonne)
+def score_calculation(result: CBAMResult, annual_export_tonnes: float, route: str = "BF-BOF") -> ScoringResult:
+    grade_result = grade_for_intensity(result.intensity_tco2e_per_tonne, route=route)
     risk_tier = _cbam_risk_tier(result.taxable_emissions_tco2e_per_tonne, result.gross_tariff_cost_eur_per_tonne)
 
     # PRD §8.5: the CBAM de minimis exemption is assessed per EU *importer*

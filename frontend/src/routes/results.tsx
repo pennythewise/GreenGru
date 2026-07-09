@@ -24,12 +24,13 @@ const chartColors = {
 };
 
 function Results() {
+  const activeCisaColor = cisaGrades.find((g) => g.grade === kpis.cisaGrade)?.color ?? "warning";
   return (
     <AppShell crumb="Results">
       <PageHeader
         n="05"
         zh="评分"
-        title="CBAM: exposed · CISA: grade C"
+        title="CBAM: exposed · CISA: grade E"
         subtitle="Net tariff is what's actually owed this year. Gross is the 2034 steady-state — never blur the 40× gap between them."
         right={
           <div className="flex gap-2">
@@ -85,8 +86,13 @@ function Results() {
             <span className="text-[10.5px] font-mono text-muted-foreground">E ← → A</span>
           </div>
           <div className="mt-3 flex items-baseline gap-3">
-            <div className="text-4xl font-semibold tracking-tight text-warning">Grade {kpis.cisaGrade}</div>
-            <div className="text-[12px] font-mono text-muted-foreground">gap +{kpis.benchmarkGap}% to B</div>
+            <div className={cn(
+              "text-4xl font-semibold tracking-tight",
+              activeCisaColor === "danger" && "text-danger",
+              activeCisaColor === "warning" && "text-warning",
+              activeCisaColor === "carbon" && "text-carbon",
+            )}>Grade {kpis.cisaGrade}</div>
+            <div className="text-[12px] font-mono text-muted-foreground">gap +{kpis.benchmarkGap}% to D</div>
           </div>
           <div className="mt-4 space-y-1.5">
             {cisaGrades.map((g) => {
@@ -94,7 +100,10 @@ function Results() {
               return (
                 <div key={g.grade} className={cn(
                   "flex items-center gap-3 rounded-md border px-2.5 py-1.5",
-                  active ? "border-warning/40 bg-warning/5" : "border-border bg-surface/50",
+                  active && g.color === "danger" && "border-danger/40 bg-danger/5",
+                  active && g.color === "warning" && "border-warning/40 bg-warning/5",
+                  active && g.color === "carbon" && "border-carbon/40 bg-carbon/5",
+                  !active && "border-border bg-surface/50",
                 )}>
                   <div className={cn(
                     "h-7 w-7 rounded flex items-center justify-center font-display font-bold text-[13px]",
@@ -104,7 +113,14 @@ function Results() {
                   )}>{g.grade}</div>
                   <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
                     <div>
-                      <div className="text-[12.5px] font-medium">{g.label} {active && <span className="text-[10px] font-mono text-warning ml-1">← you</span>}</div>
+                      <div className="text-[12.5px] font-medium">{g.label} {active && (
+                        <span className={cn(
+                          "text-[10px] font-mono ml-1",
+                          g.color === "danger" && "text-danger",
+                          g.color === "warning" && "text-warning",
+                          g.color === "carbon" && "text-carbon",
+                        )}>← you</span>
+                      )}</div>
                       <div className="text-[10.5px] font-mono text-muted-foreground">≤ {g.max} tCO₂e/t</div>
                     </div>
                     <div className="text-[11px] font-mono text-muted-foreground">{active ? kpis.intensity : g.max}</div>

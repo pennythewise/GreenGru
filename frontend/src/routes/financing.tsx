@@ -46,8 +46,8 @@ function Financing() {
             <div>
               <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-muted-foreground">1 · 低碳排放钢等级</div>
               <div className="mt-1 flex items-baseline gap-3">
-                <span className="text-4xl font-semibold tracking-tight text-warning">Grade {kpis.cisaGrade}</span>
-                <span className="text-[13px] text-muted-foreground">→ 距 B 级 <span className="text-primary font-mono">+{kpis.benchmarkGap}%</span></span>
+                <span className="text-4xl font-semibold tracking-tight text-danger">Grade {kpis.cisaGrade}</span>
+                <span className="text-[13px] text-muted-foreground">→ 距 D 级 <span className="text-primary font-mono">+{kpis.benchmarkGap}%</span></span>
               </div>
               <p className="mt-1 text-[12.5px] text-muted-foreground max-w-md">当前核验强度 {kpis.intensity} tCO₂e/吨 · CISA 低碳排放钢标准分级 · 引用: 中国钢铁工业协会 低碳排放钢评价方法</p>
             </div>

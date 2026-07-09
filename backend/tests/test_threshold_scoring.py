@@ -12,7 +12,9 @@ def _calc(intensity=None, route=ProductionRoute.BF_BOF, year=2026):
 
 
 def test_grade_a_for_near_zero_intensity():
-    result = score_calculation(_calc(intensity=0.3), annual_export_tonnes=100)
+    # BF-BOF (0% scrap) Grade A boundary per the CISA draft standard's Table 1/2
+    # formula is 0.15 tCO2/t-crude-steel (a=0.15, b=0.04, alpha=0 at 0% scrap).
+    result = score_calculation(_calc(intensity=0.1), annual_export_tonnes=100)
     assert result.cisa_grade == "A"
     assert result.cisa_grade_is_provisional is True
 
