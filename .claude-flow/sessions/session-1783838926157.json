@@ -1,0 +1,14 @@
+{
+  "id": "session-1783838926157",
+  "startedAt": "2026-07-12T06:48:46.157Z",
+  "cwd": "/Users/penny/Desktop/GreenGru",
+  "context": {},
+  "metrics": {
+    "edits": 0,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "endedAt": "2026-07-12T06:48:48.522Z",
+  "duration": 2365
+}

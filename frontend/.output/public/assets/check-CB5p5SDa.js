@@ -1,0 +1,1 @@
+import{p as e}from"./AppShell-DBK2cAyp.js";var t=e(`check`,[[`path`,{d:`M20 6 9 17l-5-5`,key:`1gmf2c`}]]);export{t};

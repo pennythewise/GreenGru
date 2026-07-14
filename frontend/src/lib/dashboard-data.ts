@@ -1,4 +1,4 @@
-// Demo data for the Carbon Passport MVP flow.
+// Demo data for the GreenGru MVP flow.
 // Illustrative only — real system pulls from cited sources.
 
 export const company = {
@@ -13,133 +13,311 @@ export const company = {
   registration: "91330203MA2G4X7K9L",
 };
 
-export const cbamPhaseIn = [
-  { year: 2026, factor: 2.5, costPerT: 7.8, cum: 7.8 },
-  { year: 2027, factor: 5, costPerT: 15.7, cum: 23.5 },
-  { year: 2028, factor: 10, costPerT: 31.3, cum: 54.8 },
-  { year: 2029, factor: 22.5, costPerT: 70.4, cum: 125.2 },
-  { year: 2030, factor: 48.5, costPerT: 151.8, cum: 277.0 },
-  { year: 2031, factor: 61, costPerT: 190.9, cum: 467.9 },
-  { year: 2032, factor: 73.5, costPerT: 230.0, cum: 697.9 },
-  { year: 2033, factor: 86, costPerT: 269.2, cum: 967.1 },
-  { year: 2034, factor: 100, costPerT: 313.0, cum: 1280.1 },
+// Three route-scoped grade cards shown on Dashboard.
+export const routeGrades = [
+  {
+    key: "loan",
+    label: "Green loan",
+    zh: "绿色贷款",
+    grade: "B",
+    status: "Low-risk · eligible",
+    tone: "carbon" as const,
+    gapLabel: "gap −0.4 to A",
+    kb: "PBOC 2025 Green Finance Catalogue",
+  },
+  {
+    key: "grant",
+    label: "Factory grant",
+    zh: "零碳工厂补贴",
+    grade: "C",
+    status: "Two gaps to close",
+    tone: "warning" as const,
+    gapLabel: "+6 pts to B",
+    kb: "GB/T 36132 · 工信部联节〔2026〕13号",
+  },
+  {
+    key: "cbam",
+    label: "EU license (CBAM)",
+    zh: "碳关税",
+    grade: "C",
+    status: "Exposed · €38/t 2026",
+    tone: "ember" as const,
+    gapLabel: "+37% over benchmark",
+    kb: "Reg (EU) 2023/956 · IR (EU) 2025/2621",
+  },
 ];
 
-export const intensityTrend = [
-  { m: "Sep", measured: 2.31, benchmark: 1.37, default: 3.51 },
-  { m: "Oct", measured: 2.24, benchmark: 1.37, default: 3.51 },
-  { m: "Nov", measured: 2.18, benchmark: 1.37, default: 3.51 },
-  { m: "Dec", measured: 2.09, benchmark: 1.37, default: 3.51 },
-  { m: "Jan", measured: 1.98, benchmark: 1.37, default: 3.51 },
-  { m: "Feb", measured: 1.94, benchmark: 1.37, default: 3.51 },
-  { m: "Mar", measured: 1.87, benchmark: 1.37, default: 3.51 },
+// Ratio sliders shown on Dashboard (grant rubric levers).
+export const ratioSliders = [
+  { key: "scrap", label: "Scrap steel ratio", zh: "废钢比", value: 24.5, target: 40, unit: "%" },
+  { key: "green", label: "Green electricity ratio", zh: "绿电比", value: 45.0, target: 60, unit: "%" },
+  { key: "meter", label: "Metering coverage", zh: "计量覆盖", value: 78.0, target: 95, unit: "%" },
 ];
 
-// Boundaries from the real CISA draft standard (T/CISA 452, 钢协科〔2024〕32号)
-// via backend/app/data/cisa_tiers.py's grade_for_intensity(): Table 1 crude-steel
-// boundary + Table 2 线棒材/bar-wire-rod ore-based alpha, at BF-BOF's nominal 0%
-// scrap ratio. Keep these in sync with cisa_tiers.py if that formula changes —
-// see this project's own rule against silently drifting demo data from the
-// engine that's supposed to be its source of truth.
-export const cisaGrades = [
-  { grade: "E", label: "Baseline", max: 2.235, color: "danger" as const },
-  { grade: "D", label: "Entry", max: 1.675, color: "warning" as const },
-  { grade: "C", label: "Improved", max: 1.04, color: "warning" as const },
-  { grade: "B", label: "Advanced", max: 0.44, color: "carbon" as const },
-  { grade: "A", label: "Near-zero", max: 0.15, color: "carbon" as const },
+// Gauge — how close to next tier on the highest-priority route (Grant here).
+export const tierGauge = { value: 68, min: 0, max: 100, label: "Grant score", nextTier: "B", zh: "距 B 级" };
+
+// Process-stage matrix / heatmap (CISA screenshot pattern).
+export const processMatrix = [
+  { stage: "Sintering",   zh: "烧结", energy: "ok",    intensity: "warn", metering: "ok",   audit: "ok"   },
+  { stage: "Melting",     zh: "炼钢", energy: "warn",  intensity: "bad",  metering: "warn", audit: "warn" },
+  { stage: "Rolling",     zh: "轧制", energy: "ok",    intensity: "ok",   metering: "ok",   audit: "ok"   },
+  { stage: "Galvanizing", zh: "镀锌", energy: "warn",  intensity: "warn", metering: "ok",   audit: "ok"   },
+  { stage: "Finishing",   zh: "精加工", energy: "ok",   intensity: "ok",   metering: "warn", audit: "ok"   },
 ];
+
+// Donut breakdown — emissions source split.
+export const emissionsBreakdown = [
+  { key: "direct",   label: "Direct combustion", value: 42, color: "var(--color-ember)" },
+  { key: "process",  label: "Process reactions", value: 24, color: "var(--color-warning)" },
+  { key: "indirect", label: "Indirect · grid",   value: 22, color: "var(--color-teal)" },
+  { key: "upstream", label: "Upstream inputs",   value: 12, color: "var(--color-carbon)" },
+];
+
+// Simulated factory floor — live sensor snapshot per stage.
+// Array order = production flow; keys sync 1:1 with processMatrix rows
+// and the 3D factory zones in FactoryScene.
+export type FactoryStageDatum = {
+  key: string;
+  stage: string;
+  zh: string;
+  voltage: number;
+  current: number;
+  power: number;
+  carbon: number; // stage carbon intensity, tCO2e/t
+  status: "ok" | "warn";
+  warning?: string;
+};
+
+export const factoryFloor: FactoryStageDatum[] = [
+  { key: "sintering",   stage: "Sintering",   zh: "烧结",   voltage: 396, current: 612, power: 242, carbon: 1.42, status: "ok" },
+  { key: "melting",     stage: "Melting",     zh: "炼钢",   voltage: 402, current: 890, power: 358, carbon: 2.18, status: "warn", warning: "kW draw 12% over threshold" },
+  { key: "rolling",     stage: "Rolling",     zh: "轧制",   voltage: 398, current: 540, power: 215, carbon: 1.05, status: "ok" },
+  { key: "galvanizing", stage: "Galvanizing", zh: "镀锌",   voltage: 401, current: 470, power: 188, carbon: 0.98, status: "ok" },
+  { key: "finishing",   stage: "Finishing",   zh: "精加工", voltage: 399, current: 310, power: 124, carbon: 0.41, status: "ok" },
+];
+
+// Interior equipment per stage — shown when the operator zooms into a building
+// in the 3D factory. powerShare/carbonShare are % of the parent stage's power
+// and carbon (each column sums to 100), so equipment numbers always reconcile
+// with the stage totals above. Equipment lists follow standard plant layouts:
+// sinter plant (proportioning → mixing → ignition → strand → cooler → ESP),
+// BOF melt shop (scrap bay → hot metal → converter → LF → caster → OG),
+// hot strip mill (reheat → roughing → finishing → laminar cooling → coiler),
+// continuous hot-dip galvanizing line (cleaning → anneal → zinc pot → air
+// knife → skin-pass), and a finishing/dispatch bay.
+export type FactoryEquipment = {
+  key: string;
+  name: string;
+  zh: string;
+  role: string;
+  powerShare: number;  // % of stage power
+  carbonShare: number; // % of stage carbon intensity
+  hotspot?: boolean;   // main emission source of the stage
+};
+
+export const factoryEquipment: Record<string, FactoryEquipment[]> = {
+  sintering: [
+    { key: "bins",     name: "Proportioning bins", zh: "配料仓",   role: "Weigh-feeds ore, coke breeze and flux", powerShare: 8,  carbonShare: 2 },
+    { key: "drum",     name: "Mixing drum",        zh: "混料机",   role: "Granulates the raw mix with moisture",  powerShare: 6,  carbonShare: 2 },
+    { key: "ignition", name: "Ignition furnace",   zh: "点火炉",   role: "Gas burners ignite the sinter bed",     powerShare: 12, carbonShare: 18 },
+    { key: "strand",   name: "Sinter strand",      zh: "烧结机",   role: "Coke breeze burns through the bed",     powerShare: 38, carbonShare: 62, hotspot: true },
+    { key: "cooler",   name: "Annular cooler",     zh: "环冷机",   role: "Air-cools hot sinter on a ring",        powerShare: 16, carbonShare: 4 },
+    { key: "esp",      name: "ESP dust collector", zh: "静电除尘", role: "Cleans strand waste gas",               powerShare: 20, carbonShare: 12 },
+  ],
+  melting: [
+    { key: "scrap",  name: "Scrap bay",         zh: "废钢加料跨", role: "Charges scrap into the converter",      powerShare: 4,  carbonShare: 2 },
+    { key: "ladle",  name: "Hot metal ladle",   zh: "铁水包",     role: "Delivers BF hot metal for charging",    powerShare: 2,  carbonShare: 6 },
+    { key: "bof",    name: "BOF converter",     zh: "转炉",       role: "O₂ blow oxidises C, Si, Mn from melt",  powerShare: 34, carbonShare: 58, hotspot: true },
+    { key: "lf",     name: "Ladle furnace",     zh: "LF精炼炉",   role: "Arc reheating + alloy trim before cast", powerShare: 30, carbonShare: 14 },
+    { key: "caster", name: "Continuous caster", zh: "连铸机",     role: "Casts steel into billets/slabs",        powerShare: 18, carbonShare: 12 },
+    { key: "og",     name: "OG gas cleaning",   zh: "OG煤气净化", role: "Recovers and scrubs converter gas",     powerShare: 12, carbonShare: 8 },
+  ],
+  rolling: [
+    { key: "reheat",  name: "Reheating furnace", zh: "加热炉",   role: "Gas-fired, brings billets to ~1200 °C", powerShare: 30, carbonShare: 72, hotspot: true },
+    { key: "rough",   name: "Roughing stand",    zh: "粗轧机",   role: "First heavy reduction passes",          powerShare: 24, carbonShare: 10 },
+    { key: "finish",  name: "Finishing stands",  zh: "精轧机组", role: "Tandem stands set final gauge",         powerShare: 28, carbonShare: 12 },
+    { key: "laminar", name: "Laminar cooling",   zh: "层流冷却", role: "Water curtain sets coiling temp",       powerShare: 6,  carbonShare: 2 },
+    { key: "coiler",  name: "Down coiler",       zh: "卷取机",   role: "Winds strip into hot coils",            powerShare: 12, carbonShare: 4 },
+  ],
+  galvanizing: [
+    { key: "clean",  name: "Cleaning section",  zh: "清洗段", role: "Degreases strip before annealing",        powerShare: 10, carbonShare: 4 },
+    { key: "anneal", name: "Annealing furnace", zh: "退火炉", role: "H₂/N₂ atmosphere, gas-fired recrystallise", powerShare: 34, carbonShare: 58, hotspot: true },
+    { key: "pot",    name: "Zinc pot",          zh: "锌锅",   role: "Induction-heated molten zinc bath",       powerShare: 26, carbonShare: 28 },
+    { key: "knife",  name: "Air knives",        zh: "气刀",   role: "Jets meter the zinc coating weight",      powerShare: 8,  carbonShare: 2 },
+    { key: "spm",    name: "Skin-pass mill",    zh: "光整机", role: "Light pass for surface + flatness",       powerShare: 22, carbonShare: 8 },
+  ],
+  finishing: [
+    { key: "ctl",     name: "Cut-to-length line", zh: "剪切线", role: "Shears strip to ordered lengths",   powerShare: 30, carbonShare: 30 },
+    { key: "inspect", name: "Inspection station", zh: "检验台", role: "Surface + gauge QC before dispatch", powerShare: 8,  carbonShare: 5 },
+    { key: "pack",    name: "Strapping machine",  zh: "打包机", role: "Straps and labels finished coils",   powerShare: 14, carbonShare: 10 },
+    { key: "crane",   name: "Overhead crane",     zh: "行车",   role: "Moves coils to storage and trucks",  powerShare: 28, carbonShare: 35 },
+    { key: "storage", name: "Coil storage",       zh: "卷材库区", role: "Saddle racks awaiting dispatch",   powerShare: 20, carbonShare: 20 },
+  ],
+};
+
+export const factorySync = {
+  lastSync: "09:41:22 CST",
+  downstream: ["Readiness pre-screener", "Advisory agent", "Grant score writeback"],
+};
 
 export const submissions = [
-  { id: "S-0417", cn: "7318 15 88", desc: "Hex bolt M12", tons: 1240, cbamTier: "Exposed", grade: "E", status: "Signed", date: "2026-03-14" },
-  { id: "S-0416", cn: "7318 15 42", desc: "Screw M8", tons: 860, cbamTier: "Exposed", grade: "C", status: "Signed", date: "2026-03-09" },
-  { id: "S-0415", cn: "7326", desc: "Steel bracket", tons: 520, cbamTier: "High", grade: "D", status: "Needs input", date: "2026-03-05" },
-  { id: "S-0414", cn: "7301", desc: "Welded angle", tons: 310, cbamTier: "High", grade: "D", status: "Signed", date: "2026-02-27" },
-  { id: "S-0413", cn: "7302", desc: "Rail track material", tons: 145, cbamTier: "Marginal", grade: "C", status: "Signed", date: "2026-02-20" },
-  { id: "S-0412", cn: "7213", desc: "Hot-rolled wire rod", tons: 90, cbamTier: "De minimis?", grade: "C", status: "Signed", date: "2026-02-11" },
+  { id: "S-0417", route: "CBAM",  cn: "7318 15 88", desc: "Hex bolt M12",         tons: 1240, tier: "Exposed",   grade: "C", status: "Signed",      date: "2026-03-14" },
+  { id: "S-0416", route: "Grant", cn: "—",           desc: "2025 Q4 factory pack", tons: 0,    tier: "Tier 2",    grade: "C", status: "Signed",      date: "2026-03-09" },
+  { id: "S-0415", route: "Loan",  cn: "—",           desc: "3-yr working capital", tons: 0,    tier: "Low-risk",  grade: "B", status: "Needs input", date: "2026-03-05" },
+  { id: "S-0414", route: "CBAM",  cn: "7301",        desc: "Welded angle",         tons: 310,  tier: "High",      grade: "D", status: "Signed",      date: "2026-02-27" },
+  { id: "S-0413", route: "CBAM",  cn: "7302",        desc: "Rail track material",  tons: 145,  tier: "Marginal",  grade: "C", status: "Signed",      date: "2026-02-20" },
+  { id: "S-0412", route: "Grant", cn: "—",           desc: "Metering upgrade",     tons: 0,    tier: "Tier 2",    grade: "C", status: "Signed",      date: "2026-02-11" },
 ];
 
-export const products = submissions.slice(0, 4).map((s) => ({
-  cn: s.cn, desc: s.desc, tons: s.tons, intensity: s.id === "S-0417" ? 1.87 : 2.08, grade: s.grade,
-  cbam2026: Math.round(s.tons * 78), cbam2034: Math.round(s.tons * 3123),
-}));
-
-export const paths = [
-  { id: "P1", name: "Lightweight digital monitoring", zh: "数字监测", tag: "quick win",
-    cost: 8000, saving: 0, costPerT: 0, payback: 0.3,
-    detail: "Deploy 6 CT-clamp kWh meters on shopfloor mains; closes measurement gap so verified data replaces defaults. Sub-¥10k, weeks not months.",
-    status: "recommended", range: "¥1,000–¥10,000 · closes measurement gap" },
-  { id: "P2", name: "Market diversification", zh: "市场分散", tag: "moderate",
-    cost: 480_000, saving: 1180, costPerT: 407, payback: 2.1,
-    detail: "Rebalance 18% of EU-bound tonnes to SEA + domestic anchor buyers; reduces EU exposure share while renewable PPA lands.",
-    status: "eligible", range: "moderate cost · reduces EU exposure share" },
-  { id: "P3", name: "Heavy retrofit — scrap-EAF route", zh: "短流程改造", tag: "structural",
-    cost: 41_000_000, saving: 3900, costPerT: 10513, payback: 9.2,
-    detail: "Full route switch to scrap-EAF; benchmark gap goes from +37% to −8%. Only if the lighter paths cannot close the gap.",
-    status: "future", range: "¥100,000+ · full route change" },
+// Six-stage pipeline per section 4 of brief.
+export const pipelineStages = [
+  { n: 1, key: "Intake",                zh: "接入",     model: "deterministic · OCR + StructBERT",       status: "done",    elapsed: "812 ms" },
+  { n: 2, key: "Validate",              zh: "校验",     model: "deterministic · 国家税务总局 API",         status: "done",    elapsed: "428 ms" },
+  { n: 3, key: "Classify",              zh: "分类",     model: "qwen-flash · route router (loan/grant/CBAM)", status: "active", elapsed: "1.2 s" },
+  { n: 4, key: "Calculate",             zh: "计算",     model: "python · rule-based",                      status: "pending", elapsed: null },
+  { n: 5, key: "Update dashboard",      zh: "更新总览", model: "deterministic · data commit (no model)",  status: "pending", elapsed: null },
+  { n: 6, key: "Authorize → Upstream",  zh: "授权上传", model: "operator confirm → Baowu/Ansteel API",    status: "pending", elapsed: null, requiresAuth: true },
 ];
 
-export const financing = [
-  { name: "PBOC 碳减排支持工具 (CERF)", tier: "深绿", rate: "1.75%", ceiling: "¥60M", pass: true, citation: "PBOC 2026-01-26 press briefing", note: "Jan 2026 expansion covers 节能改造 + 绿色升级" },
-  { name: "衢州碳账户金融 · 优质档", tier: "深绿", rate: "LPR −85bp", ceiling: "1.5× base", pass: true, citation: "Quzhou 4-tier carbon-account model", note: "Top tier · deep-green" },
-  { name: "零碳工厂 国家级奖补", tier: "—", rate: "grant", ceiling: "¥2.0M", pass: true, citation: "工信部联节〔2026〕13号", note: "National zero-carbon-factory subsidy" },
-  { name: "浙江省绿色低碳转型贴息", tier: "—", rate: "grant", ceiling: "¥1.0M", pass: false, citation: "浙经信节能〔2025〕42号", note: "Requires provincial 零碳工厂 certification (in-progress)" },
-];
+// Horizontal per-route stage strip (Section 6 / B in brief).
+export function routeStrip(kb: string) {
+  return [
+    { n: 1, key: "Pre-screener",     zh: "预筛",       method: "deterministic · doc checklist",   status: "done",    elapsed: "310 ms" },
+    { n: 2, key: "Report",           zh: "报告",       method: "python · rule-based",              status: "done",    elapsed: "1.4 s" },
+    { n: 3, key: "Score",            zh: "评分",       method: `rule-based · ${kb}`,               status: "active",  elapsed: "0.6 s" },
+    { n: 4, key: "Pull factory data",zh: "工厂数据",   method: "deterministic · dashboard bus",    status: "pending", elapsed: null },
+    { n: 5, key: "Advisory",         zh: "建议",       method: "qwen-plus · EN / 中文",             status: "pending", elapsed: null },
+  ];
+}
+
+// Document checklists per route (Section A in brief).
+export const docChecklists = {
+  loan: {
+    title: "Green loan — required documents",
+    kb: "PBOC 2025 Green Finance Catalogue",
+    items: [
+      { name: "Business licence · 营业执照", done: true },
+      { name: "Latest 12-mo utility invoices", done: true },
+      { name: "Emissions ledger · Q1–Q4 2025", done: true },
+      { name: "Bank statement · last 6 mo", done: true },
+      { name: "Green-project use-of-proceeds", done: false },
+      { name: "Auditor attestation (optional)", done: false },
+    ],
+  },
+  grant: {
+    title: "Zero-carbon factory grant — required documents",
+    kb: "GB/T 36132",
+    items: [
+      { name: "Factory registration · 工厂登记", done: true },
+      { name: "Metering coverage report", done: true },
+      { name: "Scrap-steel ratio evidence", done: true },
+      { name: "Green-electricity PPA / green cert", done: true },
+      { name: "Third-party emissions report (12 mo)", done: false },
+      { name: "Provincial 零碳工厂 pre-cert", done: false },
+    ],
+  },
+  passport: {
+    title: "EU license (CBAM) — required documents",
+    kb: "Reg (EU) 2023/956",
+    items: [
+      { name: "CN-code product list · 税则号", done: true },
+      { name: "Route-of-production statement", done: true },
+      { name: "Direct + indirect embedded emissions", done: true },
+      { name: "Verifier accreditation", done: true },
+      { name: "Purchased CBAM certificates (Q ledger)", done: false },
+      { name: "Installation-level emissions data", done: false },
+    ],
+  },
+};
+
+export const routePages = {
+  loan: {
+    slug: "loan" as const,
+    label: "Loan", zh: "贷款", n: "07",
+    title: "Green Loan Preview",
+    subtitle: "Deterministic rubric — passes are auditable line by line.",
+    kb: "PBOC 2025 Green Finance Catalogue",
+    scoreLabel: "Loan risk tier",
+    scoreValue: "Low-risk",
+    scoreGrade: "B",
+    gauge: 78,
+    gapUnit: "risk pts",
+    advisoryImpactUnit: "loan score",
+    citations: "PBOC 2025 · IR (EU) 2025/2621 · Reg (EU) 2023/956",
+  },
+  grant: {
+    slug: "grant" as const,
+    label: "Grant", zh: "补贴", n: "08",
+    title: "Green Factory Grant Preview",
+    subtitle: "GB/T 36132 rubric — every point cites the specific clause.",
+    kb: "GB/T 36132",
+    scoreLabel: "Grant tier",
+    scoreValue: "Tier 2 · 深绿",
+    scoreGrade: "C",
+    gauge: 68,
+    gapUnit: "grant pts",
+    advisoryImpactUnit: "grant score",
+    citations: "GB/T 36132 · 工信部联节〔2026〕13号 · PBOC",
+  },
+  passport: {
+    slug: "passport" as const,
+    label: "EU license", zh: "碳护照", n: "06",
+    title: "CBAM Readiness Preview",
+    subtitle: "Benchmark gap against Reg (EU) 2023/956 default values.",
+    kb: "Reg (EU) 2023/956 benchmark gap",
+    scoreLabel: "CBAM tier",
+    scoreValue: "Exposed",
+    scoreGrade: "C",
+    gauge: 41,
+    gapUnit: "€ / t exposure",
+    advisoryImpactUnit: "€/t saved",
+    citations: "Reg (EU) 2023/956 · IR (EU) 2025/2621 · CISA",
+  },
+};
+
+export const advisoryCards = {
+  loan: [
+    { title: "Lift metering coverage 78% → 95%", impact: "+8", why: "PBOC tier weights measurement evidence 25%. Missing meters keep you in Tier 2 despite low-carbon inputs.", status: "Not yet — planned" },
+    { title: "Add auditor attestation", impact: "+5", why: "Attested emissions unlock LPR −85bp under Quzhou 4-tier model.", status: "Not yet — planned" },
+    { title: "Refinance existing loan into CERF", impact: "+12", why: "PBOC 碳减排支持工具 covers 60% principal at 1.75%.", status: "Implemented" },
+  ],
+  grant: [
+    { title: "Raise scrap-steel ratio 24.5% → 40%", impact: "+9", why: "GB/T 36132 §5.2 — scrap ratio is the single largest lever in the grant rubric.", status: "Not yet — planned" },
+    { title: "Sign green-electricity PPA 45% → 60%", impact: "+6", why: "Directly meets 工信部联节〔2026〕13号 renewable clause.", status: "Not yet — planned" },
+    { title: "Close Melting-stage metering gap", impact: "+3", why: "Without stage-level data the auditor caps your score at Tier 2.", status: "Implemented" },
+  ],
+  passport: [
+    { title: "Switch to Scrap-EAF for 18% of tonnes", impact: "€142/t saved", why: "Benchmark gap goes from +37% to −8% for reallocated tonnage — the only structural fix.", status: "Not yet — planned" },
+    { title: "Diversify EU-bound tonnes → SEA anchor", impact: "€48/t exposure ↓", why: "Cuts CBAM-exposed share while retrofit lands.", status: "Not yet — planned" },
+    { title: "Install 6× CT-clamp kWh meters", impact: "€22/t verified", why: "Replaces default values with measured data — sub-¥10k, weeks not months.", status: "Implemented" },
+  ],
+};
+
+export const gaps = {
+  loan:   [ "Metering coverage below Tier-1 floor (78% < 90%)", "Use-of-proceeds document missing" ],
+  grant:  [ "Scrap-steel ratio 24.5% below GB/T 36132 §5.2 floor of 30%", "Third-party emissions report not attached" ],
+  passport:[ "Route BF-BOF intensity +37% vs Reg 2023/956 benchmark", "Q4 CBAM certificate ledger not attached" ],
+};
 
 export const kpis = {
   intensity: 1.87,
   intensityDelta: -0.44,
-  // Gap to the next achievable grade (D, boundary 1.675) — NOT to B. At the
-  // current CISA-E boundary, B is 4 tiers away; the %-gap framing only makes
-  // sense against the next rung. (1.87 - 1.675) / 1.675 * 100.
-  benchmarkGap: 11.6,
-  cisaGrade: "E",
+  benchmarkGap: 36.5,
+  cisaGrade: "C",
   financingTier: "深绿",
   cbam2026: 236_980,
   cbam2034: 9_489_100,
-  netTariff: 38,      // €/t this year
-  grossTariff: 313,   // €/t 2034
-  certPrice: 75.36,   // Q1 2026
+  netTariff: 38,
+  grossTariff: 313,
+  certPrice: 75.36,
   submissionsYtd: 12,
   tonnesCovered: 2930,
 };
 
-export const pipelineStages = [
-  { n: 1, key: "Intake", zh: "接入", model: "qwen3-vl-flash · vision", status: "done", elapsed: "812 ms" },
-  { n: 2, key: "Validate", zh: "校验", model: "deterministic · plausibility", status: "done", elapsed: "38 ms" },
-  { n: 3, key: "Classify", zh: "分类", model: "qwen-flash · CN 7318 15 88", status: "active", elapsed: "1.2 s" },
-  { n: 4, key: "Calculate", zh: "计算", model: "python · CBAM + intensity", status: "pending", elapsed: null },
-  { n: 5, key: "Score", zh: "评分", model: "rule-based · CISA + benchmark", status: "pending", elapsed: null },
-  { n: 6, key: "Generate docs", zh: "生成文件", model: "qwen-plus · EN/中文", status: "pending", elapsed: null },
-];
-
-export const passportFields = {
-  exporter: { name: company.nameEn, nameZh: company.name, id: company.registration, addr: company.location },
-  cn: "7318 15 88",
-  route: "BF-BOF (integrated)",
-  tonnage: 1240,
-  intensity: 1.87,
-  intensitySource: "Measured — installer-certified CT clamps + invoice recon (12 mo)",
-  taxable: 1240 * 1.87,
-  certQuarter: "Q1 2026",
-  certPrice: 75.36,
-  net: 38,
-  gross: 313,
-  phaseIn: 2.5,
-  hash: "sha256:9b2c…f14e",
-};
-
-export const confirmCase = {
-  reason: "Classifier confidence 61% on Flash pass; hint disagrees.",
-  hint: { cn: "7318 15 88", label: "Hex bolt, tensile ≥ 800 MPa", conf: null },
-  classifier: { cn: "7318 15 42", label: "Screw, wood/self-tapping", conf: 0.61 },
-  invoiceExcerpt: "M12×80 六角螺栓 · 高强度 8.8级 · 数量 12,400pcs",
-};
-
-export const partnerSuppliers = [
-  { name: "Supplier · Ningbo 001", grade: "B", tier: "深绿", exposure: 1420 },
-  { name: "Supplier · Suzhou 044", grade: "C", tier: "浅绿", exposure: 2930 },
-  { name: "Supplier · Tangshan 118", grade: "D", tier: "黄", exposure: 4720 },
-  { name: "Supplier · Foshan 087", grade: "A", tier: "深绿", exposure: 610 },
-  { name: "Supplier · Handan 209", grade: "D", tier: "红", exposure: 5810 },
-  { name: "Supplier · Anshan 012", grade: "B", tier: "深绿", exposure: 1180 },
+// Entry-flow router output (Section 5 in brief).
+export const routerOutput = [
+  { key: "grant",    label: "Grant 补贴",       conf: 0.88, preSelected: true,  reason: "Factory registration + metering coverage clear the entry gate." },
+  { key: "loan",     label: "Loan 贷款",        conf: 0.72, preSelected: true,  reason: "Cash-flow signals and green-project intent detected." },
+  { key: "passport", label: "EU license CBAM",  conf: 0.34, preSelected: false, reason: "No EU-bound tonnes declared this period." },
 ];

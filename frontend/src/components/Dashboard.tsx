@@ -1,110 +1,311 @@
-import { Link } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
+import { ClientOnly, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
-  AlertTriangle,
   ArrowRight,
   ArrowUpRight,
+  Banknote,
   BadgeCheck,
   ChevronRight,
+  CircleAlert,
+  CircleCheck,
+  CircleDot,
+  Factory,
   FileText,
-  Layers,
+  Leaf,
   Plus,
   Ship,
-  Trophy,
+  Zap,
 } from "lucide-react";
-import { Area, AreaChart, ResponsiveContainer } from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import type { CSSProperties } from "react";
 
-import { AppShell, PageHeader } from "@/components/AppShell";
-import { intensityTrend, kpis, submissions } from "@/lib/dashboard-data";
+import { AppShell, CitationFooter, PageHeader } from "@/components/AppShell";
+import {
+  emissionsBreakdown,
+  factorySync,
+  processMatrix,
+  ratioSliders,
+  routeGrades,
+  submissions,
+  tierGauge,
+} from "@/lib/dashboard-data";
 import { cn } from "@/lib/utils";
 
-function StatCard({
-  n, icon: Icon, label, zh, value, unit, delta, tone, footnote,
-}: {
-  n: string;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string; zh: string; value: string; unit?: string; delta?: string;
-  tone: "ember" | "carbon" | "warning" | "signal";
-  footnote?: string;
-}) {
-  const spark = intensityTrend.map((r) => ({ v: r.measured }));
-  const toneClass = { ember: "text-primary", carbon: "text-carbon", warning: "text-warning", signal: "text-signal" }[tone];
+/* ---------- Grade card (CISA pattern) ---------- */
+function GradeCard({ r }: { r: (typeof routeGrades)[number] }) {
+  const gradeTone = r.tone === "carbon" ? "text-carbon border-carbon/40 bg-carbon/10"
+                  : r.tone === "warning" ? "text-warning border-warning/40 bg-warning/10"
+                  : "text-gold border-gold/40 bg-gold/10";
+  const routeHref = r.key === "loan" ? "/loan" : r.key === "grant" ? "/grant" : "/passport";
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-      className="panel p-5 relative"
+      className="panel p-5 relative overflow-hidden"
     >
       <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
-          <Icon className={cn("h-3.5 w-3.5", toneClass)} />
-          {label}
+        <div>
+          <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">{r.label}</div>
+          <div className="text-[10px] font-mono text-muted-foreground/70">{r.zh}</div>
         </div>
-        <span className="text-[10px] font-mono text-muted-foreground/70">{n} · {zh}</span>
+        <span className={cn("inline-flex h-14 w-14 items-center justify-center rounded-xl border font-display font-bold text-[32px] leading-none", gradeTone)}>
+          {r.grade}
+        </span>
       </div>
-      <div className="mt-3 flex items-baseline gap-1.5">
-        <span className="font-mono text-[32px] font-semibold tracking-tight leading-none">{value}</span>
-        {unit && <span className="text-[12px] text-muted-foreground font-mono">{unit}</span>}
+      <div className="mt-4 text-[13px] font-medium">{r.status}</div>
+      <div className="mt-1 text-[11.5px] font-mono text-muted-foreground">{r.gapLabel}</div>
+      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+        <span className="text-[10.5px] font-mono text-muted-foreground truncate pr-2">{r.kb}</span>
+        <Link to={routeHref} className="text-primary hover:brightness-125 text-[11.5px] font-mono inline-flex items-center gap-1">
+          Open <ChevronRight className="h-3 w-3" />
+        </Link>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className={cn("text-[11.5px] font-mono", toneClass)}>{delta}</span>
-        <div className="h-6 w-20">
-          <ResponsiveContainer>
-            <AreaChart data={spark}>
-              <defs>
-                <linearGradient id={`sp-${n}`} x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor={`var(--color-${tone})`} stopOpacity={0.5} />
-                  <stop offset="100%" stopColor={`var(--color-${tone})`} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area type="monotone" dataKey="v" stroke={`var(--color-${tone})`} strokeWidth={1.5} fill={`url(#sp-${n})`} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-      {footnote && <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground">{footnote}</div>}
     </motion.div>
   );
 }
 
+/* ---------- Slider bar (grant rubric levers) ---------- */
+function RatioSlider({ s }: { s: (typeof ratioSliders)[number] }) {
+  const pct = Math.min(100, (s.value / (s.target * 1.25)) * 100);
+  const targetPct = Math.min(100, (s.target / (s.target * 1.25)) * 100);
+  const good = s.value >= s.target;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <div>
+          <span className="text-[12.5px]">{s.label}</span>
+          <span className="ml-1.5 text-[10.5px] font-mono text-muted-foreground/80">{s.zh}</span>
+        </div>
+        <div className="font-mono text-[13px]">
+          <span className={good ? "text-carbon" : "text-warning"}>{s.value.toFixed(1)}{s.unit}</span>
+          <span className="text-muted-foreground/70"> / {s.target}{s.unit}</span>
+        </div>
+      </div>
+      <div className="mt-2 h-2 rounded-full bg-muted/60 relative overflow-hidden">
+        <div className={cn("absolute inset-y-0 left-0 rounded-full", good ? "bg-carbon" : "bg-warning")} style={{ width: `${pct}%` }} />
+        <div className="absolute top-0 bottom-0 w-px bg-foreground/50" style={{ left: `${targetPct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Semicircular gauge (CISA speedometer) ---------- */
+function TierGauge() {
+  const pct = tierGauge.value / 100;
+  const angle = -90 + pct * 180; // -90 → 90
+  return (
+    <div className="relative w-[240px] h-[130px] mx-auto">
+      <svg viewBox="0 0 200 110" className="w-full h-full">
+        <defs>
+          <linearGradient id="arcG" x1="0" x2="1">
+            <stop offset="0" stopColor="var(--color-danger)" />
+            <stop offset="0.5" stopColor="var(--color-warning)" />
+            <stop offset="1" stopColor="var(--color-carbon)" />
+          </linearGradient>
+        </defs>
+        <path d="M 15 100 A 85 85 0 0 1 185 100" fill="none" stroke="url(#arcG)" strokeWidth="14" strokeLinecap="round" />
+        <g transform={`rotate(${angle} 100 100)`}>
+          <line x1="100" y1="100" x2="100" y2="30" stroke="var(--color-gold)" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="100" cy="100" r="6" fill="var(--color-gold)" />
+        </g>
+      </svg>
+      <div className="absolute inset-x-0 bottom-0 text-center">
+        <div className="font-mono text-[28px] font-semibold text-gold leading-none">{tierGauge.value}</div>
+        <div className="text-[10.5px] font-mono text-muted-foreground mt-0.5">{tierGauge.label} · {tierGauge.zh} {tierGauge.nextTier}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Process matrix ---------- */
+function MatrixCell({ s }: { s: string }) {
+  const cls = s === "ok" ? "bg-carbon/70" : s === "warn" ? "bg-warning/80" : "bg-danger/80";
+  return <span className={cn("inline-block h-3.5 w-3.5 rounded-sm", cls)} />;
+}
+
+/* ---------- 3D factory floor (client-only — three.js can't render on the server) ---------- */
+const FactoryScene = lazy(() =>
+  import("@/components/FactoryScene").then((m) => ({ default: m.FactoryScene })),
+);
+
+function FactorySceneFallback() {
+  return (
+    <div className="h-[400px] rounded-lg border border-border bg-surface/40 flex items-center justify-center">
+      <span className="text-[11px] font-mono text-muted-foreground animate-pulse">
+        Loading 3D factory floor · 工厂实时加载中…
+      </span>
+    </div>
+  );
+}
+
+/* ---------- Status pill ---------- */
 function StatusPill({ s }: { s: string }) {
   const map: Record<string, string> = {
-    Signed: "bg-carbon/10 text-carbon border-carbon/25",
-    "Needs input": "bg-warning/10 text-warning border-warning/30",
-    Running: "bg-signal/10 text-signal border-signal/30",
+    Signed: "bg-carbon/10 text-carbon border-carbon/30",
+    "Needs input": "bg-warning/10 text-warning border-warning/40",
   };
   return (
     <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10.5px] font-mono border", map[s] ?? "bg-muted text-muted-foreground border-border")}>
       {s === "Signed" && <BadgeCheck className="h-3 w-3" />}
-      {s === "Needs input" && <AlertTriangle className="h-3 w-3" />}
+      {s === "Needs input" && <CircleAlert className="h-3 w-3" />}
       {s}
     </span>
   );
 }
 
+/* ============================================================ */
+
 export function Dashboard() {
+  const routeIcon = (r: string) =>
+    r === "Loan" ? Banknote : r === "Grant" ? Leaf : Ship;
+
   return (
     <AppShell crumb="Dashboard">
       <PageHeader
         n="02"
         zh="总览"
-        title="What's done · what needs attention"
-        subtitle="Orient a returning operator — the glanceable summary, plus the fastest way back into a stalled pipeline."
+        title="One glance across all three routes"
+        subtitle="Loan, grant, and CBAM read the same way — plus a live pull from the factory that generates the data."
         right={
           <Link
-            to="/new"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-primary text-primary-foreground text-[13px] font-medium ember-glow hover:brightness-110 transition"
+            to="/entry"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-primary text-primary-foreground text-[13px] font-medium teal-glow hover:brightness-110 transition"
           >
-            <Plus className="h-4 w-4" /> New submission
+            <Plus className="h-4 w-4" /> Ask GreenGru
           </Link>
         }
       />
 
+      {/* Three route grade cards — CISA pattern */}
       <div className="grid md:grid-cols-3 gap-4">
-        <StatCard n="a" zh="提交" icon={Layers} label="Submissions YTD" value={String(kpis.submissionsYtd)} unit="of 47 lifetime" delta="+3 this month" tone="signal" footnote="6 exposed · 4 needs-input · 2 signed today" />
-        <StatCard n="b" zh="等级" icon={Trophy} label="Latest CISA grade" value={kpis.cisaGrade} unit="/ A" delta={`gap +${kpis.benchmarkGap}% to D`} tone="warning" footnote="Path P1 lifts E → D in 14 months." />
-        <StatCard n="c" zh="风险" icon={Ship} label="CBAM tier · latest" value="Exposed" delta={`€${kpis.netTariff}/t net · 2026`} tone="ember" footnote={`Gross 2034 €${kpis.grossTariff}/t — 40× escalation ahead`} />
+        {routeGrades.map((r) => <GradeCard key={r.key} r={r} />)}
       </div>
 
+      {/* Row: gauge + sliders + donut */}
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="panel p-5">
+          <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+            <CircleDot className="h-3.5 w-3.5 text-gold" /> Distance to next tier
+          </div>
+          <div className="mt-4"><TierGauge /></div>
+          <div className="mt-2 text-[11.5px] text-muted-foreground text-center">
+            32 pts to unlock <span className="text-carbon">Tier B — 深绿</span> on the grant rubric.
+          </div>
+        </div>
+
+        <div className="panel p-5 space-y-4">
+          <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+            <Zap className="h-3.5 w-3.5 text-teal" /> Grant rubric levers
+          </div>
+          {ratioSliders.map((s) => <RatioSlider key={s.key} s={s} />)}
+          <div className="pt-1 text-[11px] text-muted-foreground">
+            Solid marker = current · thin line = rubric floor. Only two levers stand between C and B.
+          </div>
+        </div>
+
+        <div className="panel p-5">
+          <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+            <CircleCheck className="h-3.5 w-3.5 text-carbon" /> Emissions source split
+          </div>
+          <div className="mt-2 h-[140px]">
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={emissionsBreakdown}
+                  dataKey="value"
+                  innerRadius={40}
+                  outerRadius={62}
+                  paddingAngle={2}
+                  strokeWidth={0}
+                >
+                  {emissionsBreakdown.map((e) => <Cell key={e.key} fill={e.color} />)}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <ul className="mt-2 space-y-1 text-[11.5px] font-mono">
+            {emissionsBreakdown.map((e) => (
+              <li key={e.key} className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-sm" style={{ background: e.color } as CSSProperties} />
+                  <span className="text-muted-foreground">{e.label}</span>
+                </span>
+                <span>{e.value}%</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Row: process matrix + live factory panel */}
+      <div className="grid lg:grid-cols-[1.15fr_1fr] gap-4">
+        <div className="panel p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+              <FileText className="h-3.5 w-3.5 text-teal" /> Process-stage matrix · 工序审计
+            </div>
+            <span className="text-[10.5px] font-mono text-muted-foreground">CISA · Operational Process Boundary</span>
+          </div>
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-[12.5px]">
+              <thead>
+                <tr className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <th className="py-2 pr-3 text-left">Stage</th>
+                  <th className="py-2 px-2 text-center">Energy</th>
+                  <th className="py-2 px-2 text-center">Intensity</th>
+                  <th className="py-2 px-2 text-center">Metering</th>
+                  <th className="py-2 px-2 text-center">Audit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {processMatrix.map((row) => (
+                  <tr key={row.stage} className="border-b border-border last:border-0">
+                    <td className="py-2.5 pr-3">
+                      <div className="font-medium">{row.stage}</div>
+                      <div className="text-[10px] font-mono text-muted-foreground">{row.zh}</div>
+                    </td>
+                    <td className="py-2.5 px-2 text-center"><MatrixCell s={row.energy} /></td>
+                    <td className="py-2.5 px-2 text-center"><MatrixCell s={row.intensity} /></td>
+                    <td className="py-2.5 px-2 text-center"><MatrixCell s={row.metering} /></td>
+                    <td className="py-2.5 px-2 text-center"><MatrixCell s={row.audit} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-3 flex items-center gap-3 text-[10.5px] font-mono text-muted-foreground">
+            <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-carbon/70" /> ok</span>
+            <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-warning/80" /> attention</span>
+            <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-danger/80" /> hotspot</span>
+          </div>
+        </div>
+
+        <div className="panel p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+              <Factory className="h-3.5 w-3.5 text-teal" /> Simulated factory floor · 工厂实时
+            </div>
+            <div className="flex items-center gap-1 text-[10.5px] font-mono text-carbon">
+              <span className="h-1.5 w-1.5 rounded-full bg-carbon pulse-dot" /> live
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <ClientOnly fallback={<FactorySceneFallback />}>
+              <Suspense fallback={<FactorySceneFallback />}>
+                <FactoryScene />
+              </Suspense>
+            </ClientOnly>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-border text-[11px] font-mono text-muted-foreground">
+            <div>Last sync <span className="text-foreground">{factorySync.lastSync}</span> · deterministic threshold-watch, no model call.</div>
+            <div className="mt-1">Feeds → {factorySync.downstream.join(" · ")}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Submissions */}
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}
         className="panel p-5"
@@ -112,9 +313,9 @@ export function Dashboard() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-              <FileText className="h-3.5 w-3.5 text-signal" /> Submission history
+              <FileText className="h-3.5 w-3.5 text-teal" /> Your submissions
             </div>
-            <h3 className="mt-1 text-base font-semibold tracking-tight">Every row opens its Results screen</h3>
+            <h3 className="mt-1 text-base font-semibold tracking-tight">One page per confirmed route</h3>
           </div>
           <span className="text-[11px] font-mono text-muted-foreground">{submissions.length} of 47</span>
         </div>
@@ -122,67 +323,75 @@ export function Dashboard() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="text-left text-[10.5px] font-mono uppercase tracking-wider text-muted-foreground border-b border-border">
-                <th className="py-2 pr-3">CN code</th>
-                <th className="py-2 pr-3">Product</th>
+                <th className="py-2 pr-3">Route</th>
+                <th className="py-2 pr-3">Descriptor</th>
                 <th className="py-2 pr-3 text-right">Tonnes</th>
-                <th className="py-2 pr-3">CBAM tier</th>
-                <th className="py-2 pr-3">CISA</th>
+                <th className="py-2 pr-3">Tier</th>
+                <th className="py-2 pr-3">Grade</th>
                 <th className="py-2 pr-3">Status</th>
                 <th className="py-2 pr-3">Date</th>
                 <th className="py-2 pr-0"></th>
               </tr>
             </thead>
             <tbody className="font-mono">
-              {submissions.map((s) => (
-                <tr key={s.id} className="border-b border-border last:border-0 hover:bg-surface-2/60 transition group cursor-pointer">
-                  <td className="py-3 pr-3 text-foreground">{s.cn}</td>
-                  <td className="py-3 pr-3 text-muted-foreground font-sans">{s.desc}</td>
-                  <td className="py-3 pr-3 text-right">{s.tons.toLocaleString()}</td>
-                  <td className="py-3 pr-3">
-                    <span className={cn(
-                      "text-[10.5px] font-mono px-1.5 py-0.5 rounded border",
-                      s.cbamTier === "Exposed" && "bg-primary/10 text-primary border-primary/25",
-                      s.cbamTier === "High" && "bg-danger/10 text-danger border-danger/25",
-                      s.cbamTier === "Marginal" && "bg-warning/10 text-warning border-warning/30",
-                      s.cbamTier === "De minimis?" && "bg-carbon/10 text-carbon border-carbon/25",
-                    )}>{s.cbamTier}</span>
-                  </td>
-                  <td className="py-3 pr-3">
-                    <span className={cn(
-                      "inline-flex h-6 w-6 items-center justify-center rounded font-semibold text-[11px]",
-                      s.grade === "C" && "bg-warning/15 text-warning",
-                      s.grade === "D" && "bg-danger/15 text-danger",
-                      s.grade === "B" && "bg-carbon/15 text-carbon",
-                    )}>{s.grade}</span>
-                  </td>
-                  <td className="py-3 pr-3">
-                    <Link to={s.status === "Needs input" ? "/confirm" : "/results"}>
-                      <StatusPill s={s.status} />
-                    </Link>
-                  </td>
-                  <td className="py-3 pr-3 text-muted-foreground">{s.date}</td>
-                  <td className="py-3 pr-0 text-right">
-                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition inline" />
-                  </td>
-                </tr>
-              ))}
+              {submissions.map((s) => {
+                const RIcon = routeIcon(s.route);
+                const href = s.route === "Loan" ? "/loan" : s.route === "Grant" ? "/grant" : "/passport";
+                return (
+                  <tr key={s.id} className="border-b border-border last:border-0 hover:bg-surface-2/60 transition group cursor-pointer">
+                    <td className="py-3 pr-3">
+                      <span className="inline-flex items-center gap-1.5 text-[11.5px] px-1.5 py-0.5 rounded border border-border bg-surface">
+                        <RIcon className="h-3 w-3 text-teal" /> {s.route}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-3 text-muted-foreground font-sans">
+                      {s.desc}
+                      {s.cn !== "—" && <span className="ml-2 text-[10.5px] font-mono text-muted-foreground/70">CN {s.cn}</span>}
+                    </td>
+                    <td className="py-3 pr-3 text-right">{s.tons ? s.tons.toLocaleString() : "—"}</td>
+                    <td className="py-3 pr-3">
+                      <span className={cn(
+                        "text-[10.5px] font-mono px-1.5 py-0.5 rounded border",
+                        s.tier === "Exposed" && "bg-warning/10 text-warning border-warning/30",
+                        s.tier === "High" && "bg-danger/10 text-danger border-danger/30",
+                        s.tier === "Marginal" && "bg-warning/10 text-warning border-warning/30",
+                        s.tier === "Low-risk" && "bg-carbon/10 text-carbon border-carbon/30",
+                        s.tier === "Tier 2" && "bg-teal/10 text-teal border-teal/30",
+                      )}>{s.tier}</span>
+                    </td>
+                    <td className="py-3 pr-3">
+                      <span className={cn(
+                        "inline-flex h-6 w-6 items-center justify-center rounded font-semibold text-[11px]",
+                        s.grade === "B" && "bg-carbon/15 text-carbon",
+                        s.grade === "C" && "bg-gold/15 text-gold",
+                        s.grade === "D" && "bg-danger/15 text-danger",
+                      )}>{s.grade}</span>
+                    </td>
+                    <td className="py-3 pr-3">
+                      <Link to={href}><StatusPill s={s.status} /></Link>
+                    </td>
+                    <td className="py-3 pr-3 text-muted-foreground">{s.date}</td>
+                    <td className="py-3 pr-0 text-right">
+                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition inline" />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
         <div className="mt-4 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-          <span>Empty state · first-time operator: <Link to="/new" className="text-primary hover:underline">Start your first submission →</Link></span>
+          <span>First time? <Link to="/entry" className="text-primary hover:underline">Ask GreenGru →</Link></span>
           <Link to="/pipeline" className="flex items-center gap-1 hover:text-foreground transition">
             View live pipeline <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
       </motion.div>
 
-      <footer className="pt-2 flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-mono text-muted-foreground border-t border-border/60">
-        <div>Every regulated number traceable to cited source · IR (EU) 2025/2621 · Reg (EU) 2023/956 · CISA · PBOC · 工信部联节〔2026〕13号</div>
-        <div className="flex items-center gap-1.5">
-          <ArrowUpRight className="h-3 w-3" /> Distributed via Baowu / Ansteel supplier program
-        </div>
-      </footer>
+      <CitationFooter extra="PBOC 2025 Green Finance Catalogue · GB/T 36132" />
+      <div className="pb-2 flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+        <ArrowUpRight className="h-3 w-3" /> Distributed via Baowu / Ansteel supplier program
+      </div>
     </AppShell>
   );
 }
