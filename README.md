@@ -124,7 +124,23 @@ Vite will print the local URL to open in the browser, usually
 `http://localhost:5173` or `http://localhost:8080`.
 
 If the app needs API settings, add them to a local `.env` or `.env.local` file
-in `frontendnew/` using the same variable names the app expects.
+in `frontend/` using the same variable names the app expects.
+
+### Deploy frontend to Vercel
+
+This is a **monorepo**: the TanStack Start app lives in `frontend/`, not the
+repo root. A generic Vercel `404: NOT_FOUND` almost always means Vercel built
+the wrong directory or used the Cloudflare Nitro preset instead of Vercel's.
+
+**Option A (recommended):** Vercel project → Settings → General → **Root
+Directory** = `frontend`, Framework Preset = **TanStack Start**, then redeploy.
+
+**Option B:** Leave Root Directory empty; the repo-root `vercel.json` runs
+`cd frontend && npm install && npm run build` for you.
+
+The backend (`backend/`) is **not** deployed by Vercel. Host it separately
+(Render, Railway, Fly.io, etc.) and set the frontend env var for your API URL
+in the Vercel dashboard before going live.
 
 ### Try it end-to-end
 
@@ -164,7 +180,7 @@ for the full list and what to do about each:
 
 ## Monorepo layout
 
-- `frontendnew/` — Vite + React + TypeScript + Tailwind + TanStack
+- `frontend/` — TanStack Start + Vite + React + TypeScript + Tailwind
 - `backend/` — Python 3.11+ + FastAPI
 - `supabase/migrations/` — SQL schema (source of truth; `backend/app/models_orm.py` mirrors it by hand)
 - `firmware/` — ESP32/EmonLib stub (optional, decoupled — see skill for why)
