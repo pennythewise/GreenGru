@@ -10,29 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SigninRouteImport } from './routes/signin'
-import { Route as ResultsRouteImport } from './routes/results'
-import { Route as PlanRouteImport } from './routes/plan'
 import { Route as PipelineRouteImport } from './routes/pipeline'
 import { Route as PassportRouteImport } from './routes/passport'
-import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as NewRouteImport } from './routes/new'
-import { Route as FinancingRouteImport } from './routes/financing'
-import { Route as ConfirmRouteImport } from './routes/confirm'
+import { Route as LoanRouteImport } from './routes/loan'
+import { Route as GrantRouteImport } from './routes/grant'
+import { Route as EntryRouteImport } from './routes/entry'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SigninRoute = SigninRouteImport.update({
   id: '/signin',
   path: '/signin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResultsRoute = ResultsRouteImport.update({
-  id: '/results',
-  path: '/results',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlanRoute = PlanRouteImport.update({
-  id: '/plan',
-  path: '/plan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PipelineRoute = PipelineRouteImport.update({
@@ -45,24 +33,24 @@ const PassportRoute = PassportRouteImport.update({
   path: '/passport',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PartnerRoute = PartnerRouteImport.update({
-  id: '/partner',
-  path: '/partner',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const NewRoute = NewRouteImport.update({
   id: '/new',
   path: '/new',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FinancingRoute = FinancingRouteImport.update({
-  id: '/financing',
-  path: '/financing',
+const LoanRoute = LoanRouteImport.update({
+  id: '/loan',
+  path: '/loan',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConfirmRoute = ConfirmRouteImport.update({
-  id: '/confirm',
-  path: '/confirm',
+const GrantRoute = GrantRouteImport.update({
+  id: '/grant',
+  path: '/grant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntryRoute = EntryRouteImport.update({
+  id: '/entry',
+  path: '/entry',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -73,90 +61,76 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/confirm': typeof ConfirmRoute
-  '/financing': typeof FinancingRoute
+  '/entry': typeof EntryRoute
+  '/grant': typeof GrantRoute
+  '/loan': typeof LoanRoute
   '/new': typeof NewRoute
-  '/partner': typeof PartnerRoute
   '/passport': typeof PassportRoute
   '/pipeline': typeof PipelineRoute
-  '/plan': typeof PlanRoute
-  '/results': typeof ResultsRoute
   '/signin': typeof SigninRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/confirm': typeof ConfirmRoute
-  '/financing': typeof FinancingRoute
+  '/entry': typeof EntryRoute
+  '/grant': typeof GrantRoute
+  '/loan': typeof LoanRoute
   '/new': typeof NewRoute
-  '/partner': typeof PartnerRoute
   '/passport': typeof PassportRoute
   '/pipeline': typeof PipelineRoute
-  '/plan': typeof PlanRoute
-  '/results': typeof ResultsRoute
   '/signin': typeof SigninRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/confirm': typeof ConfirmRoute
-  '/financing': typeof FinancingRoute
+  '/entry': typeof EntryRoute
+  '/grant': typeof GrantRoute
+  '/loan': typeof LoanRoute
   '/new': typeof NewRoute
-  '/partner': typeof PartnerRoute
   '/passport': typeof PassportRoute
   '/pipeline': typeof PipelineRoute
-  '/plan': typeof PlanRoute
-  '/results': typeof ResultsRoute
   '/signin': typeof SigninRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/confirm'
-    | '/financing'
+    | '/entry'
+    | '/grant'
+    | '/loan'
     | '/new'
-    | '/partner'
     | '/passport'
     | '/pipeline'
-    | '/plan'
-    | '/results'
     | '/signin'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/confirm'
-    | '/financing'
+    | '/entry'
+    | '/grant'
+    | '/loan'
     | '/new'
-    | '/partner'
     | '/passport'
     | '/pipeline'
-    | '/plan'
-    | '/results'
     | '/signin'
   id:
     | '__root__'
     | '/'
-    | '/confirm'
-    | '/financing'
+    | '/entry'
+    | '/grant'
+    | '/loan'
     | '/new'
-    | '/partner'
     | '/passport'
     | '/pipeline'
-    | '/plan'
-    | '/results'
     | '/signin'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ConfirmRoute: typeof ConfirmRoute
-  FinancingRoute: typeof FinancingRoute
+  EntryRoute: typeof EntryRoute
+  GrantRoute: typeof GrantRoute
+  LoanRoute: typeof LoanRoute
   NewRoute: typeof NewRoute
-  PartnerRoute: typeof PartnerRoute
   PassportRoute: typeof PassportRoute
   PipelineRoute: typeof PipelineRoute
-  PlanRoute: typeof PlanRoute
-  ResultsRoute: typeof ResultsRoute
   SigninRoute: typeof SigninRoute
 }
 
@@ -167,20 +141,6 @@ declare module '@tanstack/react-router' {
       path: '/signin'
       fullPath: '/signin'
       preLoaderRoute: typeof SigninRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/results': {
-      id: '/results'
-      path: '/results'
-      fullPath: '/results'
-      preLoaderRoute: typeof ResultsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/plan': {
-      id: '/plan'
-      path: '/plan'
-      fullPath: '/plan'
-      preLoaderRoute: typeof PlanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pipeline': {
@@ -197,13 +157,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PassportRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/partner': {
-      id: '/partner'
-      path: '/partner'
-      fullPath: '/partner'
-      preLoaderRoute: typeof PartnerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/new': {
       id: '/new'
       path: '/new'
@@ -211,18 +164,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/financing': {
-      id: '/financing'
-      path: '/financing'
-      fullPath: '/financing'
-      preLoaderRoute: typeof FinancingRouteImport
+    '/loan': {
+      id: '/loan'
+      path: '/loan'
+      fullPath: '/loan'
+      preLoaderRoute: typeof LoanRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/confirm': {
-      id: '/confirm'
-      path: '/confirm'
-      fullPath: '/confirm'
-      preLoaderRoute: typeof ConfirmRouteImport
+    '/grant': {
+      id: '/grant'
+      path: '/grant'
+      fullPath: '/grant'
+      preLoaderRoute: typeof GrantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entry': {
+      id: '/entry'
+      path: '/entry'
+      fullPath: '/entry'
+      preLoaderRoute: typeof EntryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -237,14 +197,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ConfirmRoute: ConfirmRoute,
-  FinancingRoute: FinancingRoute,
+  EntryRoute: EntryRoute,
+  GrantRoute: GrantRoute,
+  LoanRoute: LoanRoute,
   NewRoute: NewRoute,
-  PartnerRoute: PartnerRoute,
   PassportRoute: PassportRoute,
   PipelineRoute: PipelineRoute,
-  PlanRoute: PlanRoute,
-  ResultsRoute: ResultsRoute,
   SigninRoute: SigninRoute,
 }
 export const routeTree = rootRouteImport

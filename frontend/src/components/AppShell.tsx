@@ -1,38 +1,33 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { motion } from "motion/react";
 import {
   Banknote,
   Building2,
-  ClipboardCheck,
   FileCheck2,
-  Flame,
   Gauge,
-  Globe2,
+  Leaf,
   LogOut,
+  MessagesSquare,
   Radio,
-  ScrollText,
-  Sparkles,
   Upload,
   Workflow,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 const nav = [
-  { to: "/", icon: Gauge, label: "Dashboard", zh: "总览", n: "02" },
-  { to: "/new", icon: Upload, label: "New submission", zh: "新建", n: "03" },
-  { to: "/pipeline", icon: Workflow, label: "Pipeline", zh: "流水线", n: "04" },
-  { to: "/results", icon: ClipboardCheck, label: "Results", zh: "评分", n: "05" },
-  { to: "/passport", icon: FileCheck2, label: "CBAM passport", zh: "碳护照", n: "06" },
-  { to: "/financing", icon: Banknote, label: "Financing", zh: "融资", n: "07" },
-  { to: "/plan", icon: Sparkles, label: "Action plan", zh: "行动方案", n: "08" },
-  { to: "/confirm", icon: ScrollText, label: "Manual confirm", zh: "人工确认", n: "09" },
-  { to: "/partner", icon: Globe2, label: "Partner view", zh: "宝武视图", n: "10" },
+  { to: "/",         icon: Gauge,          label: "Dashboard",      zh: "总览",     n: "02" },
+  { to: "/entry",    icon: MessagesSquare, label: "Ask GreenGru",   zh: "入口",     n: "03" },
+  { to: "/new",      icon: Upload,         label: "New submission", zh: "新建",     n: "04" },
+  { to: "/pipeline", icon: Workflow,       label: "Pipeline",       zh: "流水线",   n: "05" },
+  { to: "/passport", icon: FileCheck2,     label: "EU license",     zh: "碳护照",   n: "06" },
+  { to: "/loan",     icon: Banknote,       label: "Loan",           zh: "贷款",     n: "07" },
+  { to: "/grant",    icon: Leaf,           label: "Grant",          zh: "补贴",     n: "08" },
 ] as const;
 
 export function LangToggle() {
   return (
-    <div className="inline-flex items-center rounded-md border border-border bg-card p-0.5 text-[11px] font-mono">
+    <div className="inline-flex items-center rounded-md border border-border bg-surface p-0.5 text-[11px] font-mono">
       <button className="px-2 py-0.5 rounded-sm bg-foreground text-background">EN</button>
       <button className="px-2 py-0.5 rounded-sm text-muted-foreground hover:text-foreground">中文</button>
     </div>
@@ -46,13 +41,14 @@ export function Sidebar() {
       <Link to="/" className="px-5 py-5 border-b border-border block">
         <div className="flex items-center gap-2.5">
           <div className="relative">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-danger flex items-center justify-center ember-glow">
-              <Flame className="h-4.5 w-4.5 text-primary-foreground" strokeWidth={2.4} />
+            <div className="h-9 w-9 rounded-lg flex items-center justify-center teal-glow"
+                 style={{ background: "var(--gradient-teal)" }}>
+              <span className="font-display text-[18px] font-bold text-[oklch(0.14_0.02_220)]">G</span>
             </div>
             <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-carbon pulse-dot" />
           </div>
           <div>
-            <div className="text-[13px] font-semibold tracking-tight leading-tight">Carbon Passport</div>
+            <div className="text-[13px] font-semibold tracking-tight leading-tight">GreenGru</div>
             <div className="text-[10.5px] text-muted-foreground font-mono tracking-wider">MVP · v1.0</div>
           </div>
         </div>
@@ -69,7 +65,7 @@ export function Sidebar() {
               className={cn(
                 "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] transition-colors group",
                 active
-                  ? "bg-primary/10 text-foreground border border-primary/25"
+                  ? "bg-primary/10 text-foreground border border-primary/30"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface-2 border border-transparent",
               )}
             >
@@ -99,7 +95,7 @@ export function Sidebar() {
 
 export function TopBar({ crumb }: { crumb?: string }) {
   return (
-    <header className="flex items-center justify-between gap-4 px-6 py-3.5 border-b border-border bg-background/85 backdrop-blur-xl sticky top-0 z-20">
+    <header className="flex items-center justify-between gap-4 px-6 py-3.5 border-b border-border bg-background/70 backdrop-blur-xl sticky top-0 z-20">
       <div className="flex items-center gap-3 min-w-0">
         <div className="hidden md:flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
           <Building2 className="h-3.5 w-3.5" />
@@ -110,7 +106,7 @@ export function TopBar({ crumb }: { crumb?: string }) {
       </div>
       <div className="flex items-center gap-2.5">
         <LangToggle />
-        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-card text-[11px] font-mono text-muted-foreground">
+        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-surface text-[11px] font-mono text-muted-foreground">
           <Radio className="h-3 w-3 text-carbon" /> qc-ops@hengfeng.cn
         </div>
         <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-2 transition text-[12px]">
@@ -136,10 +132,19 @@ export function PageHeader({ n, title, zh, subtitle, right }: { n: string; title
           <span>{zh}</span>
         </div>
         <h1 className="mt-1 text-[26px] md:text-[30px] font-semibold tracking-tight leading-[1.1]">{title}</h1>
-        <p className="mt-1.5 text-[13.5px] text-muted-foreground max-w-2xl">{subtitle}</p>
+        <p className="mt-1.5 text-[13.5px] text-muted-foreground max-w-2xl italic">{subtitle}</p>
       </div>
       {right}
     </motion.div>
+  );
+}
+
+export function CitationFooter({ extra }: { extra?: string }) {
+  return (
+    <footer className="pt-2 flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-mono text-muted-foreground border-t border-border/60">
+      <div>Cited: IR (EU) 2025/2621 · Reg (EU) 2023/956 · CISA · PBOC · 工信部联节〔2026〕13号{extra ? ` · ${extra}` : ""}</div>
+      <div>© GreenGru · Beijing-region infra</div>
+    </footer>
   );
 }
 
