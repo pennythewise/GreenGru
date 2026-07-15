@@ -4,9 +4,9 @@
 // grouped by invoice party, plus the classified CN code and the calculation
 // method it selects. Read-only until the operator clicks Edit (top right) —
 // if they never touch it, the extracted values are what gets submitted as-is.
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
-import { Check, FileText, Loader2, Pencil, ShieldCheck, X } from "lucide-react";
+import { Check, ChevronDown, FileText, Loader2, Pencil, ShieldCheck, X } from "lucide-react";
 
 import type { ClassificationPreview, InvoiceData, OcrPreviewResponse } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -50,6 +50,75 @@ function PartyBlock({ title, zh, party, editing, onChange }: {
   );
 }
 
+function CardShell({
+  fileName,
+  fileSizeLabel,
+  expanded,
+  onToggleExpand,
+  onRemove,
+  locked,
+  status,
+  summary,
+  children,
+}: {
+  fileName: string;
+  fileSizeLabel: string;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onRemove: () => void;
+  locked?: boolean;
+  status: "loading" | "error" | "ready";
+  summary?: string;
+  children?: ReactNode;
+}) {
+  const statusTone =
+    status === "loading" ? "text-primary" : status === "error" ? "text-danger" : "text-carbon";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border border-border bg-surface/40 overflow-hidden"
+    >
+      <div className="flex items-start gap-2.5 p-3">
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Collapse document" : "Expand document"}
+          className="mt-0.5 h-8 w-8 rounded-lg border border-border bg-surface flex items-center justify-center shrink-0 hover:bg-surface-2 transition"
+        >
+          <ChevronDown className={cn("h-4 w-4 transition-transform", expanded && "rotate-180")} />
+        </button>
+        <div className="h-8 w-8 rounded-lg bg-carbon/15 text-carbon flex items-center justify-center shrink-0 mt-0.5">
+          {status === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+        </div>
+        <button type="button" onClick={onToggleExpand} className="min-w-0 flex-1 text-left">
+          <div className="text-[13px] font-medium truncate">{fileName}</div>
+          <div className="text-[11px] font-mono text-muted-foreground truncate">
+            {fileSizeLabel}
+            {summary && <> · {summary}</>}
+          </div>
+          <div className={cn("mt-0.5 text-[10.5px] font-mono uppercase tracking-wider", statusTone)}>
+            {status === "loading" ? "OCR running…" : status === "error" ? "OCR failed" : "Ready"}
+          </div>
+        </button>
+        {!locked && (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="Remove file"
+            className="h-7 w-7 rounded-md border border-border bg-surface flex items-center justify-center hover:bg-surface-2 transition shrink-0"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {expanded && children && <div className="px-4 pb-4 pt-0 border-t border-border/60">{children}</div>}
+    </motion.div>
+  );
+}
+
 export function ExtractedInvoiceCard({
   fileName,
   fileSizeLabel,
@@ -58,6 +127,8 @@ export function ExtractedInvoiceCard({
   loading = false,
   error = null,
   preview = null,
+  expanded = true,
+  onToggleExpand,
 }: {
   fileName: string;
   fileSizeLabel: string;
@@ -66,6 +137,8 @@ export function ExtractedInvoiceCard({
   loading?: boolean;
   error?: string | null;
   preview?: OcrPreviewResponse | null;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [data, setData] = useState<InvoiceData | null>(preview?.invoice ?? null);
@@ -80,70 +153,88 @@ export function ExtractedInvoiceCard({
     }
   }, [preview]);
 
+  const toggle = onToggleExpand ?? (() => {});
+
   if (loading) {
     return (
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-3 rounded-xl border border-border bg-surface/40 p-8 text-center">
-        <Loader2 className="h-8 w-8 text-primary mx-auto animate-spin" />
-        <div className="mt-3 text-[14px] font-medium">Running OCR intake…</div>
-        <div className="mt-1 text-[12px] text-muted-foreground font-mono">{fileName}</div>
-        <div className="mt-2 text-[11px] text-muted-foreground">chineseocr → field parse → CN classify · PDFs also embed via text-embedding-v4</div>
-      </motion.div>
+      <CardShell
+        fileName={fileName}
+        fileSizeLabel={fileSizeLabel}
+        expanded={expanded}
+        onToggleExpand={toggle}
+        onRemove={onRemove}
+        locked={locked}
+        status="loading"
+        summary="chineseocr → classify"
+      >
+        <div className="py-6 text-center">
+          <Loader2 className="h-7 w-7 text-primary mx-auto animate-spin" />
+          <div className="mt-3 text-[13px] font-medium">Running OCR intake…</div>
+          <div className="mt-2 text-[11px] text-muted-foreground">chineseocr → field parse → CN classify · PDFs also embed via text-embedding-v4</div>
+        </div>
+      </CardShell>
     );
   }
 
   if (error) {
     return (
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-3 rounded-xl border border-danger/40 bg-danger/5 p-4">
-        <div className="text-[13.5px] font-medium text-danger">OCR preview failed</div>
-        <div className="mt-1 text-[12px] text-muted-foreground">{error}</div>
-        <button type="button" onClick={onRemove} className="mt-3 text-[12px] font-mono text-primary hover:underline">Remove and try again</button>
-      </motion.div>
+      <CardShell
+        fileName={fileName}
+        fileSizeLabel={fileSizeLabel}
+        expanded={expanded}
+        onToggleExpand={toggle}
+        onRemove={onRemove}
+        locked={locked}
+        status="error"
+      >
+        <div className="py-3">
+          <div className="text-[13px] font-medium text-danger">OCR preview failed</div>
+          <div className="mt-1 text-[12px] text-muted-foreground">{error}</div>
+        </div>
+      </CardShell>
     );
   }
 
   if (!data || !classification) return null;
 
+  const summary = `CN ${classification.cnCode} · ${preview?.ocr_source ?? "ready"}`;
+
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-3 rounded-xl border border-carbon/40 bg-carbon/[0.04] p-4">
+    <CardShell
+      fileName={fileName}
+      fileSizeLabel={fileSizeLabel}
+      expanded={expanded}
+      onToggleExpand={toggle}
+      onRemove={onRemove}
+      locked={locked}
+      status="ready"
+      summary={summary}
+    >
+      <div className="pt-3">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5 min-w-0">
-          <div className="h-8 w-8 rounded-lg bg-carbon/15 text-carbon flex items-center justify-center shrink-0 mt-0.5">
-            <FileText className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-[13.5px] font-medium">Extracted info with classified result</div>
-            <div className="text-[11px] font-mono text-muted-foreground">提取信息与分类结果 · {fileName} · {fileSizeLabel}</div>
-            {preview && (
-              <div className="mt-1 text-[10.5px] font-mono text-muted-foreground">
-                OCR: {preview.ocr_source}
-                {preview.mock_fields.length > 0 && <> · mock fill: {preview.mock_fields[0]}</>}
-                {preview.pdf_embedding?.embedded && <> · PDF embedded ({preview.pdf_embedding.chunk_count} chunks → {preview.pdf_embedding.storage})</>}
-              </div>
-            )}
-          </div>
+        <div className="min-w-0">
+          <div className="text-[13px] font-medium">Extracted info with classified result</div>
+          <div className="text-[11px] font-mono text-muted-foreground">提取信息与分类结果</div>
+          {preview && (
+            <div className="mt-1 text-[10.5px] font-mono text-muted-foreground">
+              OCR: {preview.ocr_source}
+              {preview.mock_fields.length > 0 && <> · mock fill: {preview.mock_fields[0]}</>}
+              {preview.pdf_embedding?.embedded && <> · PDF embedded ({preview.pdf_embedding.chunk_count} chunks → {preview.pdf_embedding.storage})</>}
+            </div>
+          )}
         </div>
         {!locked && (
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => setEditing((e) => !e)}
-              className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border text-[11.5px] font-medium transition",
-                editing ? "border-carbon/50 bg-carbon/15 text-carbon" : "border-border bg-surface hover:bg-surface-2",
-              )}
-            >
-              {editing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-              {editing ? "Done" : "Edit"}
-            </button>
-            <button
-              type="button"
-              onClick={onRemove}
-              aria-label="Remove file"
-              className="h-7 w-7 rounded-md border border-border bg-surface flex items-center justify-center hover:bg-surface-2 transition"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setEditing((e) => !e)}
+            className={cn(
+              "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border text-[11.5px] font-medium transition shrink-0",
+              editing ? "border-carbon/50 bg-carbon/15 text-carbon" : "border-border bg-surface hover:bg-surface-2",
+            )}
+          >
+            {editing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+            {editing ? "Done" : "Edit"}
+          </button>
         )}
       </div>
 
@@ -229,6 +320,7 @@ export function ExtractedInvoiceCard({
         <span>复核 {data.reviewer}</span>
         <span>开票人 {data.issuer}</span>
       </div>
-    </motion.div>
+      </div>
+    </CardShell>
   );
 }

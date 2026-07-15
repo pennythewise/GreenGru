@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   FileUp,
   Info,
+  Plus,
   Radio,
   Upload,
 } from "lucide-react";
@@ -25,40 +26,94 @@ export const Route = createFileRoute("/new")({
   component: NewSubmission,
 });
 
+type UploadedDocument = {
+  id: string;
+  file: File;
+  ocrLoading: boolean;
+  ocrPreview: OcrPreviewResponse | null;
+  ocrError: string | null;
+  expanded: boolean;
+};
+
+function newDocId() {
+  return crypto.randomUUID();
+}
+
 function NewSubmission() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [authorized, setAuthorized] = useState(false);
-  const [ocrLoading, setOcrLoading] = useState(false);
-  const [ocrPreview, setOcrPreview] = useState<OcrPreviewResponse | null>(null);
-  const [ocrError, setOcrError] = useState<string | null>(null);
 
-  const processFile = useCallback(async (next: File) => {
-    setFile(next);
-    setOcrPreview(null);
-    setOcrError(null);
-    setOcrLoading(true);
-    try {
-      const result = await previewOcr(next);
-      setOcrPreview(result);
-    } catch (err) {
-      setOcrError(err instanceof Error ? err.message : "OCR preview failed");
-    } finally {
-      setOcrLoading(false);
-    }
+  const processFiles = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+
+    const entries: UploadedDocument[] = files.map((file, i) => ({
+      id: newDocId(),
+      file,
+      ocrLoading: true,
+      ocrPreview: null,
+      ocrError: null,
+      expanded: i === files.length - 1,
+    }));
+
+    setDocuments((prev) => {
+      const collapseExisting = prev.map((d) => ({ ...d, expanded: false }));
+      return [...collapseExisting, ...entries];
+    });
+
+    await Promise.all(
+      entries.map(async (entry) => {
+        try {
+          const result = await previewOcr(entry.file);
+          setDocuments((prev) =>
+            prev.map((d) =>
+              d.id === entry.id ? { ...d, ocrLoading: false, ocrPreview: result, ocrError: null } : d,
+            ),
+          );
+        } catch (err) {
+          setDocuments((prev) =>
+            prev.map((d) =>
+              d.id === entry.id
+                ? {
+                    ...d,
+                    ocrLoading: false,
+                    ocrPreview: null,
+                    ocrError: err instanceof Error ? err.message : "OCR preview failed",
+                  }
+                : d,
+            ),
+          );
+        }
+      }),
+    );
   }, []);
 
-  const clearFile = useCallback(() => {
-    setFile(null);
-    setOcrPreview(null);
-    setOcrError(null);
-    setOcrLoading(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  const removeDocument = useCallback((id: string) => {
+    setDocuments((prev) => prev.filter((d) => d.id !== id));
   }, []);
 
-  const canSubmit = !!file && !!ocrPreview && !ocrLoading && !ocrError && !submitted;
+  const toggleDocument = useCallback((id: string) => {
+    setDocuments((prev) => prev.map((d) => (d.id === id ? { ...d, expanded: !d.expanded } : d)));
+  }, []);
+
+  const pickFiles = useCallback(
+    (fileList: FileList | null | undefined) => {
+      if (!fileList?.length) return;
+      void processFiles(Array.from(fileList));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    [processFiles],
+  );
+
+  const anyLoading = documents.some((d) => d.ocrLoading);
+  const readyDocs = documents.filter((d) => d.ocrPreview && !d.ocrError);
+  const hasErrors = documents.some((d) => d.ocrError);
+  const canSubmit =
+    documents.length > 0 && !anyLoading && readyDocs.length > 0 && !hasErrors && !submitted;
+
+  const totalTonnage = readyDocs.reduce((sum, d) => sum + (d.ocrPreview?.production_volume_tonnes ?? 0), 0);
 
   return (
     <AppShell crumb="New submission">
@@ -66,67 +121,94 @@ function NewSubmission() {
         n="04"
         zh="新建"
         title="Get real data in — with guardrails"
-        subtitle="Upload a document — obviously-wrong uploads get rejected before any paid model call runs."
+        subtitle="Upload documents — obviously-wrong uploads get rejected before any paid model call runs."
       />
 
       <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5">
         <div className="space-y-5">
           {/* 1 · Documents */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="panel p-5">
-            <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-              <FileUp className="h-3.5 w-3.5 text-teal" /> 1 · Documents
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+                <FileUp className="h-3.5 w-3.5 text-teal" /> 1 · Documents
+              </div>
+              {documents.length > 0 && (
+                <span className="text-[10.5px] font-mono text-muted-foreground">
+                  {documents.length} file{documents.length === 1 ? "" : "s"} · {readyDocs.length} ready
+                </span>
+              )}
             </div>
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               className="hidden"
               accept=".pdf,.csv,.xlsx,.png,.jpg,.jpeg"
-              onChange={(e) => {
-                const picked = e.target.files?.[0];
-                if (picked) void processFile(picked);
-              }}
+              onChange={(e) => pickFiles(e.target.files)}
             />
-            {file ? (
-              <ExtractedInvoiceCard
-                fileName={file.name}
-                fileSizeLabel={`${(file.size / 1024).toFixed(0)} KB`}
-                locked={submitted}
-                loading={ocrLoading}
-                error={ocrError}
-                preview={ocrPreview}
-                onRemove={clearFile}
-              />
-            ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  const dropped = e.dataTransfer.files?.[0];
-                  if (dropped) void processFile(dropped);
-                }}
-                className={cn(
-                  "mt-3 rounded-xl border-2 border-dashed p-8 text-center transition cursor-pointer",
-                  dragOver ? "border-primary bg-primary/[0.08]" : "border-primary/30 bg-primary/[0.04] hover:bg-primary/[0.08]",
-                )}
-              >
-                <Upload className="h-8 w-8 text-primary mx-auto" strokeWidth={1.6} />
-                <div className="mt-3 text-[14px] font-medium">Drop invoices / photos / PDF</div>
-                <div className="mt-1 text-[12px] text-muted-foreground">or upload CSV / XLSX — structured files skip the vision model entirely</div>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                  className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-[12px] font-medium hover:bg-surface-2 transition"
-                >
-                  Browse files
-                </button>
+
+            {documents.length > 0 && (
+              <div className="mt-3 space-y-2.5">
+                {documents.map((doc) => (
+                  <ExtractedInvoiceCard
+                    key={doc.id}
+                    fileName={doc.file.name}
+                    fileSizeLabel={`${(doc.file.size / 1024).toFixed(0)} KB`}
+                    locked={submitted}
+                    loading={doc.ocrLoading}
+                    error={doc.ocrError}
+                    preview={doc.ocrPreview}
+                    expanded={doc.expanded}
+                    onToggleExpand={() => toggleDocument(doc.id)}
+                    onRemove={() => removeDocument(doc.id)}
+                  />
+                ))}
               </div>
             )}
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                pickFiles(e.dataTransfer.files);
+              }}
+              className={cn(
+                "rounded-xl border-2 border-dashed text-center transition cursor-pointer",
+                documents.length > 0 ? "mt-3 p-4" : "mt-3 p-8",
+                dragOver ? "border-primary bg-primary/[0.08]" : "border-primary/30 bg-primary/[0.04] hover:bg-primary/[0.08]",
+              )}
+            >
+              {documents.length > 0 ? (
+                <>
+                  <Plus className="h-5 w-5 text-primary mx-auto" strokeWidth={1.6} />
+                  <div className="mt-2 text-[13px] font-medium">Add more invoices / PDFs</div>
+                  <div className="mt-1 text-[11.5px] text-muted-foreground">Drop files here or browse — each upload runs OCR separately</div>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-8 w-8 text-primary mx-auto" strokeWidth={1.6} />
+                  <div className="mt-3 text-[14px] font-medium">Drop invoices / photos / PDF</div>
+                  <div className="mt-1 text-[12px] text-muted-foreground">or upload CSV / XLSX — structured files skip the vision model entirely</div>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-[12px] font-medium hover:bg-surface-2 transition"
+              >
+                Browse files
+              </button>
+            </div>
+
             <div className="mt-3 flex items-start gap-2 text-[11.5px] text-muted-foreground">
               <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              <span>Stage 1 intake uses chineseocr for photos; PDFs extract text and embed with Qwen text-embedding-v4 into Supabase. Missing fields fall back to cited mock invoice templates.</span>
+              <span>
+                Stage 1 intake uses chineseocr for photos; PDFs extract text and embed with Qwen text-embedding-v4 into Supabase.
+                Missing fields fall back to cited mock invoice templates. Use the chevron on each row to collapse long lists.
+              </span>
             </div>
           </motion.div>
 
@@ -173,7 +255,7 @@ function NewSubmission() {
             </h3>
             {!submitted && (
               <p className="mt-1 text-[12px] text-muted-foreground">
-                Upload a document and hit Submit to start the six-stage pipeline — it stays idle until then.
+                Upload documents and hit Submit to start the six-stage pipeline — it stays idle until then.
               </p>
             )}
 
@@ -185,8 +267,9 @@ function NewSubmission() {
               <>
                 <div className="mt-1 hairline" />
                 <div className="mt-4 space-y-1.5 text-[11.5px] font-mono">
-                  <Row k="Tonnage" v={ocrPreview?.production_volume_tonnes ? `${ocrPreview.production_volume_tonnes.toLocaleString()} t` : "—"} />
-                  <Row k="OCR source" v={ocrPreview?.ocr_source ?? "—"} />
+                  <Row k="Documents" v={documents.length ? `${readyDocs.length}/${documents.length} ready` : "—"} />
+                  <Row k="Tonnage" v={totalTonnage > 0 ? `${totalTonnage.toLocaleString()} t` : "—"} />
+                  <Row k="OCR source" v={readyDocs[0]?.ocrPreview?.ocr_source ?? "—"} />
                   <Row k="Sensor" v="attached · 30 d" />
                 </div>
 
@@ -206,13 +289,15 @@ function NewSubmission() {
                 <div className="mt-2.5 flex items-start gap-1.5 text-[11px] text-muted-foreground">
                   <CheckCircle2 className="h-3.5 w-3.5 text-carbon shrink-0 mt-0.5" />
                   <span>
-                    {file && !ocrLoading && !ocrError && ocrPreview
-                      ? "Resumable — a failed stage never re-bills finished work."
-                      : file && ocrLoading
+                    {documents.length === 0
+                      ? "Upload at least one document above to enable submit."
+                      : anyLoading
                         ? "Running OCR intake on backend…"
-                        : file && ocrError
-                          ? "Fix the upload error above before submitting."
-                          : "Upload a document above to enable submit."}
+                        : hasErrors
+                          ? "Remove or replace failed uploads before submitting."
+                          : readyDocs.length > 0
+                            ? "Resumable — a failed stage never re-bills finished work."
+                            : "Waiting for OCR results…"}
                   </span>
                 </div>
               </>
