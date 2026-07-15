@@ -13,7 +13,10 @@ import { useCallback, useRef, useState } from "react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { ExtractedInvoiceCard } from "@/components/ExtractedInvoiceCard";
 import { PipelineTracker } from "@/components/PipelineTracker";
+import { UpstreamAuthorizationModal } from "@/components/UpstreamAuthorizationModal";
 import { previewOcr, type OcrPreviewResponse } from "@/lib/api";
+import { useLocale } from "@/lib/locale";
+import { crumbs, newPage } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/new")({
@@ -45,6 +48,7 @@ function NewSubmission() {
   const [dragOver, setDragOver] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [authorized, setAuthorized] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const processFiles = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
@@ -114,14 +118,28 @@ function NewSubmission() {
     documents.length > 0 && !anyLoading && readyDocs.length > 0 && !hasErrors && !submitted;
 
   const totalTonnage = readyDocs.reduce((sum, d) => sum + (d.ocrPreview?.production_volume_tonnes ?? 0), 0);
+  const { t, isZh } = useLocale();
+
+  const submitHint =
+    documents.length === 0
+      ? t(newPage.uploadToEnable.en, newPage.uploadToEnable.zh)
+      : anyLoading
+        ? t(newPage.ocrRunning.en, newPage.ocrRunning.zh)
+        : hasErrors
+          ? t(newPage.fixUploadError.en, newPage.fixUploadError.zh)
+          : readyDocs.length > 0
+            ? t(newPage.resumable.en, newPage.resumable.zh)
+            : t(newPage.waitingOcr.en, newPage.waitingOcr.zh);
 
   return (
-    <AppShell crumb="New submission">
+    <AppShell crumb={t(crumbs.new.en, crumbs.new.zh)}>
       <PageHeader
         n="04"
         zh="新建"
-        title="Get real data in — with guardrails"
-        subtitle="Upload documents — obviously-wrong uploads get rejected before any paid model call runs."
+        title={newPage.title.en}
+        titleZh={newPage.title.zh}
+        subtitle={newPage.subtitle.en}
+        subtitleZh={newPage.subtitle.zh}
       />
 
       <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5">
@@ -130,11 +148,13 @@ function NewSubmission() {
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="panel p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-                <FileUp className="h-3.5 w-3.5 text-teal" /> 1 · Documents
+                <FileUp className="h-3.5 w-3.5 text-teal" /> {t(newPage.documents.en, newPage.documents.zh)}
               </div>
               {documents.length > 0 && (
                 <span className="text-[10.5px] font-mono text-muted-foreground">
-                  {documents.length} file{documents.length === 1 ? "" : "s"} · {readyDocs.length} ready
+                  {isZh
+                    ? `${documents.length} 个文件 · ${readyDocs.length} 个就绪`
+                    : `${documents.length} file${documents.length === 1 ? "" : "s"} · ${readyDocs.length} ready`}
                 </span>
               )}
             </div>
@@ -184,14 +204,14 @@ function NewSubmission() {
               {documents.length > 0 ? (
                 <>
                   <Plus className="h-5 w-5 text-primary mx-auto" strokeWidth={1.6} />
-                  <div className="mt-2 text-[13px] font-medium">Add more invoices / PDFs</div>
-                  <div className="mt-1 text-[11.5px] text-muted-foreground">Drop files here or browse — each upload runs OCR separately</div>
+                  <div className="mt-2 text-[13px] font-medium">{t(newPage.addMoreTitle.en, newPage.addMoreTitle.zh)}</div>
+                  <div className="mt-1 text-[11.5px] text-muted-foreground">{t(newPage.addMoreSub.en, newPage.addMoreSub.zh)}</div>
                 </>
               ) : (
                 <>
                   <Upload className="h-8 w-8 text-primary mx-auto" strokeWidth={1.6} />
-                  <div className="mt-3 text-[14px] font-medium">Drop invoices / photos / PDF</div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">or upload CSV / XLSX — structured files skip the vision model entirely</div>
+                  <div className="mt-3 text-[14px] font-medium">{t(newPage.dropTitle.en, newPage.dropTitle.zh)}</div>
+                  <div className="mt-1 text-[12px] text-muted-foreground">{t(newPage.dropSub.en, newPage.dropSub.zh)}</div>
                 </>
               )}
               <button
@@ -199,35 +219,31 @@ function NewSubmission() {
                 onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
                 className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-[12px] font-medium hover:bg-surface-2 transition"
               >
-                Browse files
+                {t(newPage.browse.en, newPage.browse.zh)}
               </button>
             </div>
 
             <div className="mt-3 flex items-start gap-2 text-[11.5px] text-muted-foreground">
               <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              <span>
-                Stage 1 intake uses chineseocr for photos; PDFs extract text and embed with Qwen text-embedding-v4 into Supabase.
-                Missing fields fall back to cited mock invoice templates. Use the chevron on each row to collapse long lists.
-              </span>
+              <span>{t(newPage.intakeNote.en, newPage.intakeNote.zh)}</span>
             </div>
           </motion.div>
 
-          {/* 2 · Sensor */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="panel p-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-                <Radio className="h-3.5 w-3.5 text-carbon" /> 2 · Sensor data · optional
+                <Radio className="h-3.5 w-3.5 text-carbon" /> {t(newPage.sensorOptional.en, newPage.sensorOptional.zh)}
               </div>
               <label className="inline-flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" defaultChecked className="peer sr-only" />
                 <span className="w-9 h-5 rounded-full bg-muted peer-checked:bg-carbon transition relative">
                   <span className="absolute top-0.5 left-0.5 w-4 h-4 bg-background rounded-full transition peer-checked:translate-x-4" />
                 </span>
-                <span className="text-[12px] font-mono">Include ESP32 kWh feed</span>
+                <span className="text-[12px] font-mono">{t(newPage.esp32.en, newPage.esp32.zh)}</span>
               </label>
             </div>
             <p className="mt-2 text-[12px] text-muted-foreground">
-              Decoupled — feeds the <span className="text-carbon">grant + loan scores</span>, never the CBAM tariff number.
+              {t(newPage.sensorNote.en, newPage.sensorNote.zh)}
             </p>
             <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] font-mono">
               {[
@@ -248,29 +264,45 @@ function NewSubmission() {
         <div className="lg:sticky lg:top-24 space-y-3 self-start">
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="panel-lift p-5">
             <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-              {submitted ? "Pipeline · live" : "Ready to submit"}
+              {submitted ? t(newPage.pipelineLive.en, newPage.pipelineLive.zh) : t(newPage.readySubmit.en, newPage.readySubmit.zh)}
             </div>
             <h3 className="mt-1 text-lg font-semibold tracking-tight">
-              {submitted ? "Processing your submission" : "Pipeline preview"}
+              {submitted ? t(newPage.pipelineLive.en, newPage.pipelineLive.zh) : t(newPage.pipelinePreview.en, newPage.pipelinePreview.zh)}
             </h3>
             {!submitted && (
               <p className="mt-1 text-[12px] text-muted-foreground">
-                Upload documents and hit Submit to start the six-stage pipeline — it stays idle until then.
+                {t(newPage.pipelinePreviewSub.en, newPage.pipelinePreviewSub.zh)}
               </p>
             )}
 
             <div className="mt-4">
-              <PipelineTracker running={submitted} authorized={authorized} onAuthorize={() => setAuthorized(true)} />
+              <PipelineTracker
+                running={submitted}
+                authorized={authorized}
+                onAuthorize={() => setAuthModalOpen(true)}
+              />
             </div>
+
+            <UpstreamAuthorizationModal
+              open={authModalOpen}
+              onOpenChange={setAuthModalOpen}
+              documentCount={readyDocs.length}
+              onAuthorized={() => setAuthorized(true)}
+            />
 
             {!submitted && (
               <>
                 <div className="mt-1 hairline" />
                 <div className="mt-4 space-y-1.5 text-[11.5px] font-mono">
-                  <Row k="Documents" v={documents.length ? `${readyDocs.length}/${documents.length} ready` : "—"} />
-                  <Row k="Tonnage" v={totalTonnage > 0 ? `${totalTonnage.toLocaleString()} t` : "—"} />
-                  <Row k="OCR source" v={readyDocs[0]?.ocrPreview?.ocr_source ?? "—"} />
-                  <Row k="Sensor" v="attached · 30 d" />
+                  <Row
+                    k={t(newPage.documentsRow.en, newPage.documentsRow.zh)}
+                    v={documents.length ? (isZh ? `${readyDocs.length}/${documents.length} 就绪` : `${readyDocs.length}/${documents.length} ready`) : "—"}
+                  />
+                  <Row
+                    k={t(newPage.tonnage.en, newPage.tonnage.zh)}
+                    v={totalTonnage > 0 ? `${totalTonnage.toLocaleString()} t` : "—"}
+                  />
+                  <Row k={t(newPage.sensor.en, newPage.sensor.zh)} v={t(newPage.sensorVal.en, newPage.sensorVal.zh)} />
                 </div>
 
                 <button
@@ -284,21 +316,11 @@ function NewSubmission() {
                       : "bg-muted text-muted-foreground cursor-not-allowed",
                   )}
                 >
-                  Submit <ArrowRight className="h-4 w-4" />
+                  {t(newPage.submit.en, newPage.submit.zh)} <ArrowRight className="h-4 w-4" />
                 </button>
                 <div className="mt-2.5 flex items-start gap-1.5 text-[11px] text-muted-foreground">
                   <CheckCircle2 className="h-3.5 w-3.5 text-carbon shrink-0 mt-0.5" />
-                  <span>
-                    {documents.length === 0
-                      ? "Upload at least one document above to enable submit."
-                      : anyLoading
-                        ? "Running OCR intake on backend…"
-                        : hasErrors
-                          ? "Remove or replace failed uploads before submitting."
-                          : readyDocs.length > 0
-                            ? "Resumable — a failed stage never re-bills finished work."
-                            : "Waiting for OCR results…"}
-                  </span>
+                  <span>{submitHint}</span>
                 </div>
               </>
             )}
@@ -307,7 +329,8 @@ function NewSubmission() {
               <div className="mt-4 rounded-md border border-carbon/30 bg-carbon/5 p-3 flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-carbon shrink-0 mt-0.5" />
                 <div className="text-[12px] text-muted-foreground">
-                  Submitted to Upstream. <Link to="/" className="text-primary hover:underline">Back to dashboard →</Link>
+                  {t(newPage.authorizedMsg.en, newPage.authorizedMsg.zh)}{" "}
+                  <Link to="/entry" className="text-primary hover:underline">{t(newPage.continueCopilot.en, newPage.continueCopilot.zh)}</Link>
                 </div>
               </div>
             )}

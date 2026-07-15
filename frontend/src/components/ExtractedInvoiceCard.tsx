@@ -9,6 +9,8 @@ import { motion } from "motion/react";
 import { Check, ChevronDown, FileText, Loader2, Pencil, ShieldCheck, X } from "lucide-react";
 
 import type { ClassificationPreview, InvoiceData, OcrPreviewResponse } from "@/lib/api";
+import { useLocale } from "@/lib/locale";
+import { invoiceCard } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
 
 type Party = { name: string; taxId: string; addressPhone: string; bankAccount: string };
@@ -71,6 +73,7 @@ function CardShell({
   summary?: string;
   children?: ReactNode;
 }) {
+  const { t } = useLocale();
   const statusTone =
     status === "loading" ? "text-primary" : status === "error" ? "text-danger" : "text-carbon";
 
@@ -85,7 +88,7 @@ function CardShell({
           type="button"
           onClick={onToggleExpand}
           aria-expanded={expanded}
-          aria-label={expanded ? "Collapse document" : "Expand document"}
+          aria-label={expanded ? t(invoiceCard.collapse.en, invoiceCard.collapse.zh) : t(invoiceCard.expand.en, invoiceCard.expand.zh)}
           className="mt-0.5 h-8 w-8 rounded-lg border border-border bg-surface flex items-center justify-center shrink-0 hover:bg-surface-2 transition"
         >
           <ChevronDown className={cn("h-4 w-4 transition-transform", expanded && "rotate-180")} />
@@ -100,14 +103,14 @@ function CardShell({
             {summary && <> · {summary}</>}
           </div>
           <div className={cn("mt-0.5 text-[10.5px] font-mono uppercase tracking-wider", statusTone)}>
-            {status === "loading" ? "OCR running…" : status === "error" ? "OCR failed" : "Ready"}
+            {status === "loading" ? t(invoiceCard.ocrRunning.en, invoiceCard.ocrRunning.zh) : status === "error" ? t(invoiceCard.ocrFailed.en, invoiceCard.ocrFailed.zh) : t(invoiceCard.ready.en, invoiceCard.ready.zh)}
           </div>
         </button>
         {!locked && (
           <button
             type="button"
             onClick={onRemove}
-            aria-label="Remove file"
+            aria-label={t(invoiceCard.remove.en, invoiceCard.remove.zh)}
             className="h-7 w-7 rounded-md border border-border bg-surface flex items-center justify-center hover:bg-surface-2 transition shrink-0"
           >
             <X className="h-3.5 w-3.5" />
@@ -141,6 +144,7 @@ export function ExtractedInvoiceCard({
   onToggleExpand?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const { t } = useLocale();
   const [data, setData] = useState<InvoiceData | null>(preview?.invoice ?? null);
   const [classification, setClassification] = useState<ClassificationPreview | null>(preview?.classification ?? null);
   const canEdit = editing && !locked && !!data;
@@ -169,8 +173,8 @@ export function ExtractedInvoiceCard({
       >
         <div className="py-6 text-center">
           <Loader2 className="h-7 w-7 text-primary mx-auto animate-spin" />
-          <div className="mt-3 text-[13px] font-medium">Running OCR intake…</div>
-          <div className="mt-2 text-[11px] text-muted-foreground">chineseocr → field parse → CN classify · PDFs also embed via text-embedding-v4</div>
+          <div className="mt-3 text-[13px] font-medium">{t(invoiceCard.runningIntake.en, invoiceCard.runningIntake.zh)}</div>
+          <div className="mt-2 text-[11px] text-muted-foreground">{t(invoiceCard.intakeDetail.en, invoiceCard.intakeDetail.zh)}</div>
         </div>
       </CardShell>
     );
@@ -188,7 +192,7 @@ export function ExtractedInvoiceCard({
         status="error"
       >
         <div className="py-3">
-          <div className="text-[13px] font-medium text-danger">OCR preview failed</div>
+          <div className="text-[13px] font-medium text-danger">{t(invoiceCard.previewFailed.en, invoiceCard.previewFailed.zh)}</div>
           <div className="mt-1 text-[12px] text-muted-foreground">{error}</div>
         </div>
       </CardShell>
@@ -197,7 +201,7 @@ export function ExtractedInvoiceCard({
 
   if (!data || !classification) return null;
 
-  const summary = `CN ${classification.cnCode} · ${preview?.ocr_source ?? "ready"}`;
+  const summary = `CN ${classification.cnCode}`;
 
   return (
     <CardShell
@@ -213,15 +217,7 @@ export function ExtractedInvoiceCard({
       <div className="pt-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[13px] font-medium">Extracted info with classified result</div>
-          <div className="text-[11px] font-mono text-muted-foreground">提取信息与分类结果</div>
-          {preview && (
-            <div className="mt-1 text-[10.5px] font-mono text-muted-foreground">
-              OCR: {preview.ocr_source}
-              {preview.mock_fields.length > 0 && <> · mock fill: {preview.mock_fields[0]}</>}
-              {preview.pdf_embedding?.embedded && <> · PDF embedded ({preview.pdf_embedding.chunk_count} chunks → {preview.pdf_embedding.storage})</>}
-            </div>
-          )}
+          <div className="text-[13px] font-medium">{t(invoiceCard.extractedTitle.en, invoiceCard.extractedTitle.zh)}</div>
         </div>
         {!locked && (
           <button
@@ -233,20 +229,20 @@ export function ExtractedInvoiceCard({
             )}
           >
             {editing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-            {editing ? "Done" : "Edit"}
+            {editing ? t(invoiceCard.done.en, invoiceCard.done.zh) : t(invoiceCard.edit.en, invoiceCard.edit.zh)}
           </button>
         )}
       </div>
 
       <div className="mt-2 text-[11px] text-muted-foreground">
         {locked
-          ? "Locked — submitted to the pipeline as shown below."
-          : "Runs as-is on submit. Click Edit to correct anything the OCR pass misread."}
+          ? t(invoiceCard.lockedNote.en, invoiceCard.lockedNote.zh)
+          : t(invoiceCard.editNote.en, invoiceCard.editNote.zh)}
       </div>
 
       <div className="mt-3 rounded-lg border border-teal/30 bg-teal/[0.06] p-3">
         <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.12em] text-teal">
-          <ShieldCheck className="h-3.5 w-3.5" /> Classified result · 分类结果
+          <ShieldCheck className="h-3.5 w-3.5" /> {t(invoiceCard.classified.en, invoiceCard.classified.zh)}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center px-2 py-1 rounded border border-teal/40 bg-teal/10 text-[12px] font-mono text-foreground">
@@ -257,13 +253,13 @@ export function ExtractedInvoiceCard({
         <div className="mt-2 text-[11px] font-mono text-muted-foreground">
           qwen-flash {classification.flashConfidence}%
           {classification.escalated && classification.plusConfidence != null && (
-            <> · low confidence → escalated → qwen-plus {classification.plusConfidence}%</>
+            <> · {t(invoiceCard.lowConfidence.en, invoiceCard.lowConfidence.zh)} qwen-plus {classification.plusConfidence}%</>
           )}
         </div>
         <div className="mt-2 pt-2 border-t border-border/60 text-[11.5px]">
-          <span className="text-muted-foreground">Calculation method selected → </span>
+          <span className="text-muted-foreground">{t(invoiceCard.calcMethod.en, invoiceCard.calcMethod.zh)} </span>
           <span className="font-medium">{classification.route}</span>
-          <span className="text-muted-foreground"> route · </span>
+          <span className="text-muted-foreground"> {t(invoiceCard.route.en, invoiceCard.route.zh)} · </span>
           <span className="font-mono text-[11px] text-muted-foreground">{classification.benchmark} · {classification.defaultIntensity}</span>
         </div>
       </div>
@@ -279,7 +275,7 @@ export function ExtractedInvoiceCard({
       </div>
 
       <div className="mt-3 rounded-lg border border-border bg-surface/40 p-3">
-        <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">货物明细 · Line items</div>
+        <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">{t(invoiceCard.lineItems.en, invoiceCard.lineItems.zh)}</div>
         <div className="mt-2 overflow-x-auto">
           <table className="w-full text-[11.5px]">
             <thead>

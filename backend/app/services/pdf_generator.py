@@ -115,3 +115,87 @@ def render_and_store_document(
         storage_path=storage_path,
         used_pdf_fallback_html=used_fallback,
     )
+
+
+def render_route_preview_pdf(*, payload: dict, route: str) -> GeneratedDocument:
+    """Themed route preview PDF for Section A/B/C — Jinja2 + WeasyPrint."""
+    generated_at = datetime.now(timezone.utc).isoformat()
+    checklist = payload.get("checklist", [])
+    checklist_done = sum(1 for i in checklist if i.get("done"))
+    checklist_total = len(checklist)
+
+    hashable = "\n".join(
+        [
+            payload.get("title", ""),
+            payload.get("company_name", ""),
+            str(checklist_done),
+            str(checklist_total),
+        ]
+        + [f"{s.get('n')}:{s.get('status')}" for s in payload.get("pipeline_stages", [])]
+    )
+    content_hash = hashlib.sha256(hashable.encode("utf-8")).hexdigest()
+    signature = _sign(content_hash)
+
+    template = _env.get_template("route_preview.html")
+    font_path_uri = _FONT_PATH.as_uri() if _FONT_PATH.exists() else ""
+    lang = payload.get("lang", "en")
+    disclaimer = DISCLAIMER_EN if lang == "en" else f"{DISCLAIMER_EN}\n\n{DISCLAIMER_CN}"
+
+    html_content = template.render(
+        lang=lang,
+        title=payload.get("title", "Route Preview"),
+        title_zh=payload.get("title_zh"),
+        subtitle=payload.get("subtitle", ""),
+        subtitle_zh=payload.get("subtitle_zh"),
+        status_label=payload.get("status_label", "Submit-ready"),
+        company_name=payload.get("company_name", ""),
+        company_id=payload.get("company_id", ""),
+        production_route=payload.get("production_route", ""),
+        kb=payload.get("kb", ""),
+        score_label=payload.get("score_label", ""),
+        score_value=payload.get("score_value", ""),
+        score_grade=payload.get("score_grade", ""),
+        gauge=payload.get("gauge", 0),
+        checklist=checklist,
+        checklist_done=checklist_done,
+        checklist_total=checklist_total,
+        pipeline_stages=payload.get("pipeline_stages", []),
+        gaps=payload.get("gaps", []),
+        advisory=payload.get("advisory", []),
+        kpis=payload.get("kpis", []),
+        citations=payload.get("citations", ""),
+        disclaimer=disclaimer,
+        content_hash=content_hash,
+        signature=signature,
+        generated_at=generated_at,
+        font_path=font_path_uri,
+    )
+
+    storage_dir = Path(settings.local_storage_dir) / "documents"
+    storage_dir.mkdir(parents=True, exist_ok=True)
+    base_name = f"route_preview_{route}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+
+    used_fallback = False
+    pdf_path = storage_dir / f"{base_name}.pdf"
+    try:
+        from weasyprint import HTML
+
+        HTML(string=html_content, base_url=str(_TEMPLATE_DIR)).write_pdf(str(pdf_path))
+        storage_path = str(pdf_path)
+        filename = f"GreenGru-{route}-preview.pdf"
+    except Exception as exc:  # noqa: BLE001
+        used_fallback = True
+        html_path = storage_dir / f"{base_name}.fallback.html"
+        html_path.write_text(
+            f"<!-- WeasyPrint PDF rendering failed: {exc!r} -->\n" + html_content,
+            encoding="utf-8",
+        )
+        storage_path = str(html_path)
+        filename = f"GreenGru-{route}-preview.html"
+
+    return GeneratedDocument(
+        content_hash=content_hash,
+        signature=signature,
+        storage_path=storage_path,
+        used_pdf_fallback_html=used_fallback,
+    )

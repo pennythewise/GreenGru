@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<title>{{ title }}</title>
+<style>
+    @page { size: A4; margin: 14mm 16mm; }
+    @font-face {
+        font-family: 'DocumentCJK';
+        src: url('{{ font_path }}') format('truetype');
+    }
+    :root {
+        --bg: #0b1519;
+        --surface: #111f24;
+        --border: #1e3339;
+        --teal: #2dd4bf;
+        --carbon: #4ade80;
+        --gold: #fbbf24;
+        --warning: #f59e0b;
+        --danger: #f87171;
+        --muted: #7a9aa3;
+        --text: #e8f4f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+        font-family: 'DocumentCJK', 'Noto Sans SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+        font-size: 9.5pt;
+        color: var(--text);
+        background: var(--bg);
+        line-height: 1.45;
+        margin: 0;
+        padding: 0;
+    }
+    .page {
+        background: linear-gradient(160deg, #0b1519 0%, #0d1a1f 40%, #0a1216 100%);
+        min-height: 100%;
+        padding: 0;
+    }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid var(--teal);
+        padding-bottom: 10px;
+        margin-bottom: 14px;
+    }
+    .brand {
+        font-size: 8pt;
+        font-family: 'Courier New', monospace;
+        color: var(--teal);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+    h1 {
+        font-size: 20pt;
+        margin: 4px 0 2px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+    .subtitle { color: var(--muted); font-size: 9pt; margin: 0; }
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 8pt;
+        font-family: 'Courier New', monospace;
+        border: 1px solid var(--carbon);
+        background: rgba(74, 222, 128, 0.12);
+        color: var(--carbon);
+    }
+    .meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+    .meta-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+    }
+    .meta-label { font-size: 7.5pt; color: var(--muted); font-family: 'Courier New', monospace; text-transform: uppercase; }
+    .meta-value { font-size: 10pt; font-weight: 600; margin-top: 2px; }
+    .section-title {
+        font-size: 8pt;
+        font-family: 'Courier New', monospace;
+        color: var(--teal);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin: 16px 0 8px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--border);
+    }
+    .score-row {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+    }
+    .grade-circle {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        border: 3px solid var(--gold);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: rgba(251, 191, 36, 0.08);
+    }
+    .grade-letter { font-size: 26pt; font-weight: 700; color: var(--gold); line-height: 1; }
+    .grade-sub { font-size: 7pt; color: var(--muted); font-family: 'Courier New', monospace; }
+    .gauge-bar {
+        height: 8px;
+        background: var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 6px;
+    }
+    .gauge-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--danger), var(--warning), var(--carbon));
+        border-radius: 4px;
+    }
+    table.data {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8.5pt;
+    }
+    table.data th {
+        text-align: left;
+        font-size: 7pt;
+        font-family: 'Courier New', monospace;
+        color: var(--muted);
+        text-transform: uppercase;
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+    }
+    table.data td {
+        padding: 6px 8px;
+        border-bottom: 1px solid rgba(30, 51, 57, 0.6);
+        vertical-align: top;
+    }
+    .status-done { color: var(--carbon); font-family: 'Courier New', monospace; font-size: 8pt; }
+    .status-pending { color: var(--muted); font-family: 'Courier New', monospace; font-size: 8pt; }
+    .pipeline-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+    .stage-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 6px;
+        min-height: 72px;
+    }
+    .stage-card.done { border-color: rgba(74, 222, 128, 0.5); background: rgba(74, 222, 128, 0.06); }
+    .stage-card.active { border-color: rgba(45, 212, 191, 0.6); background: rgba(45, 212, 191, 0.08); }
+    .stage-num { font-size: 7pt; font-family: 'Courier New', monospace; color: var(--muted); }
+    .stage-num.done { color: var(--carbon); }
+    .stage-num.active { color: var(--teal); }
+    .stage-time { float: right; font-size: 7pt; color: var(--muted); font-family: 'Courier New', monospace; }
+    .stage-name { font-size: 9pt; font-weight: 600; margin: 4px 0 1px; }
+    .stage-zh { font-size: 7pt; color: var(--muted); font-family: 'Courier New', monospace; }
+    .stage-method { font-size: 7pt; color: var(--muted); margin-top: 4px; font-family: 'Courier New', monospace; line-height: 1.3; }
+    .stage-method.active { color: var(--teal); }
+    .gap-item {
+        display: flex;
+        gap: 6px;
+        padding: 5px 0;
+        font-size: 8.5pt;
+        border-bottom: 1px solid rgba(30, 51, 57, 0.4);
+    }
+    .gap-icon { color: var(--warning); flex-shrink: 0; }
+    .advisory-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+    }
+    .advisory-title { font-weight: 600; font-size: 9pt; }
+    .advisory-impact {
+        float: right;
+        font-size: 7.5pt;
+        font-family: 'Courier New', monospace;
+        color: var(--gold);
+        background: rgba(251, 191, 36, 0.12);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    .advisory-why { font-size: 8pt; color: var(--muted); margin-top: 4px; }
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+    .kpi {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px;
+        text-align: center;
+    }
+    .kpi-val { font-size: 14pt; font-weight: 700; color: var(--teal); font-family: 'Courier New', monospace; }
+    .kpi-label { font-size: 7pt; color: var(--muted); margin-top: 2px; }
+    .disclaimer {
+        margin-top: 16px;
+        padding: 10px 12px;
+        background: rgba(30, 51, 57, 0.5);
+        border-left: 3px solid var(--muted);
+        font-size: 7.5pt;
+        color: var(--muted);
+    }
+    .footer {
+        margin-top: 12px;
+        font-size: 6.5pt;
+        color: var(--muted);
+        font-family: 'Courier New', monospace;
+        word-break: break-all;
+        border-top: 1px solid var(--border);
+        padding-top: 8px;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="header">
+        <div>
+            <div class="brand">GreenGru · Steel SME Carbon Passport</div>
+            <h1>{{ title }}</h1>
+            <p class="subtitle">{{ subtitle }}{% if subtitle_zh %} · {{ subtitle_zh }}{% endif %}</p>
+        </div>
+        <div class="badge">{{ status_label }}</div>
+    </div>
+
+    <div class="meta-grid">
+        <div class="meta-card">
+            <div class="meta-label">Company / 公司</div>
+            <div class="meta-value">{{ company_name }}</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Passport ID</div>
+            <div class="meta-value">{{ company_id }}</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Route / 路线</div>
+            <div class="meta-value">{{ production_route }}</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Knowledge base</div>
+            <div class="meta-value">{{ kb }}</div>
+        </div>
+    </div>
+
+    <div class="section-title">Section A · Document checklist / 文件清单</div>
+    <table class="data">
+        <thead>
+            <tr><th>Document</th><th>Status</th><th>File</th></tr>
+        </thead>
+        <tbody>
+            {% for item in checklist %}
+            <tr>
+                <td>{{ item.name }}{% if item.name_zh %}<br><span style="color:var(--muted);font-size:7.5pt">{{ item.name_zh }}</span>{% endif %}</td>
+                <td class="{% if item.done %}status-done{% else %}status-pending{% endif %}">
+                    {% if item.done %}✓ done{% else %}○ pending{% endif %}
+                </td>
+                <td style="font-family:'Courier New',monospace;font-size:7.5pt;color:var(--muted)">{{ item.file_name or "—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p style="font-size:7.5pt;color:var(--muted);margin:4px 0 0">{{ checklist_done }} / {{ checklist_total }} collected</p>
+
+    <div class="section-title">Section B · Route pipeline / 路线流水线</div>
+    <div class="pipeline-grid">
+        {% for s in pipeline_stages %}
+        <div class="stage-card {% if s.status == 'done' %}done{% elif s.status == 'loading' or s.status == 'active' %}active{% endif %}">
+            <div class="stage-num {% if s.status == 'done' %}done{% elif s.status == 'loading' or s.status == 'active' %}active{% endif %}">
+                STAGE {{ s.n }}
+                <span class="stage-time">{{ s.elapsed or "—" }}</span>
+            </div>
+            <div class="stage-name">{{ s.key }}</div>
+            <div class="stage-zh">{{ s.zh }}</div>
+            <div class="stage-method {% if s.status == 'loading' or s.status == 'active' %}active{% endif %}">{{ s.method }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="section-title">Section C · Report preview / 报告预览</div>
+    <div class="score-row">
+        <div class="grade-circle">
+            <div class="grade-letter">{{ score_grade }}</div>
+            <div class="grade-sub">{{ gauge }} / 100</div>
+        </div>
+        <div style="flex:1">
+            <div style="font-size:8pt;color:var(--muted);font-family:'Courier New',monospace;text-transform:uppercase">{{ score_label }}</div>
+            <div style="font-size:13pt;font-weight:600;margin:2px 0">{{ score_value }}</div>
+            <div class="gauge-bar"><div class="gauge-fill" style="width:{{ gauge }}%"></div></div>
+        </div>
+    </div>
+
+    {% if kpis %}
+    <div class="kpi-row">
+        {% for k in kpis %}
+        <div class="kpi">
+            <div class="kpi-val">{{ k.value }}</div>
+            <div class="kpi-label">{{ k.label }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="two-col">
+        <div>
+            <div style="font-size:8pt;font-family:'Courier New',monospace;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Gap list / 差距清单</div>
+            {% for g in gaps %}
+            <div class="gap-item"><span class="gap-icon">⚠</span><span>{{ g }}</span></div>
+            {% endfor %}
+        </div>
+        <div>
+            <div style="font-size:8pt;font-family:'Courier New',monospace;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Advisory / 建议</div>
+            {% for a in advisory %}
+            <div class="advisory-card">
+                <span class="advisory-impact">{{ a.impact }}</span>
+                <div class="advisory-title">{{ a.title }}</div>
+                <div class="advisory-why">{{ a.why }}</div>
+                <div style="font-size:7pt;color:var(--muted);margin-top:4px;font-family:'Courier New',monospace">{{ a.status }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="disclaimer">{{ disclaimer }}</div>
+    <div class="footer">
+        Content hash (SHA-256): {{ content_hash }}<br>
+        Signature: {{ signature }}<br>
+        Generated: {{ generated_at }} · {{ citations }}
+    </div>
+</div>
+</body>
+</html>

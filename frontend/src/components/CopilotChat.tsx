@@ -1,19 +1,13 @@
 import { useRouterState } from "@tanstack/react-router";
 import { MessagesSquare, Paperclip, Send, Sparkles, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { CopilotPromptBar } from "@/components/CopilotPromptBar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import {
-  getCopilotContext,
-  getCopilotReply,
-  type CopilotPrompt,
-} from "@/lib/copilot-context";
+import { useCopilotChat } from "@/hooks/useCopilotChat";
+import { getCopilotContext } from "@/lib/copilot-context";
+import { useLocale } from "@/lib/locale";
+import { copilot, copilotGreetings, copilotPageLabels } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
-
-type ChatMessage = {
-  id: string;
-  role: "assistant" | "user";
-  text: string;
-};
 
 function CopilotIcon({ size = "sm" }: { size?: "sm" | "md" }) {
   const dim = size === "md" ? "h-9 w-9 rounded-lg" : "h-7 w-7 rounded-md";
@@ -31,18 +25,18 @@ function CopilotIcon({ size = "sm" }: { size?: "sm" | "md" }) {
 export function CopilotTrigger() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const ctx = getCopilotContext(pathname);
+  const { t, isZh } = useLocale();
+  const greeting = t(copilotGreetings[ctx.page].en, copilotGreetings[ctx.page].zh);
+  const pageLabel = t(copilotPageLabels[ctx.page].en, copilotPageLabels[ctx.page].zh);
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [pending, setPending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { messages, pending, modelLabel, sendMessage, reset } = useCopilotChat(ctx.page, greeting);
 
   useEffect(() => {
-    if (!open) return;
-    setMessages([{ id: `greeting-${ctx.page}`, role: "assistant", text: ctx.greeting }]);
-    setPending(false);
-  }, [ctx.page, ctx.greeting, open]);
+    if (open) reset();
+  }, [ctx.page, isZh, open, reset]);
 
   useEffect(() => {
     if (open) {
@@ -55,37 +49,21 @@ export function CopilotTrigger() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, pending]);
 
-  function sendMessage(text: string, promptId: string | null = null) {
-    const trimmed = text.trim();
-    if (!trimmed || pending) return;
-
-    const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", text: trimmed };
-    setMessages((prev) => [...prev, userMsg]);
+  function handleSend(text: string, promptId: string | null = null) {
+    void sendMessage(text, promptId);
     setInput("");
-    setPending(true);
-
-    window.setTimeout(() => {
-      const reply = getCopilotReply(ctx.page, promptId, trimmed);
-      setMessages((prev) => [
-        ...prev,
-        { id: `a-${Date.now()}`, role: "assistant", text: reply },
-      ]);
-      setPending(false);
-    }, 450);
   }
 
-  function handlePrompt(prompt: CopilotPrompt) {
-    sendMessage(prompt.label, prompt.id);
-  }
+  const promptMode = ctx.page === "entry" ? "routes" : "page";
 
   return (
     <Sheet open={open} onOpenChange={setOpen} modal={false}>
       <SheetTrigger asChild>
         <button
           type="button"
-          aria-label={open ? "Close GreenGru Copilot" : "Open GreenGru Copilot"}
+          aria-label={open ? t(copilot.closePanel.en, copilot.closePanel.zh) : t(copilot.openCopilot.en, copilot.openCopilot.zh)}
           aria-pressed={open}
-          title="GreenGru Copilot"
+          title={t(copilot.title.en, copilot.title.zh)}
           className={cn(
             "inline-flex items-center justify-center h-7 w-7 rounded-md border transition",
             open
@@ -109,31 +87,29 @@ export function CopilotTrigger() {
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={() => setOpen(false)}
       >
-        {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-surface/60 shrink-0">
           <CopilotIcon size="md" />
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold tracking-tight leading-tight">GreenGru Copilot</div>
-            <div className="text-[11px] font-mono text-muted-foreground truncate">{ctx.pageLabel}</div>
+            <div className="text-[15px] font-semibold tracking-tight leading-tight">{t(copilot.title.en, copilot.title.zh)}</div>
+            <div className="text-[11px] font-mono text-muted-foreground truncate">{pageLabel}</div>
           </div>
-          <span className="text-[10px] font-mono text-muted-foreground shrink-0 hidden sm:inline">qwen-plus</span>
+          <span className="text-[10px] font-mono text-muted-foreground shrink-0 hidden sm:inline">{modelLabel}</span>
           <button
             type="button"
             onClick={() => setOpen(false)}
-            aria-label="Close copilot panel"
+            aria-label={t(copilot.closePanel.en, copilot.closePanel.zh)}
             className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-surface-2 transition shrink-0"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Messages */}
         <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-3">
           {messages.map((m) => (
             <div
               key={m.id}
               className={cn(
-                "max-w-[90%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed",
+                "max-w-[90%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap",
                 m.role === "assistant"
                   ? "rounded-tl-sm border border-border bg-surface"
                   : "ml-auto rounded-tr-sm bg-primary/15 border border-primary/30",
@@ -146,34 +122,24 @@ export function CopilotTrigger() {
             <div className="max-w-[90%] rounded-2xl rounded-tl-sm border border-border bg-surface px-4 py-3 text-[13px] text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 animate-pulse text-teal" />
-                Thinking…
+                {t(copilot.thinking.en, copilot.thinking.zh)}
               </span>
             </div>
           )}
         </div>
 
-        {/* Suggested prompts */}
         <div className="px-5 pb-3 shrink-0">
           <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.12em] text-muted-foreground mb-2.5">
-            <MessagesSquare className="h-3 w-3 text-teal" /> Suggested
+            <MessagesSquare className="h-3 w-3 text-teal" /> {t(copilot.suggested.en, copilot.suggested.zh)}
           </div>
-          <div className="flex flex-col gap-2">
-            {ctx.prompts.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                disabled={pending}
-                onClick={() => handlePrompt(p)}
-                className="text-left rounded-lg border border-border bg-surface/50 px-3.5 py-2.5 text-[12px] hover:border-primary/40 hover:bg-primary/[0.06] transition disabled:opacity-50"
-              >
-                <span className="block text-foreground">{p.label}</span>
-                <span className="block mt-0.5 text-[10.5px] font-mono text-muted-foreground">{p.zh}</span>
-              </button>
-            ))}
-          </div>
+          <CopilotPromptBar
+            mode={promptMode}
+            prompts={ctx.prompts}
+            disabled={pending}
+            onSendPrompt={(p) => handleSend(p.label, p.id)}
+          />
         </div>
 
-        {/* Input */}
         <div className="px-5 pb-5 pt-3 border-t border-border shrink-0">
           <div className="flex items-center gap-2 rounded-lg border border-border bg-surface/50 px-3 py-2.5">
             <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -184,16 +150,16 @@ export function CopilotTrigger() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  sendMessage(input);
+                  handleSend(input);
                 }
               }}
-              placeholder="Ask while you fill in… · 边填边问"
+              placeholder={t(copilot.placeholder.en, copilot.placeholder.zh)}
               className="flex-1 min-w-0 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/70"
             />
             <button
               type="button"
               disabled={!input.trim() || pending}
-              onClick={() => sendMessage(input)}
+              onClick={() => handleSend(input)}
               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium teal-glow hover:brightness-110 transition disabled:opacity-40"
             >
               <Send className="h-3.5 w-3.5" />

@@ -1,0 +1,102 @@
+{
+  "installation_name_en": {
+    "sheet": "A_InstData",
+    "cell": "I20"
+  },
+  "street_number": {
+    "sheet": "A_InstData",
+    "cell": "I21"
+  },
+  "economic_activity": {
+    "sheet": "A_InstData",
+    "cell": "I22"
+  },
+  "post_code": {
+    "sheet": "A_InstData",
+    "cell": "I23"
+  },
+  "po_box": {
+    "sheet": "A_InstData",
+    "cell": "I24"
+  },
+  "city": {
+    "sheet": "A_InstData",
+    "cell": "I25"
+  },
+  "country": {
+    "sheet": "A_InstData",
+    "cell": "I26"
+  },
+  "unlocode": {
+    "sheet": "A_InstData",
+    "cell": "I27"
+  },
+  "latitude": {
+    "sheet": "A_InstData",
+    "cell": "I28"
+  },
+  "longitude": {
+    "sheet": "A_InstData",
+    "cell": "I29"
+  },
+  "authorized_rep_name": {
+    "sheet": "A_InstData",
+    "cell": "I30"
+  },
+  "authorized_rep_email": {
+    "sheet": "A_InstData",
+    "cell": "I31"
+  },
+  "authorized_rep_telephone": {
+    "sheet": "A_InstData",
+    "cell": "I32"
+  },
+  "period_start": {
+    "sheet": "A_InstData",
+    "cell": "I9"
+  },
+  "period_end": {
+    "sheet": "A_InstData",
+    "cell": "L9"
+  },
+  "reporting_period_start": {
+    "sheet": "A_InstData",
+    "cell": "I9"
+  },
+  "reporting_period_end": {
+    "sheet": "A_InstData",
+    "cell": "L9"
+  },
+  "production_process": {
+    "sheet": "Summary_Products",
+    "cell": "D9"
+  },
+  "aggregated_good_type": {
+    "sheet": "Summary_Products",
+    "cell": "E9"
+  },
+  "cn_code": {
+    "sheet": "Summary_Products",
+    "cell": "G9"
+  },
+  "cn_name": {
+    "sheet": "Summary_Products",
+    "cell": "H9"
+  },
+  "product_name": {
+    "sheet": "Summary_Products",
+    "cell": "F9"
+  },
+  "see_direct": {
+    "sheet": "Summary_Products",
+    "cell": "I9"
+  },
+  "see_indirect": {
+    "sheet": "Summary_Products",
+    "cell": "J9"
+  },
+  "see_total": {
+    "sheet": "Summary_Products",
+    "cell": "K9"
+  }
+}

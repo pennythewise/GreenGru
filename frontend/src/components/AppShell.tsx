@@ -13,6 +13,8 @@ import {
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { CopilotTrigger } from "@/components/CopilotChat";
+import { useLocale } from "@/lib/locale";
+import { shell } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
 
 type NavChild = { to: string; icon: typeof Gauge; label: string; zh: string };
@@ -32,16 +34,36 @@ const nav: NavItem[] = [
 ];
 
 export function LangToggle() {
+  const { locale, setLocale } = useLocale();
   return (
     <div className="inline-flex items-center rounded-md border border-border bg-surface p-0.5 text-[11px] font-mono">
-      <button className="px-2 py-0.5 rounded-sm bg-foreground text-background">EN</button>
-      <button className="px-2 py-0.5 rounded-sm text-muted-foreground hover:text-foreground">中文</button>
+      <button
+        type="button"
+        onClick={() => setLocale("en")}
+        className={cn(
+          "px-2 py-0.5 rounded-sm transition",
+          locale === "en" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        EN
+      </button>
+      <button
+        type="button"
+        onClick={() => setLocale("zh")}
+        className={cn(
+          "px-2 py-0.5 rounded-sm transition",
+          locale === "zh" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        中文
+      </button>
     </div>
   );
 }
 
 export function Sidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isZh, t } = useLocale();
   return (
     <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border bg-surface/60 backdrop-blur-xl">
       <Link to="/" className="px-5 py-5 border-b border-border block">
@@ -61,7 +83,9 @@ export function Sidebar() {
       </Link>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <div className="px-2 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-mono">SME operator</div>
+        <div className="px-2 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-mono">
+          {t(shell.smeOperator.en, shell.smeOperator.zh)}
+        </div>
         {nav.map((it) => {
           const active = it.to === "/" ? pathname === "/" : pathname.startsWith(it.to);
           return (
@@ -76,8 +100,8 @@ export function Sidebar() {
                 )}
               >
                 <it.icon className="h-4 w-4" strokeWidth={2} />
-                <span className="flex-1 text-left">{it.label}</span>
-                <span className="text-[10px] font-mono text-muted-foreground/70">{it.zh}</span>
+                <span className="flex-1 text-left">{isZh ? it.zh : it.label}</span>
+                {!isZh && <span className="text-[10px] font-mono text-muted-foreground/70">{it.zh}</span>}
               </Link>
               {it.children && (
                 <div className="relative mt-0.5 ml-[22px] space-y-0.5 border-l border-border pl-3">
@@ -95,8 +119,8 @@ export function Sidebar() {
                         )}
                       >
                         <c.icon className="h-3.5 w-3.5" strokeWidth={2} />
-                        <span className="flex-1 text-left">{c.label}</span>
-                        <span className="text-[10px] font-mono text-muted-foreground/70">{c.zh}</span>
+                        <span className="flex-1 text-left">{isZh ? c.zh : c.label}</span>
+                        {!isZh && <span className="text-[10px] font-mono text-muted-foreground/70">{c.zh}</span>}
                       </Link>
                     );
                   })}
@@ -114,7 +138,7 @@ export function Sidebar() {
             BEIJING · DASHSCOPE
           </div>
           <div className="mt-1.5 text-[11.5px] text-muted-foreground leading-snug">
-            Your data stays on Beijing-region infrastructure.
+            {t(shell.dataResidency.en, shell.dataResidency.zh)}
           </div>
         </div>
       </div>
@@ -123,6 +147,7 @@ export function Sidebar() {
 }
 
 export function TopBar({ crumb }: { crumb?: string }) {
+  const { t } = useLocale();
   return (
     <header className="flex items-center justify-between gap-4 px-6 py-3.5 border-b border-border bg-background/70 backdrop-blur-xl sticky top-0 z-20">
       <div className="flex items-center gap-3 min-w-0">
@@ -130,7 +155,7 @@ export function TopBar({ crumb }: { crumb?: string }) {
           <Building2 className="h-3.5 w-3.5" />
           <span>BAOWU × HENGFENG</span>
           <span className="text-border">/</span>
-          <span className="text-foreground">{crumb ?? "Command Center"}</span>
+          <span className="text-foreground">{crumb ?? t(shell.commandCenter.en, shell.commandCenter.zh)}</span>
         </div>
       </div>
       <div className="flex items-center gap-2.5">
@@ -150,6 +175,7 @@ export function TopBar({ crumb }: { crumb?: string }) {
 }
 
 export function UpstreamTopBar({ crumb }: { crumb?: string }) {
+  const { t } = useLocale();
   return (
     <header className="flex items-center justify-between gap-4 px-6 py-3.5 border-b border-border bg-background/70 backdrop-blur-xl sticky top-0 z-20">
       <div className="flex items-center gap-3 min-w-0">
@@ -162,13 +188,13 @@ export function UpstreamTopBar({ crumb }: { crumb?: string }) {
             <Building2 className="h-3.5 w-3.5" />
             <span>BAOWU / ANSTEEL</span>
             <span className="text-border">/</span>
-            <span className="text-foreground">{crumb ?? "Account Manager"}</span>
+            <span className="text-foreground">{crumb ?? t(shell.accountManager.en, shell.accountManager.zh)}</span>
           </div>
         </Link>
       </div>
       <div className="flex items-center gap-2.5">
         <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-surface text-[11px] font-mono text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-carbon pulse-dot" /> API Connected
+          <span className="h-1.5 w-1.5 rounded-full bg-carbon pulse-dot" /> {t(shell.apiConnected.en, shell.apiConnected.zh)}
         </div>
         <LangToggle />
         <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-surface text-[11px] font-mono text-muted-foreground">
@@ -197,7 +223,27 @@ export function UpstreamShell({ crumb, children }: { crumb?: string; children: R
   );
 }
 
-export function PageHeader({ n, title, zh, subtitle, right }: { n: string; title: string; zh?: string; subtitle: string; right?: ReactNode }) {
+export function PageHeader({
+  n,
+  title,
+  zh,
+  subtitle,
+  titleZh,
+  subtitleZh,
+  right,
+}: {
+  n: string;
+  title: string;
+  zh?: string;
+  subtitle: string;
+  titleZh?: string;
+  subtitleZh?: string;
+  right?: ReactNode;
+}) {
+  const { isZh } = useLocale();
+  const displayTitle = isZh ? (titleZh ?? zh ?? title) : title;
+  const displaySubtitle = isZh ? (subtitleZh ?? subtitle) : subtitle;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -208,11 +254,15 @@ export function PageHeader({ n, title, zh, subtitle, right }: { n: string; title
       <div className="min-w-0">
         <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-muted-foreground">
           <span className="text-primary">{n}</span>
-          <span className="text-border">·</span>
-          <span>{zh}</span>
+          {zh && (
+            <>
+              <span className="text-border">·</span>
+              <span>{zh}</span>
+            </>
+          )}
         </div>
-        <h1 className="mt-1 text-[26px] md:text-[30px] font-semibold tracking-tight leading-[1.1]">{title}</h1>
-        <p className="mt-1.5 text-[13.5px] text-muted-foreground max-w-2xl italic">{subtitle}</p>
+        <h1 className="mt-1 text-[26px] md:text-[30px] font-semibold tracking-tight leading-[1.1]">{displayTitle}</h1>
+        <p className="mt-1.5 text-[13.5px] text-muted-foreground max-w-2xl italic">{displaySubtitle}</p>
       </div>
       {right}
     </motion.div>
@@ -220,10 +270,11 @@ export function PageHeader({ n, title, zh, subtitle, right }: { n: string; title
 }
 
 export function CitationFooter({ extra }: { extra?: string }) {
+  const { t } = useLocale();
   return (
     <footer className="pt-2 flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-mono text-muted-foreground border-t border-border/60">
-      <div>Cited: IR (EU) 2025/2621 · Reg (EU) 2023/956 · CISA · PBOC · 工信部联节〔2026〕13号{extra ? ` · ${extra}` : ""}</div>
-      <div>© GreenGru · Beijing-region infra</div>
+      <div>{t(shell.cited.en, shell.cited.zh)} IR (EU) 2025/2621 · Reg (EU) 2023/956 · CISA · PBOC · 工信部联节〔2026〕13号{extra ? ` · ${extra}` : ""}</div>
+      <div>{t(shell.copyright.en, shell.copyright.zh)}</div>
     </footer>
   );
 }

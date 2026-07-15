@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     dashscope_api_key: str | None = None
     dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
+    # Copilot chat uses a dedicated key + model (sidebar + /entry chat).
+    dashscope_copilot_api_key: str | None = None
+    model_copilot: str = "qwen3.7-plus"
+
     model_intake_vision: str = "qwen3-vl-flash"
     model_classifier: str = "qwen-flash"
     model_classifier_escalation: str = "qwen-plus"

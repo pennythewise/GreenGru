@@ -6,11 +6,25 @@ export type CopilotPage =
   | "entry"
   | "dashboard";
 
+export type CopilotRoute = "loan" | "grant" | "passport";
+
 export type CopilotPrompt = {
   id: string;
   label: string;
   zh: string;
 };
+
+export type CopilotRouteChip = {
+  key: CopilotRoute;
+  label: string;
+  icon: "loan" | "grant" | "passport";
+};
+
+export const COPILOT_ROUTE_CHIPS: CopilotRouteChip[] = [
+  { key: "loan", label: "贷款 · Loan", icon: "loan" },
+  { key: "grant", label: "补贴 · Grant", icon: "grant" },
+  { key: "passport", label: "CBAM · EU license", icon: "passport" },
+];
 
 export type CopilotContext = {
   page: CopilotPage;
@@ -122,6 +136,13 @@ const PROMPTS: Record<CopilotPage, [CopilotPrompt, CopilotPrompt, CopilotPrompt]
       zh: "我的数据在哪里处理？",
     },
   ],
+};
+
+/** Three prompts per route — shown after user picks Loan / Grant / EU license. */
+export const ROUTE_PROMPTS: Record<CopilotRoute, [CopilotPrompt, CopilotPrompt, CopilotPrompt]> = {
+  loan: PROMPTS.loan,
+  grant: PROMPTS.grant,
+  passport: PROMPTS.passport,
 };
 
 const GREETINGS: Record<CopilotPage, string> = {
