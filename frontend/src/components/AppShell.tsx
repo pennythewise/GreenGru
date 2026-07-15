@@ -149,6 +149,54 @@ export function TopBar({ crumb }: { crumb?: string }) {
   );
 }
 
+export function UpstreamTopBar({ crumb }: { crumb?: string }) {
+  return (
+    <header className="flex items-center justify-between gap-4 px-6 py-3.5 border-b border-border bg-background/70 backdrop-blur-xl sticky top-0 z-20">
+      <div className="flex items-center gap-3 min-w-0">
+        <Link to="/upstream" className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-lg flex items-center justify-center teal-glow"
+               style={{ background: "var(--gradient-teal)" }}>
+            <span className="font-display text-[16px] font-bold text-[oklch(0.14_0.02_220)]">G</span>
+          </div>
+          <div className="hidden md:flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
+            <Building2 className="h-3.5 w-3.5" />
+            <span>BAOWU / ANSTEEL</span>
+            <span className="text-border">/</span>
+            <span className="text-foreground">{crumb ?? "Account Manager"}</span>
+          </div>
+        </Link>
+      </div>
+      <div className="flex items-center gap-2.5">
+        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-surface text-[11px] font-mono text-muted-foreground">
+          <span className="h-1.5 w-1.5 rounded-full bg-carbon pulse-dot" /> API Connected
+        </div>
+        <LangToggle />
+        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-surface text-[11px] font-mono text-muted-foreground">
+          <Radio className="h-3 w-3 text-carbon" /> account-mgr@baowu-partners.cn
+        </div>
+        <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-2 transition text-[12px]">
+          <LogOut className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+// Minimal shell for the anchor-enterprise ("Upstream") persona — deliberately
+// not the SME Sidebar/AppShell, since that nav (New submission, GreenGru
+// Copilot, Loan/Grant) has no meaning for an account manager looking at an
+// aggregate, read-only view across suppliers.
+export function UpstreamShell({ crumb, children }: { crumb?: string; children: ReactNode }) {
+  return (
+    <div className="theme-light min-h-screen flex flex-col text-foreground bg-background" style={{ colorScheme: "light" }}>
+      <UpstreamTopBar crumb={crumb} />
+      <main className="flex-1 p-4 md:p-8 space-y-6 max-w-[1400px] w-full mx-auto">
+        {children}
+      </main>
+    </div>
+  );
+}
+
 export function PageHeader({ n, title, zh, subtitle, right }: { n: string; title: string; zh?: string; subtitle: string; right?: ReactNode }) {
   return (
     <motion.div
