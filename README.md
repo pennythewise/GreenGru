@@ -120,8 +120,7 @@ npm install
 npm run dev
 ```
 
-Vite will print the local URL to open in the browser, usually
-`http://localhost:5173` or `http://localhost:8080`.
+Vite serves the app at `http://localhost:8080`.
 
 If the app needs API settings, add them to a local `.env` or `.env.local` file
 in `frontend/` using the same variable names the app expects.
@@ -144,12 +143,26 @@ in the Vercel dashboard before going live.
 
 ### Try it end-to-end
 
-1. Start the backend (port 8000) and frontend (port 3000).
-2. Open http://localhost:3000, fill in the intake form (defaults are
-   pre-filled with a plausible example), and submit.
-3. You'll land on the results page showing the CBAM calculation (net vs.
-   gross cost), CISA grade (marked provisional), CBAM risk tier, and
-   downloadable passport + financing report PDFs.
+1. Start the backend (port 8000) and frontend (`cd frontend && npm run dev`,
+   port 8080).
+2. Open http://localhost:8080 — the Dashboard shows the three route grades
+   (loan/grant/CBAM), the process-stage matrix, and a live 3D factory floor
+   (click a building to see its interior; hover equipment for live V/I/P +
+   carbon-intensity readouts).
+3. Go to **New submission**, upload a document. The Documents panel shows
+   the OCR-extracted fields grouped by invoice party (购买方/销售方) plus the
+   classified CN code and calculation method — editable via the Edit button
+   top-right, or leave as-is.
+4. Click **Submit**. The six-stage pipeline runs live in the right-hand
+   panel; the final stage (Authorize → Upstream) pauses for your explicit
+   confirmation before anything leaves your systems.
+5. Try **GreenGru Copilot** for the conversational alternative — describe
+   your need in the chat, review the router's proposed routes and
+   confidence scores on the right, and confirm before it hands off to New
+   submission.
+6. The confirmed routes each open their own page (EU license / Loan /
+   Grant) with the deterministic score, gap-to-next-tier, and advisory
+   suggestions.
 
 ## Known limitations / honest gaps (do not treat as launch-ready)
 
@@ -172,11 +185,6 @@ for the full list and what to do about each:
 5. **ModelScope Stage-0 pre-screen** (`ENABLE_MODELSCOPE_PRESCREEN`) is a
    structural stub — it doesn't hard-fail without the `modelscope` package,
    but real OCR/classification behavior hasn't been exercised.
-6. Frontend dependency audit flags a handful of Next.js 14 advisories with
-   no available Next-14-line fix (fixing requires a major-version jump to
-   Next 16, out of scope for the PRD's locked "Next.js 14" tech stack
-   choice) — acceptable for this MVP/demo, revisit before any real
-   production deployment.
 
 ## Monorepo layout
 
