@@ -174,7 +174,7 @@ export const submissions = [
 export const pipelineStages = [
   { n: 1, key: "Intake",                zh: "接入",     model: "deterministic · OCR + StructBERT",       status: "done",    elapsed: "812 ms" },
   { n: 2, key: "Validate",              zh: "校验",     model: "deterministic · 国家税务总局 API",         status: "done",    elapsed: "428 ms" },
-  { n: 3, key: "Classify",              zh: "分类",     model: "qwen-flash · route router (loan/grant/CBAM)", status: "active", elapsed: "1.2 s" },
+  { n: 3, key: "Classify",              zh: "分类",     model: "qwen-flash · CN code classifier → picks calc. method", status: "active", elapsed: "1.2 s" },
   { n: 4, key: "Calculate",             zh: "计算",     model: "python · rule-based",                      status: "pending", elapsed: null },
   { n: 5, key: "Update dashboard",      zh: "更新总览", model: "deterministic · data commit (no model)",  status: "pending", elapsed: null },
   { n: 6, key: "Authorize → Upstream",  zh: "授权上传", model: "operator confirm → Baowu/Ansteel API",    status: "pending", elapsed: null, requiresAuth: true },
@@ -234,7 +234,7 @@ export const docChecklists = {
 export const routePages = {
   loan: {
     slug: "loan" as const,
-    label: "Loan", zh: "贷款", n: "07",
+    label: "Loan", zh: "贷款", n: "06",
     title: "Green Loan Preview",
     subtitle: "Deterministic rubric — passes are auditable line by line.",
     kb: "PBOC 2025 Green Finance Catalogue",
@@ -248,7 +248,7 @@ export const routePages = {
   },
   grant: {
     slug: "grant" as const,
-    label: "Grant", zh: "补贴", n: "08",
+    label: "Grant", zh: "补贴", n: "07",
     title: "Green Factory Grant Preview",
     subtitle: "GB/T 36132 rubric — every point cites the specific clause.",
     kb: "GB/T 36132",
@@ -262,7 +262,7 @@ export const routePages = {
   },
   passport: {
     slug: "passport" as const,
-    label: "EU license", zh: "碳护照", n: "06",
+    label: "EU license", zh: "碳护照", n: "05",
     title: "CBAM Readiness Preview",
     subtitle: "Benchmark gap against Reg (EU) 2023/956 default values.",
     kb: "Reg (EU) 2023/956 benchmark gap",

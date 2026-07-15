@@ -9,21 +9,26 @@ import {
   MessagesSquare,
   Radio,
   Upload,
-  Workflow,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
-const nav = [
-  { to: "/",         icon: Gauge,          label: "Dashboard",      zh: "总览",     n: "02" },
-  { to: "/entry",    icon: MessagesSquare, label: "Ask GreenGru",   zh: "入口",     n: "03" },
-  { to: "/new",      icon: Upload,         label: "New submission", zh: "新建",     n: "04" },
-  { to: "/pipeline", icon: Workflow,       label: "Pipeline",       zh: "流水线",   n: "05" },
-  { to: "/passport", icon: FileCheck2,     label: "EU license",     zh: "碳护照",   n: "06" },
-  { to: "/loan",     icon: Banknote,       label: "Loan",           zh: "贷款",     n: "07" },
-  { to: "/grant",    icon: Leaf,           label: "Grant",          zh: "补贴",     n: "08" },
-] as const;
+type NavChild = { to: string; icon: typeof Gauge; label: string; zh: string };
+type NavItem = { to: string; icon: typeof Gauge; label: string; zh: string; n: string; children?: NavChild[] };
+
+const nav: NavItem[] = [
+  { to: "/",      icon: Gauge,          label: "Dashboard",      zh: "总览", n: "02" },
+  { to: "/new",   icon: Upload,         label: "New submission", zh: "新建", n: "03" },
+  {
+    to: "/entry", icon: MessagesSquare, label: "GreenGru Copilot", zh: "副驾", n: "04",
+    children: [
+      { to: "/passport", icon: FileCheck2, label: "EU license", zh: "碳护照" },
+      { to: "/loan",     icon: Banknote,   label: "Loan",       zh: "贷款" },
+      { to: "/grant",    icon: Leaf,       label: "Grant",      zh: "补贴" },
+    ],
+  },
+];
 
 export function LangToggle() {
   return (
@@ -59,21 +64,45 @@ export function Sidebar() {
         {nav.map((it) => {
           const active = it.to === "/" ? pathname === "/" : pathname.startsWith(it.to);
           return (
-            <Link
-              key={it.to}
-              to={it.to}
-              className={cn(
-                "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] transition-colors group",
-                active
-                  ? "bg-primary/10 text-foreground border border-primary/30"
-                  : "text-muted-foreground hover:text-foreground hover:bg-surface-2 border border-transparent",
+            <div key={it.to}>
+              <Link
+                to={it.to}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] transition-colors group",
+                  active
+                    ? "bg-primary/10 text-foreground border border-primary/30"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-2 border border-transparent",
+                )}
+              >
+                <span className={cn("font-mono text-[10px] w-5 shrink-0", active ? "text-primary" : "text-muted-foreground/70")}>{it.n}</span>
+                <it.icon className="h-4 w-4" strokeWidth={2} />
+                <span className="flex-1 text-left">{it.label}</span>
+                <span className="text-[10px] font-mono text-muted-foreground/70">{it.zh}</span>
+              </Link>
+              {it.children && (
+                <div className="relative mt-0.5 ml-[27px] space-y-0.5 border-l border-border pl-3">
+                  {it.children.map((c) => {
+                    const cActive = pathname.startsWith(c.to);
+                    return (
+                      <Link
+                        key={c.to}
+                        to={c.to}
+                        className={cn(
+                          "flex items-center gap-2 px-2 py-1.5 rounded-md text-[12.5px] transition-colors",
+                          cActive
+                            ? "bg-primary/10 text-foreground border border-primary/30"
+                            : "text-muted-foreground hover:text-foreground hover:bg-surface-2 border border-transparent",
+                        )}
+                      >
+                        <c.icon className="h-3.5 w-3.5" strokeWidth={2} />
+                        <span className="flex-1 text-left">{c.label}</span>
+                        <span className="text-[10px] font-mono text-muted-foreground/70">{c.zh}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <span className={cn("font-mono text-[10px] w-5 shrink-0", active ? "text-primary" : "text-muted-foreground/70")}>{it.n}</span>
-              <it.icon className="h-4 w-4" strokeWidth={2} />
-              <span className="flex-1 text-left">{it.label}</span>
-              <span className="text-[10px] font-mono text-muted-foreground/70">{it.zh}</span>
-            </Link>
+            </div>
           );
         })}
       </nav>

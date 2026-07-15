@@ -1,1 +1,0 @@
-import{c as e}from"./index-qKkwIvcw.js";import{t}from"./RoutePage-D0u1zdA1.js";var n=e(),r=()=>(0,n.jsx)(t,{slug:`passport`});export{r as component};

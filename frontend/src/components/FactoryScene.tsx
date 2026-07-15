@@ -336,7 +336,7 @@ function CameraRig({ focus }: { focus: string | null }) {
 
 /* ============================================================ */
 
-export function FactoryScene() {
+export function FactoryScene({ fullscreen = false }: { fullscreen?: boolean }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
   const [interiorZone, setInteriorZone] = useState<string | null>(null);
@@ -356,7 +356,7 @@ export function FactoryScene() {
   const flow = factoryFloor.map((f) => LAYOUT[f.key]?.pos).filter(Boolean) as Vec3[];
 
   return (
-    <div className="relative h-[400px] rounded-lg overflow-hidden border border-border bg-[#0d1319]">
+    <div className={cn("relative rounded-lg overflow-hidden border border-border bg-[#0d1319]", fullscreen ? "h-full" : "h-[400px]")}>
       <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 12.5, 17], fov: 42 }}>
         <CameraRig focus={focus} />
         <InteriorSensor current={interiorZone} onChange={enterInterior} />
