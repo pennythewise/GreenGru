@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
+import { CopilotTrigger } from "@/components/CopilotChat";
 import { cn } from "@/lib/utils";
 
 type NavChild = { to: string; icon: typeof Gauge; label: string; zh: string };
@@ -133,7 +134,10 @@ export function TopBar({ crumb }: { crumb?: string }) {
         </div>
       </div>
       <div className="flex items-center gap-2.5">
-        <LangToggle />
+        <div className="flex items-center gap-1.5">
+          <LangToggle />
+          <CopilotTrigger />
+        </div>
         <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-surface text-[11px] font-mono text-muted-foreground">
           <Radio className="h-3 w-3 text-carbon" /> qc-ops@hengfeng.cn
         </div>

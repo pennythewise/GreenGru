@@ -8,10 +8,11 @@ import {
   Radio,
   Upload,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { ExtractedInvoiceCard } from "@/components/ExtractedInvoiceCard";
 import { PipelineTracker } from "@/components/PipelineTracker";
+import { previewOcr, type OcrPreviewResponse } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/new")({
@@ -30,8 +31,34 @@ function NewSubmission() {
   const [dragOver, setDragOver] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [authorized, setAuthorized] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrPreview, setOcrPreview] = useState<OcrPreviewResponse | null>(null);
+  const [ocrError, setOcrError] = useState<string | null>(null);
 
-  const canSubmit = !!file && !submitted;
+  const processFile = useCallback(async (next: File) => {
+    setFile(next);
+    setOcrPreview(null);
+    setOcrError(null);
+    setOcrLoading(true);
+    try {
+      const result = await previewOcr(next);
+      setOcrPreview(result);
+    } catch (err) {
+      setOcrError(err instanceof Error ? err.message : "OCR preview failed");
+    } finally {
+      setOcrLoading(false);
+    }
+  }, []);
+
+  const clearFile = useCallback(() => {
+    setFile(null);
+    setOcrPreview(null);
+    setOcrError(null);
+    setOcrLoading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
+  const canSubmit = !!file && !!ocrPreview && !ocrLoading && !ocrError && !submitted;
 
   return (
     <AppShell crumb="New submission">
@@ -54,14 +81,20 @@ function NewSubmission() {
               type="file"
               className="hidden"
               accept=".pdf,.csv,.xlsx,.png,.jpg,.jpeg"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                const picked = e.target.files?.[0];
+                if (picked) void processFile(picked);
+              }}
             />
             {file ? (
               <ExtractedInvoiceCard
                 fileName={file.name}
                 fileSizeLabel={`${(file.size / 1024).toFixed(0)} KB`}
                 locked={submitted}
-                onRemove={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                loading={ocrLoading}
+                error={ocrError}
+                preview={ocrPreview}
+                onRemove={clearFile}
               />
             ) : (
               <div
@@ -72,7 +105,7 @@ function NewSubmission() {
                   e.preventDefault();
                   setDragOver(false);
                   const dropped = e.dataTransfer.files?.[0];
-                  if (dropped) setFile(dropped);
+                  if (dropped) void processFile(dropped);
                 }}
                 className={cn(
                   "mt-3 rounded-xl border-2 border-dashed p-8 text-center transition cursor-pointer",
@@ -93,7 +126,7 @@ function NewSubmission() {
             )}
             <div className="mt-3 flex items-start gap-2 text-[11.5px] text-muted-foreground">
               <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              <span>Stage 0 pre-screen (StructBERT + DAMO OCR, local) rejects selfies, blank pages, and wrong document types before any DashScope call.</span>
+              <span>Stage 1 intake uses chineseocr for photos; PDFs extract text and embed with Qwen text-embedding-v4 into Supabase. Missing fields fall back to cited mock invoice templates.</span>
             </div>
           </motion.div>
 
@@ -152,7 +185,8 @@ function NewSubmission() {
               <>
                 <div className="mt-1 hairline" />
                 <div className="mt-4 space-y-1.5 text-[11.5px] font-mono">
-                  <Row k="Tonnage" v="1,240 t / yr" />
+                  <Row k="Tonnage" v={ocrPreview?.production_volume_tonnes ? `${ocrPreview.production_volume_tonnes.toLocaleString()} t` : "—"} />
+                  <Row k="OCR source" v={ocrPreview?.ocr_source ?? "—"} />
                   <Row k="Sensor" v="attached · 30 d" />
                 </div>
 
@@ -172,9 +206,13 @@ function NewSubmission() {
                 <div className="mt-2.5 flex items-start gap-1.5 text-[11px] text-muted-foreground">
                   <CheckCircle2 className="h-3.5 w-3.5 text-carbon shrink-0 mt-0.5" />
                   <span>
-                    {file
+                    {file && !ocrLoading && !ocrError && ocrPreview
                       ? "Resumable — a failed stage never re-bills finished work."
-                      : "Upload a document above to enable submit."}
+                      : file && ocrLoading
+                        ? "Running OCR intake on backend…"
+                        : file && ocrError
+                          ? "Fix the upload error above before submitting."
+                          : "Upload a document above to enable submit."}
                   </span>
                 </div>
               </>

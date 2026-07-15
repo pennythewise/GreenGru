@@ -20,7 +20,7 @@ app = FastAPI(title="Carbon Passport API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
+    allow_origins=[o.strip() for o in settings.frontend_origin.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,4 +40,9 @@ app.include_router(baowu.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "llm_mock_mode": settings.llm_mock_mode or not settings.dashscope_api_key}
+    return {
+        "status": "ok",
+        "llm_mock_mode": settings.llm_mock_mode or not settings.dashscope_api_key,
+        "chinese_ocr_url": settings.chinese_ocr_url,
+        "supabase_configured": bool(settings.supabase_url and settings.supabase_service_role_key),
+    }

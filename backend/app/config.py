@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     model_classifier: str = "qwen-flash"
     model_classifier_escalation: str = "qwen-plus"
     model_writing: str = "qwen-plus"  # passport, financing report, advisory
+    model_embedding: str = "text-embedding-v4"
+
+    # --- chineseocr (optional Stage-0 / Stage-1 OCR service) ---------------
+    # Run separately: clone https://github.com/chineseocr/chineseocr and
+    # `python app.py 8080` — then point this at http://localhost:8080/ocr
+    chinese_ocr_url: str | None = None
+    chinese_ocr_timeout_s: float = 90.0
 
     # If no API key is configured, every agent call returns a deterministic,
     # clearly-labeled mock response instead of failing — this is what lets
@@ -63,7 +70,7 @@ class Settings(BaseSettings):
     local_storage_dir: str = "./storage"
 
     # --- CORS ------------------------------------------------------------
-    frontend_origin: str = "http://localhost:3000"
+    frontend_origin: str = "http://localhost:3000,http://localhost:8080"
 
     # --- Document signing --------------------------------------------------
     # HMAC secret for signing generated documents (PRD §9.3 — hash+signature,

@@ -84,6 +84,69 @@ class IntakeRecordOut(BaseModel):
     sources: list[SourceCitation] = []
 
 
+class InvoicePartyOut(BaseModel):
+    name: str
+    taxId: str
+    addressPhone: str
+    bankAccount: str
+
+
+class InvoiceLineItemOut(BaseModel):
+    name: str
+    spec: str
+    unit: str
+    qty: str
+    unitPrice: str
+    amount: str
+    taxRate: str
+    tax: str
+
+
+class InvoiceDataOut(BaseModel):
+    invoiceCode: str
+    invoiceNumber: str
+    issueDate: str
+    buyer: InvoicePartyOut
+    seller: InvoicePartyOut
+    items: list[InvoiceLineItemOut]
+    totalAmount: str
+    totalTax: str
+    totalWithTax: str
+    payee: str
+    reviewer: str
+    issuer: str
+
+
+class ClassificationPreviewOut(BaseModel):
+    cnCode: str
+    cnLabel: str
+    flashConfidence: int
+    escalated: bool
+    plusConfidence: int | None = None
+    route: str
+    benchmark: str
+    defaultIntensity: str
+
+
+class PdfEmbeddingOut(BaseModel):
+    embedded: bool
+    chunk_count: int = 0
+    storage: str = "none"
+    file_hash: str | None = None
+    reason: str | None = None
+
+
+class OcrPreviewOut(BaseModel):
+    invoice: InvoiceDataOut
+    classification: ClassificationPreviewOut
+    ocr_source: str
+    ocr_text_preview: str
+    mock_fields: list[str] = []
+    production_volume_tonnes: float | None = None
+    pdf_embedding: PdfEmbeddingOut | None = None
+    sources: list[SourceCitation] = []
+
+
 # --- Classification ------------------------------------------------------------
 
 
