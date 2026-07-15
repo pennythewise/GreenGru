@@ -37,7 +37,7 @@ function SignIn() {
             Turn invisible emissions into a <span className="text-gradient-ember">CBAM passport</span>, a financing report, and a ranked plan.
           </h1>
           <p className="mt-4 text-[14px] text-muted-foreground leading-relaxed">
-            Distributed to Baowu / Ansteel downstream customers as a value-added service. Bilingual EN / 中文, every regulated number cited.
+            Distributed to Baowu downstream customers as a value-added service. Bilingual EN / 中文, every regulated number cited.
           </p>
 
           <div className="mt-8 grid grid-cols-3 gap-3">
@@ -56,7 +56,7 @@ function SignIn() {
         </div>
 
         <div className="relative text-[11px] font-mono text-muted-foreground">
-          © 2026 · Baowu × Ansteel supplier program · MVP demo
+          © 2026 · Baowu supplier program · MVP demo
         </div>
       </div>
 
@@ -80,7 +80,7 @@ function SignIn() {
             <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-muted-foreground">01 · Sign in</div>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight">Welcome back</h2>
             <p className="mt-1 text-[13px] text-muted-foreground">
-              B2B access via Baowu / Ansteel referral. No open self-serve signup.
+              B2B access via Baowu referral. No open self-serve signup.
             </p>
           </div>
 

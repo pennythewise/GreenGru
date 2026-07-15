@@ -177,7 +177,7 @@ export const pipelineStages = [
   { n: 3, key: "Classify",              zh: "分类",     model: "qwen-flash · CN code classifier → picks calc. method", status: "active", elapsed: "1.2 s" },
   { n: 4, key: "Calculate",             zh: "计算",     model: "python · rule-based",                      status: "pending", elapsed: null },
   { n: 5, key: "Update dashboard",      zh: "更新总览", model: "deterministic · data commit (no model)",  status: "pending", elapsed: null },
-  { n: 6, key: "Authorize → Upstream",  zh: "授权上传", model: "operator confirm → Baowu/Ansteel API",    status: "pending", elapsed: null, requiresAuth: true },
+  { n: 6, key: "Authorize → Upstream",  zh: "授权上传", model: "operator confirm → Baowu API",    status: "pending", elapsed: null, requiresAuth: true },
 ];
 
 // Horizontal per-route stage strip (Section 6 / B in brief).

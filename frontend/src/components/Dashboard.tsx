@@ -420,7 +420,7 @@ export function Dashboard() {
 
       <CitationFooter extra="PBOC 2025 Green Finance Catalogue · GB/T 36132" />
       <div className="pb-2 flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
-        <ArrowUpRight className="h-3 w-3" /> Distributed via Baowu / Ansteel supplier program
+        <ArrowUpRight className="h-3 w-3" /> Distributed via Baowu supplier program
       </div>
     </AppShell>
   );
