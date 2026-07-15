@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { ClientOnly, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
@@ -13,6 +13,8 @@ import {
   Factory,
   FileText,
   Leaf,
+  Maximize2,
+  Minimize2,
   Plus,
   Ship,
   Zap,
@@ -159,6 +161,18 @@ export function Dashboard() {
   const routeIcon = (r: string) =>
     r === "Loan" ? Banknote : r === "Grant" ? Leaf : Ship;
 
+  const [factoryExpanded, setFactoryExpanded] = useState(false);
+  useEffect(() => {
+    if (!factoryExpanded) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFactoryExpanded(false); };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [factoryExpanded]);
+
   return (
     <AppShell crumb="Dashboard">
       <PageHeader
@@ -171,7 +185,7 @@ export function Dashboard() {
             to="/entry"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-primary text-primary-foreground text-[13px] font-medium teal-glow hover:brightness-110 transition"
           >
-            <Plus className="h-4 w-4" /> Ask GreenGru
+            <Plus className="h-4 w-4" /> GreenGru Copilot
           </Link>
         }
       />
@@ -280,25 +294,41 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="panel p-5">
-          <div className="flex items-center justify-between">
+        {factoryExpanded && (
+          <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm" onClick={() => setFactoryExpanded(false)} />
+        )}
+        <div className={cn(
+          "panel p-5 flex flex-col",
+          factoryExpanded ? "fixed inset-6 z-50 shadow-2xl" : "relative",
+        )}>
+          <div className="flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
               <Factory className="h-3.5 w-3.5 text-teal" /> Simulated factory floor · 工厂实时
             </div>
-            <div className="flex items-center gap-1 text-[10.5px] font-mono text-carbon">
-              <span className="h-1.5 w-1.5 rounded-full bg-carbon pulse-dot" /> live
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 text-[10.5px] font-mono text-carbon">
+                <span className="h-1.5 w-1.5 rounded-full bg-carbon pulse-dot" /> live
+              </div>
+              <button
+                type="button"
+                onClick={() => setFactoryExpanded((e) => !e)}
+                aria-label={factoryExpanded ? "Collapse" : "Expand to full screen"}
+                className="h-6 w-6 rounded-md border border-border bg-surface flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface-2 transition"
+              >
+                {factoryExpanded ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+              </button>
             </div>
           </div>
 
-          <div className="mt-3">
+          <div className={cn("mt-3", factoryExpanded && "flex-1 min-h-0")}>
             <ClientOnly fallback={<FactorySceneFallback />}>
               <Suspense fallback={<FactorySceneFallback />}>
-                <FactoryScene />
+                <FactoryScene fullscreen={factoryExpanded} />
               </Suspense>
             </ClientOnly>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-border text-[11px] font-mono text-muted-foreground">
+          <div className="mt-3 pt-3 border-t border-border text-[11px] font-mono text-muted-foreground shrink-0">
             <div>Last sync <span className="text-foreground">{factorySync.lastSync}</span> · deterministic threshold-watch, no model call.</div>
             <div className="mt-1">Feeds → {factorySync.downstream.join(" · ")}</div>
           </div>
@@ -381,9 +411,9 @@ export function Dashboard() {
           </table>
         </div>
         <div className="mt-4 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-          <span>First time? <Link to="/entry" className="text-primary hover:underline">Ask GreenGru →</Link></span>
-          <Link to="/pipeline" className="flex items-center gap-1 hover:text-foreground transition">
-            View live pipeline <ArrowRight className="h-3 w-3" />
+          <span>First time? <Link to="/entry" className="text-primary hover:underline">Talk to GreenGru Copilot →</Link></span>
+          <Link to="/new" className="flex items-center gap-1 hover:text-foreground transition">
+            Start a new submission <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
       </motion.div>

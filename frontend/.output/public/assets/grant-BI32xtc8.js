@@ -1,0 +1,1 @@
+import{c as e}from"./index-CmGUAp_6.js";import{t}from"./RoutePage-BQ13lG71.js";var n=e(),r=()=>(0,n.jsx)(t,{slug:`grant`});export{r as component};

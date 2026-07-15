@@ -249,8 +249,8 @@ export function RoutePage({ slug }: { slug: Slug }) {
         <Link to="/" className="text-[12.5px] font-mono text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
           ← Back to dashboard
         </Link>
-        <Link to="/pipeline" className="text-[12.5px] font-mono text-primary inline-flex items-center gap-1">
-          View underlying pipeline <ArrowRight className="h-3.5 w-3.5" />
+        <Link to="/new" className="text-[12.5px] font-mono text-primary inline-flex items-center gap-1">
+          Go to new submission <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
 
