@@ -106,8 +106,60 @@
   --grid-line: oklch(1 0 0 / 3%);
 }
 
+/* Light-mode override, scoped to the Upstream (Baowu/Ansteel account-manager)
+   shell only — the rest of the app stays the fixed dark "command center"
+   theme defined in :root above. Same variable set, light values. */
+.theme-light {
+  --background: oklch(0.985 0.003 220);
+  --foreground: oklch(0.18 0.02 220);
+  --surface: oklch(0.97 0.004 220);
+  --surface-2: oklch(0.94 0.006 220);
+  --card: oklch(1 0 0 / 92%);
+  --card-foreground: oklch(0.18 0.02 220);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.02 220);
+
+  --primary: oklch(0.55 0.14 200);
+  --primary-foreground: oklch(0.99 0 0);
+  --teal: oklch(0.55 0.14 200);
+
+  --secondary: oklch(0.93 0.01 220);
+  --secondary-foreground: oklch(0.18 0.02 220);
+  --muted: oklch(0.95 0.006 220);
+  --muted-foreground: oklch(0.45 0.02 220);
+  --accent: oklch(0.92 0.03 200);
+  --accent-foreground: oklch(0.18 0.02 220);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.15 0.02 220 / 10%);
+  --input: oklch(0.15 0.02 220 / 12%);
+  --ring: oklch(0.55 0.14 200);
+
+  --steel: oklch(0.55 0.03 220);
+  --ember: oklch(0.62 0.19 40);
+  --carbon: oklch(0.58 0.15 155);
+  --signal: oklch(0.55 0.14 200);
+  --warning: oklch(0.62 0.16 75);
+  --danger: oklch(0.58 0.22 25);
+  --gold: oklch(0.64 0.15 85);
+
+  --chart-1: oklch(0.55 0.14 200);
+  --chart-2: oklch(0.58 0.15 155);
+  --chart-3: oklch(0.64 0.15 85);
+  --chart-4: oklch(0.62 0.16 75);
+  --chart-5: oklch(0.58 0.22 25);
+
+  --gradient-teal: linear-gradient(135deg, oklch(0.62 0.13 190), oklch(0.48 0.16 230));
+  --gradient-gold: linear-gradient(135deg, oklch(0.7 0.14 90), oklch(0.58 0.17 70));
+  --shadow-glow-teal: 0 8px 32px -10px oklch(0.55 0.14 200 / 28%);
+  --shadow-glow-gold: 0 8px 32px -10px oklch(0.64 0.15 85 / 24%);
+  --shadow-card: 0 1px 0 0 oklch(1 0 0 / 70%) inset, 0 12px 30px -18px oklch(0.2 0.02 220 / 12%);
+  --shadow-lift: 0 1px 0 0 oklch(1 0 0 / 80%) inset, 0 24px 50px -22px oklch(0.2 0.02 220 / 16%);
+  --grid-line: oklch(0.15 0.02 220 / 4%);
+}
+
 @layer base {
-  * { border-color: var(--color-border); }
+  * { border-color: var(--border); }
   html, body { background-color: var(--color-background); color: var(--color-foreground); }
   body {
     font-family: var(--font-sans);
@@ -126,16 +178,16 @@
 }
 
 @utility panel {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(8px);
 }
 
 @utility panel-lift {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lift);
   backdrop-filter: blur(8px);
@@ -160,7 +212,7 @@
 }
 
 @utility hairline {
-  background-image: linear-gradient(90deg, transparent, var(--color-border) 20%, var(--color-border) 80%, transparent);
+  background-image: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
   height: 1px;
 }
 
