@@ -15,13 +15,13 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 type NavChild = { to: string; icon: typeof Gauge; label: string; zh: string };
-type NavItem = { to: string; icon: typeof Gauge; label: string; zh: string; n: string; children?: NavChild[] };
+type NavItem = { to: string; icon: typeof Gauge; label: string; zh: string; children?: NavChild[] };
 
 const nav: NavItem[] = [
-  { to: "/",      icon: Gauge,          label: "Dashboard",      zh: "总览", n: "02" },
-  { to: "/new",   icon: Upload,         label: "New submission", zh: "新建", n: "03" },
+  { to: "/",      icon: Gauge,          label: "Dashboard",      zh: "总览" },
+  { to: "/new",   icon: Upload,         label: "New submission", zh: "新建" },
   {
-    to: "/entry", icon: MessagesSquare, label: "GreenGru Copilot", zh: "副驾", n: "04",
+    to: "/entry", icon: MessagesSquare, label: "GreenGru Copilot", zh: "副驾",
     children: [
       { to: "/passport", icon: FileCheck2, label: "EU license", zh: "碳护照" },
       { to: "/loan",     icon: Banknote,   label: "Loan",       zh: "贷款" },
@@ -74,13 +74,12 @@ export function Sidebar() {
                     : "text-muted-foreground hover:text-foreground hover:bg-surface-2 border border-transparent",
                 )}
               >
-                <span className={cn("font-mono text-[10px] w-5 shrink-0", active ? "text-primary" : "text-muted-foreground/70")}>{it.n}</span>
                 <it.icon className="h-4 w-4" strokeWidth={2} />
                 <span className="flex-1 text-left">{it.label}</span>
                 <span className="text-[10px] font-mono text-muted-foreground/70">{it.zh}</span>
               </Link>
               {it.children && (
-                <div className="relative mt-0.5 ml-[27px] space-y-0.5 border-l border-border pl-3">
+                <div className="relative mt-0.5 ml-[22px] space-y-0.5 border-l border-border pl-3">
                   {it.children.map((c) => {
                     const cActive = pathname.startsWith(c.to);
                     return (
