@@ -2,6 +2,8 @@
 endpoint returns its stage's output plus a `sources` array citing which
 regulatory constant was used (PRD §7 hard requirement)."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -81,6 +83,69 @@ class IntakeRecordOut(BaseModel):
     extracted_json: dict
     validator_status: str
     validator_notes: list[str]
+    sources: list[SourceCitation] = []
+
+
+class InvoicePartyOut(BaseModel):
+    name: str
+    taxId: str
+    addressPhone: str
+    bankAccount: str
+
+
+class InvoiceLineItemOut(BaseModel):
+    name: str
+    spec: str
+    unit: str
+    qty: str
+    unitPrice: str
+    amount: str
+    taxRate: str
+    tax: str
+
+
+class InvoiceDataOut(BaseModel):
+    invoiceCode: str
+    invoiceNumber: str
+    issueDate: str
+    buyer: InvoicePartyOut
+    seller: InvoicePartyOut
+    items: list[InvoiceLineItemOut]
+    totalAmount: str
+    totalTax: str
+    totalWithTax: str
+    payee: str
+    reviewer: str
+    issuer: str
+
+
+class ClassificationPreviewOut(BaseModel):
+    cnCode: str
+    cnLabel: str
+    flashConfidence: int
+    escalated: bool
+    plusConfidence: int | None = None
+    route: str
+    benchmark: str
+    defaultIntensity: str
+
+
+class PdfEmbeddingOut(BaseModel):
+    embedded: bool
+    chunk_count: int = 0
+    storage: str = "none"
+    file_hash: str | None = None
+    reason: str | None = None
+
+
+class OcrPreviewOut(BaseModel):
+    invoice: InvoiceDataOut
+    classification: ClassificationPreviewOut
+    ocr_source: str
+    ocr_text_preview: str
+    mock_fields: list[str] = []
+    production_volume_tonnes: float | None = None
+    pdf_embedding: PdfEmbeddingOut | None = None
     sources: list[SourceCitation] = []
 
 
@@ -215,3 +280,98 @@ class BaowuDashboardRow(BaseModel):
     cisa_grade: str
     cbam_risk_tier: str
     annual_exposure_eur: float
+
+
+# --- Copilot chat ------------------------------------------------------------
+
+
+class CopilotHistoryMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class CopilotChatRequest(BaseModel):
+    page: str
+    message: str
+    prompt_id: str | None = None
+    history: list[CopilotHistoryMessage] = []
+
+
+class CopilotChatResponse(BaseModel):
+    reply: str
+    model: str
+    mock: bool = False
+
+
+class RouteIntentRequest(BaseModel):
+    history: list[CopilotHistoryMessage] = []
+
+
+class RouteIntentResponse(BaseModel):
+    loan: float
+    grant: float
+    passport: float
+    reasons: dict[str, str]
+    mock: bool = False
+
+
+# --- Route preview PDF (MVP demo — frontend sends assembled state) ----------
+
+
+class ChecklistItemPdf(BaseModel):
+    name: str
+    name_zh: str | None = None
+    done: bool
+    file_name: str | None = None
+
+
+class PipelineStagePdf(BaseModel):
+    n: int
+    key: str
+    zh: str
+    method: str
+    status: Literal["pending", "loading", "active", "done"]
+    elapsed: str | None = None
+
+
+class AdvisoryItemPdf(BaseModel):
+    title: str
+    impact: str
+    why: str
+    status: str
+
+
+class KpiItemPdf(BaseModel):
+    label: str
+    value: str
+
+
+class RoutePreviewPdfRequest(BaseModel):
+    route: Literal["loan", "grant", "passport"]
+    title: str
+    title_zh: str | None = None
+    subtitle: str
+    subtitle_zh: str | None = None
+    kb: str
+    citations: str
+    company_name: str
+    company_id: str
+    production_route: str
+    score_label: str
+    score_value: str
+    score_grade: str
+    gauge: int = Field(ge=0, le=100)
+    status_label: str = "Submit-ready · 可提交"
+    checklist: list[ChecklistItemPdf]
+    pipeline_stages: list[PipelineStagePdf]
+    gaps: list[str]
+    advisory: list[AdvisoryItemPdf]
+    kpis: list[KpiItemPdf] = []
+    lang: str = "en"
+
+
+class RoutePreviewPdfResponse(BaseModel):
+    content_hash: str
+    signature: str
+    filename: str
+    used_pdf_fallback_html: bool

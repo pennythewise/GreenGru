@@ -17,4 +17,15 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    server: {
+      // Proxy API calls through the Vite dev server so the browser never
+      // cross-origin fetches to :8000 (fixes "Failed to fetch" when using
+      // localhost:8080 or a LAN IP like 172.x.x.x:8080).
+      proxy: {
+        "/api": { target: "http://127.0.0.1:8000", changeOrigin: true },
+        "/health": { target: "http://127.0.0.1:8000", changeOrigin: true },
+      },
+    },
+  },
 });

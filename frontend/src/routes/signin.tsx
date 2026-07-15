@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { Flame, Lock, Mail, ShieldCheck } from "lucide-react";
 import { LangToggle } from "@/components/AppShell";
+import { useLocale } from "@/lib/locale";
+import { signinPage } from "@/lib/ui-strings";
 
 export const Route = createFileRoute("/signin")({
   head: () => ({
@@ -15,6 +17,7 @@ export const Route = createFileRoute("/signin")({
 });
 
 function SignIn() {
+  const { t, isZh } = useLocale();
   return (
     <div className="min-h-screen grid lg:grid-cols-[1fr_460px] text-foreground">
       {/* Left: brand story */}
@@ -32,9 +35,13 @@ function SignIn() {
         </div>
 
         <div className="relative max-w-lg">
-          <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground">01 · Sign in · 登录</div>
+          <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground">01 · {t(signinPage.signIn.en, signinPage.signIn.zh)}</div>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight leading-[1.05]">
-            Turn invisible emissions into a <span className="text-gradient-ember">CBAM passport</span>, a financing report, and a ranked plan.
+            {isZh ? (
+              <>将隐形排放转化为<span className="text-gradient-ember">碳护照</span>、融资报告与优先级行动方案。</>
+            ) : (
+              <>Turn invisible emissions into a <span className="text-gradient-ember">CBAM passport</span>, a financing report, and a ranked plan.</>
+            )}
           </h1>
           <p className="mt-4 text-[14px] text-muted-foreground leading-relaxed">
             Distributed to Baowu downstream customers as a value-added service. Bilingual EN / 中文, every regulated number cited.
@@ -77,8 +84,8 @@ function SignIn() {
           </div>
 
           <div>
-            <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-muted-foreground">01 · Sign in</div>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight">Welcome back</h2>
+            <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-muted-foreground">01 · {t(signinPage.signIn.en, signinPage.signIn.zh)}</div>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight">{t(signinPage.welcome.en, signinPage.welcome.zh)}</h2>
             <p className="mt-1 text-[13px] text-muted-foreground">
               B2B access via Baowu referral. No open self-serve signup.
             </p>
@@ -86,33 +93,33 @@ function SignIn() {
 
           <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); window.location.href = "/"; }}>
             <label className="block">
-              <span className="text-[11.5px] font-mono text-muted-foreground">Work email · 邮箱</span>
+              <span className="text-[11.5px] font-mono text-muted-foreground">{t(signinPage.workEmail.en, signinPage.workEmail.zh)}</span>
               <div className="mt-1 flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-card focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30 transition">
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <input type="email" defaultValue="qc-ops@hengfeng.cn" className="flex-1 bg-transparent outline-none text-[13.5px] font-mono" />
               </div>
             </label>
             <label className="block">
-              <span className="text-[11.5px] font-mono text-muted-foreground">Password · 密码</span>
+              <span className="text-[11.5px] font-mono text-muted-foreground">{t(signinPage.password.en, signinPage.password.zh)}</span>
               <div className="mt-1 flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-card focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30 transition">
                 <Lock className="h-4 w-4 text-muted-foreground" />
                 <input type="password" defaultValue="••••••••••••" className="flex-1 bg-transparent outline-none text-[13.5px] font-mono" />
               </div>
             </label>
             <button type="submit" className="w-full flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-md bg-primary text-primary-foreground text-[13.5px] font-medium ember-glow hover:brightness-110 transition">
-              Sign in
+              {t(signinPage.signInBtn.en, signinPage.signInBtn.zh)}
             </button>
           </form>
 
           <div className="flex items-start gap-2 p-3 rounded-md border border-border bg-surface/60">
             <ShieldCheck className="h-4 w-4 text-carbon shrink-0 mt-0.5" />
             <p className="text-[11.5px] text-muted-foreground leading-relaxed">
-              Your data stays on Beijing-region infrastructure. No cross-border export at any pipeline stage.
+              {t(signinPage.residency.en, signinPage.residency.zh)}
             </p>
           </div>
 
           <div className="text-[11px] font-mono text-muted-foreground text-center">
-            Direct link (demo): <Link to="/" className="text-primary hover:underline">→ dashboard</Link>
+            {t(signinPage.demoLink.en, signinPage.demoLink.zh)} <Link to="/" className="text-primary hover:underline">{t(signinPage.dashboard.en, signinPage.dashboard.zh)}</Link>
           </div>
         </motion.div>
       </div>

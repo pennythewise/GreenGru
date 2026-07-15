@@ -2,16 +2,31 @@ from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
-from app.schemas import IntakeRecordOut, ManualIntakeRequest, SourceCitation
+from app.schemas import IntakeRecordOut, ManualIntakeRequest, OcrPreviewOut, SourceCitation
 from app.services.intake_agent import (
     IntakeExtraction,
     extract_from_document,
     merge_multi_document_extractions,
     parse_csv_intake,
 )
+from app.services.ocr_preview import run_ocr_preview
 from app.services.pipeline import run_intake
 
 router = APIRouter(prefix="/api", tags=["intake"])
+
+
+@router.post("/intake/ocr-preview", response_model=OcrPreviewOut)
+async def ocr_preview(file: UploadFile):
+    """Stage-1 preview for New Submission: chineseocr on images, PDF text
+    extraction + text-embedding-v4 vectors to Supabase, mock fill for gaps."""
+    if not file.filename:
+        raise HTTPException(status_code=422, detail="Filename is required.")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=422, detail="Empty file upload.")
+
+    return await run_ocr_preview(content=content, filename=file.filename)
 
 
 @router.post("/intake", response_model=IntakeRecordOut)

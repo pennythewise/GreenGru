@@ -3,7 +3,7 @@
   "main": "index.mjs",
   "assets": {
     "binding": "ASSETS",
-    "directory": "../public"
+    "directory": "..\\public"
   },
   "name": "pennythewise-greengru-frontend",
   "compatibility_flags": [

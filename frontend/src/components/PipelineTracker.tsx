@@ -7,6 +7,8 @@ import { motion } from "motion/react";
 import { Check, Circle, Loader2, ShieldCheck } from "lucide-react";
 
 import { pipelineStages as stageMeta } from "@/lib/dashboard-data";
+import { useLocale } from "@/lib/locale";
+import { pipeline as pipelineStr } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
 
 type Status = "pending" | "active" | "done";
@@ -30,6 +32,7 @@ export function PipelineTracker({
   onAuthorize: () => void;
 }) {
   const [runtime, setRuntime] = useState<StageRuntime[]>(idleRuntime);
+  const { isZh, t } = useLocale();
 
   useEffect(() => {
     if (!running) {
@@ -95,15 +98,15 @@ export function PipelineTracker({
             <div className="flex items-baseline justify-between gap-2">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-muted-foreground">STAGE {s.n}</span>
+                  <span className="text-[10px] font-mono text-muted-foreground">{t(pipelineStr.stage.en, pipelineStr.stage.zh)} {s.n}</span>
                   <span className="text-[10px] font-mono text-muted-foreground/70">· {s.zh}</span>
                   {isAuth && isActive && !authorized && (
                     <span className="text-[10px] font-mono text-warning inline-flex items-center gap-1">
-                      <ShieldCheck className="h-3 w-3" /> needs you
+                      <ShieldCheck className="h-3 w-3" /> {t(pipelineStr.needsYou.en, pipelineStr.needsYou.zh)}
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 text-[13px] font-medium">{s.key}</div>
+                <div className="mt-0.5 text-[13px] font-medium">{isZh ? s.zh : s.key}</div>
                 <div className={cn("mt-0.5 text-[11px] font-mono", isActive ? "text-primary" : "text-muted-foreground")}>
                   {isActive && "▸ "}{s.model}
                 </div>
@@ -126,7 +129,7 @@ export function PipelineTracker({
         initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
         className="mt-4 rounded-md border border-warning/40 bg-warning/[0.06] p-3"
       >
-        <div className="text-[12px] font-medium">Requires your authorization</div>
+        <div className="text-[12px] font-medium">{t(pipelineStr.requiresAuth.en, pipelineStr.requiresAuth.zh)}</div>
         <p className="mt-1 text-[11px] text-muted-foreground">
           Only stage that leaves your systems — uploads the signed package to Baowu.
         </p>
@@ -134,7 +137,7 @@ export function PipelineTracker({
           onClick={onAuthorize}
           className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-warning text-[oklch(0.14_0.02_220)] text-[12px] font-medium hover:brightness-110 transition"
         >
-          <ShieldCheck className="h-3.5 w-3.5" /> Authorize & send
+          <ShieldCheck className="h-3.5 w-3.5" /> {t(pipelineStr.authorizeSend.en, pipelineStr.authorizeSend.zh)}
         </button>
       </motion.div>
     )}
