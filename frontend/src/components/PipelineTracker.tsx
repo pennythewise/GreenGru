@@ -131,7 +131,7 @@ export function PipelineTracker({
       >
         <div className="text-[12px] font-medium">{t(pipelineStr.requiresAuth.en, pipelineStr.requiresAuth.zh)}</div>
         <p className="mt-1 text-[11px] text-muted-foreground">
-          {t(pipelineStr.authNote.en, pipelineStr.authNote.zh)}
+          Only stage that leaves your systems — uploads the signed package to Baowu.
         </p>
         <button
           onClick={onAuthorize}

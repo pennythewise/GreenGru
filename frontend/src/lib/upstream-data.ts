@@ -1,4 +1,4 @@
-// Demo data for the Baowu/Ansteel account-manager ("Upstream") dashboard.
+// Demo data for the Baowu account-manager ("Upstream") dashboard.
 // Illustrative only. Shape mirrors backend/app/schemas.py's BaowuDashboardRow
 // (cisa_grade, cbam_risk_tier, annual_exposure_eur) plus a company display
 // name — real data would need the baowu_dashboard_role DB grant extended to

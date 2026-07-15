@@ -106,7 +106,7 @@
   --grid-line: oklch(1 0 0 / 3%);
 }
 
-/* Light-mode override, scoped to the Upstream (Baowu/Ansteel account-manager)
+/* Light-mode override, scoped to the Upstream (Baowu account-manager)
    shell only — the rest of the app stays the fixed dark "command center"
    theme defined in :root above. Same variable set, light values. */
 .theme-light {

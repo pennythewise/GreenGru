@@ -68,12 +68,9 @@ export function Sidebar() {
     <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border bg-surface/60 backdrop-blur-xl">
       <Link to="/" className="px-5 py-5 border-b border-border block">
         <div className="flex items-center gap-2.5">
-          <div className="relative">
-            <div className="h-9 w-9 rounded-lg flex items-center justify-center teal-glow"
-                 style={{ background: "var(--gradient-teal)" }}>
-              <span className="font-display text-[18px] font-bold text-[oklch(0.14_0.02_220)]">G</span>
-            </div>
-            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-carbon pulse-dot" />
+          <div className="relative shrink-0">
+            <img src="/greengrulogo.png" alt="GreenGru" className="h-11 w-auto object-contain" />
+            <span className="absolute -top-0.5 -right-1.5 h-2 w-2 rounded-full bg-carbon pulse-dot" />
           </div>
           <div>
             <div className="text-[13px] font-semibold tracking-tight leading-tight">GreenGru</div>
@@ -180,13 +177,10 @@ export function UpstreamTopBar({ crumb }: { crumb?: string }) {
     <header className="flex items-center justify-between gap-4 px-6 py-3.5 border-b border-border bg-background/70 backdrop-blur-xl sticky top-0 z-20">
       <div className="flex items-center gap-3 min-w-0">
         <Link to="/upstream" className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg flex items-center justify-center teal-glow"
-               style={{ background: "var(--gradient-teal)" }}>
-            <span className="font-display text-[16px] font-bold text-[oklch(0.14_0.02_220)]">G</span>
-          </div>
+          <img src="/greengrulogo.png" alt="GreenGru" className="h-10 w-auto object-contain shrink-0" />
           <div className="hidden md:flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
             <Building2 className="h-3.5 w-3.5" />
-            <span>BAOWU / ANSTEEL</span>
+            <span>BAOWU</span>
             <span className="text-border">/</span>
             <span className="text-foreground">{crumb ?? t(shell.accountManager.en, shell.accountManager.zh)}</span>
           </div>
