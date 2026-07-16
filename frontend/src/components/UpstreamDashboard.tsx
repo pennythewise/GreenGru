@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import { ClientOnly } from "@tanstack/react-router";
+import { ClientOnly, Link } from "@tanstack/react-router";
 import {
   Area,
   AreaChart,
@@ -15,6 +15,7 @@ import {
 import {
   AlertTriangle,
   Building2,
+  Code2,
   Globe2,
   Leaf,
   ShieldCheck,
@@ -181,6 +182,14 @@ export function UpstreamDashboard() {
         zh="供应商组合"
         title="Portfolio view across downstream suppliers"
         subtitle="Aggregate CISA tier and verified totals only — no raw invoice or intake data is ever visible in this view."
+        right={
+          <Link
+            to="/cn/articles/full-api-documentation"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-primary/30 bg-primary/5 text-[11px] font-mono text-primary hover:brightness-110"
+          >
+            <Code2 className="h-3.5 w-3.5" /> Integration API
+          </Link>
+        }
       />
 
       {/* KPI 2x2 + exposure trend */}

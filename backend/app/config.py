@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     # explicitly not blockchain). Change this in any real deployment.
     document_signing_secret: str = "dev-only-insecure-secret-change-me"
 
+    # --- Baowu/Ansteel integration API (read-only Scope 3 feed) ------------
+    integration_api_key: str | None = None  # defaults to greengru-demo-key in router
+
 
 @lru_cache
 def get_settings() -> Settings:

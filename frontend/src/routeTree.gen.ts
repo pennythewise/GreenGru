@@ -17,6 +17,7 @@ import { Route as LoanRouteImport } from './routes/loan'
 import { Route as GrantRouteImport } from './routes/grant'
 import { Route as EntryRouteImport } from './routes/entry'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CnArticlesFullApiDocumentationRouteImport } from './routes/cn/articles/full-api-documentation'
 
 const UpstreamRoute = UpstreamRouteImport.update({
   id: '/upstream',
@@ -58,6 +59,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CnArticlesFullApiDocumentationRoute =
+  CnArticlesFullApiDocumentationRouteImport.update({
+    id: '/cn/articles/full-api-documentation',
+    path: '/cn/articles/full-api-documentation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/passport': typeof PassportRoute
   '/signin': typeof SigninRoute
   '/upstream': typeof UpstreamRoute
+  '/cn/articles/full-api-documentation': typeof CnArticlesFullApiDocumentationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +86,7 @@ export interface FileRoutesByTo {
   '/passport': typeof PassportRoute
   '/signin': typeof SigninRoute
   '/upstream': typeof UpstreamRoute
+  '/cn/articles/full-api-documentation': typeof CnArticlesFullApiDocumentationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +98,7 @@ export interface FileRoutesById {
   '/passport': typeof PassportRoute
   '/signin': typeof SigninRoute
   '/upstream': typeof UpstreamRoute
+  '/cn/articles/full-api-documentation': typeof CnArticlesFullApiDocumentationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +111,7 @@ export interface FileRouteTypes {
     | '/passport'
     | '/signin'
     | '/upstream'
+    | '/cn/articles/full-api-documentation'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +122,7 @@ export interface FileRouteTypes {
     | '/passport'
     | '/signin'
     | '/upstream'
+    | '/cn/articles/full-api-documentation'
   id:
     | '__root__'
     | '/'
@@ -121,6 +133,7 @@ export interface FileRouteTypes {
     | '/passport'
     | '/signin'
     | '/upstream'
+    | '/cn/articles/full-api-documentation'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +145,7 @@ export interface RootRouteChildren {
   PassportRoute: typeof PassportRoute
   SigninRoute: typeof SigninRoute
   UpstreamRoute: typeof UpstreamRoute
+  CnArticlesFullApiDocumentationRoute: typeof CnArticlesFullApiDocumentationRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +206,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cn/articles/full-api-documentation': {
+      id: '/cn/articles/full-api-documentation'
+      path: '/cn/articles/full-api-documentation'
+      fullPath: '/cn/articles/full-api-documentation'
+      preLoaderRoute: typeof CnArticlesFullApiDocumentationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,6 +225,7 @@ const rootRouteChildren: RootRouteChildren = {
   PassportRoute: PassportRoute,
   SigninRoute: SigninRoute,
   UpstreamRoute: UpstreamRoute,
+  CnArticlesFullApiDocumentationRoute: CnArticlesFullApiDocumentationRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
