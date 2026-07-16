@@ -844,6 +844,19 @@ var Radio = createLucideIcon("radio", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var RotateCcw = createLucideIcon("rotate-ccw", [["path", {
+	d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8",
+	key: "1357e3"
+}], ["path", {
+	d: "M3 3v5h5",
+	key: "1xhq8a"
+}]]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var Search = createLucideIcon("search", [["path", {
 	d: "m21 21-4.34-4.34",
 	key: "14j7rj"
@@ -941,6 +954,31 @@ var Sparkles = createLucideIcon("sparkles", [
 		cy: "20",
 		r: "2",
 		key: "6kqj1y"
+	}]
+]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
+var SquareFunction = createLucideIcon("square-function", [
+	["rect", {
+		width: "18",
+		height: "18",
+		x: "3",
+		y: "3",
+		rx: "2",
+		ry: "2",
+		key: "1m3agn"
+	}],
+	["path", {
+		d: "M9 17c2 0 2.8-1 2.8-2.8V10c0-2 1-3.3 3.2-3",
+		key: "m1af9g"
+	}],
+	["path", {
+		d: "M9 11.2h5.7",
+		key: "3zgcl2"
 	}]
 ]);
 /**
@@ -1112,4 +1150,4 @@ var Zap = createLucideIcon("zap", [["path", {
 	key: "1xq2db"
 }]]);
 //#endregion
-export { BadgeCheck as $, Info as A, Download as B, Maximize2 as C, LoaderCircle as D, Lock as E, FileSpreadsheet as F, CircleCheck as G, CodeXml as H, FileCheckCorner as I, ChevronDown as J, CircleAlert as K, Factory as L, Flame as M, FileUp as N, Leaf as O, FileText as P, Banknote as Q, ExternalLink as R, MessagesSquare as S, LogOut as T, Circle as U, Copy as V, CircleDot as W, Building2 as X, Check as Y, BookOpen as Z, Plus as _, Users as a, Paperclip as b, TrendingUp as c, Ship as d, ArrowUpRight as et, Shield as f, Radio as g, Search as h, Wallet as i, Gauge as j, KeyRound as k, TrendingDown as l, Send as m, X as n, ArrowLeft as nt, Upload as o, ShieldCheck as p, ChevronRight as q, WandSparkles as r, TriangleAlert as s, Zap as t, ArrowRight as tt, Sparkles as u, Play as v, Mail as w, Minimize2 as x, Pencil as y, Earth as z };
+export { BookOpen as $, Leaf as A, ExternalLink as B, Minimize2 as C, LogOut as D, Mail as E, FileUp as F, Circle as G, Download as H, FileText as I, CircleAlert as J, CircleDot as K, FileSpreadsheet as L, Info as M, Gauge as N, Lock as O, Flame as P, Building2 as Q, FileCheckCorner as R, Paperclip as S, Maximize2 as T, Copy as U, Earth as V, CodeXml as W, ChevronDown as X, ChevronRight as Y, Check as Z, RotateCcw as _, Users as a, Play as b, TrendingUp as c, Sparkles as d, Banknote as et, Ship as f, Search as g, Send as h, Wallet as i, ArrowLeft as it, KeyRound as j, LoaderCircle as k, TrendingDown as l, ShieldCheck as m, X as n, ArrowUpRight as nt, Upload as o, Shield as p, CircleCheck as q, WandSparkles as r, ArrowRight as rt, TriangleAlert as s, Zap as t, BadgeCheck as tt, SquareFunction as u, Radio as v, MessagesSquare as w, Pencil as x, Plus as y, Factory as z };

@@ -121,7 +121,10 @@ def _mock_classification_preview(product_desc: str) -> ClassificationPreviewOut:
 
 
 async def _ocr_image_intake(content: bytes, filename: str) -> tuple[str, str, list[str]]:
-    """chineseocr (5s) → qwen3.7-plus (5s) → mock."""
+    """chineseocr (5s) → qwen3.7-plus (5s) → mock — or mock only when OCR_MOCK_ONLY=true."""
+    if settings.ocr_mock_only:
+        return "", "mock", ["ocr:mock_only_mode"]
+
     flags: list[str] = []
     timeout = settings.ocr_intake_timeout_s
 
@@ -169,8 +172,11 @@ async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
     pdf_embedding: PdfEmbeddingOut | None = None
 
     if ext in PDF_EXT:
-        ocr_text = extract_pdf_text(content)
-        ocr_source = "pdf_text" if ocr_text.strip() else "mock"
+        if settings.ocr_mock_only:
+            ocr_source = "mock"
+        else:
+            ocr_text = extract_pdf_text(content)
+            ocr_source = "pdf_text" if ocr_text.strip() else "mock"
         try:
             embed_result = await embed_pdf_and_store(content=content, filename=filename)
             pdf_embedding = PdfEmbeddingOut(**embed_result)
@@ -185,11 +191,16 @@ async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
         except UnicodeDecodeError:
             ocr_source = "mock"
 
-    invoice_dict, mock_fields = parse_invoice_from_text(ocr_text, filename)
+    invoice_dict, mock_fields = parse_invoice_from_text(
+        ocr_text,
+        filename,
+        use_llm=not settings.ocr_mock_only,
+    )
     if ext in IMAGE_EXT:
         mock_fields = intake_flags + list(mock_fields)
     elif ocr_source == "mock":
-        mock_fields = ["ocr:mock_fallback_no_text"] + list(mock_fields)
+        prefix = ["ocr:mock_only_mode"] if settings.ocr_mock_only else ["ocr:mock_fallback_no_text"]
+        mock_fields = prefix + list(mock_fields)
     product_desc = product_description_from_invoice(invoice_dict)
     try:
         classification = classify_product(product_desc, cn_code_hint=None)

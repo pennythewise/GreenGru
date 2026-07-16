@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     chinese_ocr_url: str | None = None
     chinese_ocr_timeout_s: float = 90.0  # legacy default for non-intake callers
     ocr_intake_timeout_s: float = 5.0  # per-step timeout: chineseocr → qwen3.7-plus → mock
+    # Temp dev flag — skip chineseocr + qwen vision on upload; mock templates only.
+    ocr_mock_only: bool = False
 
     # If no API key is configured, every agent call returns a deterministic,
     # clearly-labeled mock response instead of failing — this is what lets

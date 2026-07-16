@@ -55,6 +55,7 @@ async def health():
         "writing_model": settings.model_writing,
         "intake_model": settings.model_intake_vision,
         "embedding_model": settings.model_embedding,
+        "ocr_mock_only": settings.ocr_mock_only,
         "chinese_ocr_url": settings.chinese_ocr_url,
         "chinese_ocr_note": (
             "CHINESE_OCR_URL must point at the chineseocr sidecar (e.g. :8081/ocr), "

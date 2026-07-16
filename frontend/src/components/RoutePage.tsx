@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { AppShell, CitationFooter, PageHeader } from "@/components/AppShell";
 import { CbamWorkbookPanel } from "@/components/CbamWorkbookPanel";
+import { GrantApplicationForm } from "@/components/GrantApplicationForm";
+import { LoanApplicationForm } from "@/components/LoanApplicationForm";
 import { useRouteChecklist } from "@/hooks/useRouteChecklist";
 import { useRoutePipeline } from "@/hooks/useRoutePipeline";
 import {
@@ -424,6 +426,8 @@ export function RoutePage({ slug }: { slug: Slug }) {
         markUploaded={checklist.markUploaded}
       />
       {slug === "passport" && <CbamWorkbookPanel />}
+      {slug === "loan" && <LoanApplicationForm />}
+      {slug === "grant" && <GrantApplicationForm />}
       <StageStrip
         kb={cfg.kb}
         stages={stages}
