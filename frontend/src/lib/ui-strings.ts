@@ -279,7 +279,7 @@ export const authModal = {
   packageHash: { en: "Package hash · SHA-256", zh: "包哈希 · SHA-256" },
   operatorSig: { en: "Operator signature · HMAC-SHA256", zh: "操作员签名 · HMAC-SHA256" },
   nextNote: { en: "Next: GreenGru Copilot — choose Loan, Grant, or EU license route.", zh: "下一步：GreenGru 副驾 — 选择贷款、补贴或欧盟许可路线。" },
-  continue: { en: "Continue to next step", zh: "继续下一步" },
+  continue: { en: "Authorize and Continue", zh: "授权并继续" },
 } as const;
 
 export const signinPage = {
