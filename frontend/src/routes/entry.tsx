@@ -4,12 +4,12 @@ import {
   ArrowRight,
   BadgeCheck,
   MessagesSquare,
-  Paperclip,
   Send,
   Sparkles,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppShell, CitationFooter, PageHeader } from "@/components/AppShell";
+import { CopilotFileAttach, formatOcrUploadSummary } from "@/components/CopilotFileAttach";
 import { CopilotPromptBar } from "@/components/CopilotPromptBar";
 import { useCopilotChat } from "@/hooks/useCopilotChat";
 import { getCopilotContext } from "@/lib/copilot-context";
@@ -44,7 +44,7 @@ function Entry() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { t, isZh } = useLocale();
   const greeting = t(entryPage.greeting.en, entryPage.greeting.zh);
-  const { messages, pending, modelLabel, sendMessage, reset } = useCopilotChat(ctx.page, greeting);
+  const { messages, pending, modelLabel, sendMessage, appendLocalExchange, reset } = useCopilotChat(ctx.page, greeting);
   const userTurns = messages.filter((m) => m.role === "user").length;
 
   useEffect(() => {
@@ -149,7 +149,18 @@ function Entry() {
           </div>
 
           <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-surface/50 px-3 py-2 shrink-0">
-            <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
+            <CopilotFileAttach
+              disabled={pending}
+              onUploaded={(file, result) => {
+                appendLocalExchange(
+                  `📎 ${file.name} (${(file.size / 1024).toFixed(0)} KB)`,
+                  formatOcrUploadSummary(file, result),
+                );
+              }}
+              onError={(msg) => {
+                appendLocalExchange("📎 Upload failed", msg);
+              }}
+            />
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}

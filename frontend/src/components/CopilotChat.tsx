@@ -1,6 +1,7 @@
 import { useRouterState } from "@tanstack/react-router";
-import { MessagesSquare, Paperclip, Send, Sparkles, X } from "lucide-react";
+import { MessagesSquare, Send, Sparkles, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { CopilotFileAttach, formatOcrUploadSummary } from "@/components/CopilotFileAttach";
 import { CopilotPromptBar } from "@/components/CopilotPromptBar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useCopilotChat } from "@/hooks/useCopilotChat";
@@ -32,7 +33,7 @@ export function CopilotTrigger() {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { messages, pending, modelLabel, sendMessage, reset } = useCopilotChat(ctx.page, greeting);
+  const { messages, pending, modelLabel, sendMessage, appendLocalExchange, reset } = useCopilotChat(ctx.page, greeting);
 
   useEffect(() => {
     if (open) reset();
@@ -142,7 +143,18 @@ export function CopilotTrigger() {
 
         <div className="px-5 pb-5 pt-3 border-t border-border shrink-0">
           <div className="flex items-center gap-2 rounded-lg border border-border bg-surface/50 px-3 py-2.5">
-            <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
+            <CopilotFileAttach
+              disabled={pending}
+              onUploaded={(file, result) => {
+                appendLocalExchange(
+                  `📎 ${file.name} (${(file.size / 1024).toFixed(0)} KB)`,
+                  formatOcrUploadSummary(file, result),
+                );
+              }}
+              onError={(msg) => {
+                appendLocalExchange("📎 Upload failed", msg);
+              }}
+            />
             <input
               ref={inputRef}
               value={input}

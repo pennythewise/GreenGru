@@ -30,7 +30,7 @@ class IntakeExtraction:
 
 
 def extract_from_document(document_text: str, source_label: str = "upload") -> IntakeExtraction:
-    """Vision/text extraction via Qwen3-VL-Flash (or mock). `document_text`
+    """Vision/text extraction via qwen3.7-plus (or mock). `document_text`
     is either an OCR text layer (Stage 0, §8.0) or a plain-text stand-in for
     a real image upload in this reference implementation — swap in
     base64 image content blocks here for a production vision call."""

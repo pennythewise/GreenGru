@@ -24,14 +24,12 @@ import type { CSSProperties } from "react";
 
 import { AppShell, CitationFooter, PageHeader } from "@/components/AppShell";
 import {
-  emissionsBreakdown,
+  company,
   factorySync,
-  processMatrix,
-  ratioSliders,
   routeGrades,
   submissions,
-  tierGauge,
 } from "@/lib/dashboard-data";
+import { useDashboardSnapshot } from "@/hooks/useDashboardSnapshot";
 import { useLocale } from "@/lib/locale";
 import { crumbs, dashboardPage, dashboardSections } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
@@ -70,7 +68,7 @@ function GradeCard({ r }: { r: (typeof routeGrades)[number] }) {
 }
 
 /* ---------- Slider bar (grant rubric levers) ---------- */
-function RatioSlider({ s }: { s: (typeof ratioSliders)[number] }) {
+function RatioSlider({ s }: { s: { key: string; label: string; zh: string; value: number; target: number; unit: string } }) {
   const { isZh } = useLocale();
   const pct = Math.min(100, (s.value / (s.target * 1.25)) * 100);
   const targetPct = Math.min(100, (s.target / (s.target * 1.25)) * 100);
@@ -96,8 +94,8 @@ function RatioSlider({ s }: { s: (typeof ratioSliders)[number] }) {
 }
 
 /* ---------- Semicircular gauge (CISA speedometer) ---------- */
-function TierGauge() {
-  const pct = tierGauge.value / 100;
+function TierGauge({ value, nextTier, zh }: { value: number; nextTier: string; zh: string }) {
+  const pct = value / 100;
   const angle = -90 + pct * 180; // -90 → 90
   return (
     <div className="relative w-[240px] h-[130px] mx-auto">
@@ -116,8 +114,8 @@ function TierGauge() {
         </g>
       </svg>
       <div className="absolute inset-x-0 bottom-0 text-center">
-        <div className="font-mono text-[28px] font-semibold text-gold leading-none">{tierGauge.value}</div>
-        <div className="text-[10.5px] font-mono text-muted-foreground mt-0.5">{tierGauge.label} · {tierGauge.zh} {tierGauge.nextTier}</div>
+        <div className="font-mono text-[28px] font-semibold text-gold leading-none">{value}</div>
+        <div className="text-[10.5px] font-mono text-muted-foreground mt-0.5">Grant score · {zh} {nextTier}</div>
       </div>
     </div>
   );
@@ -170,6 +168,9 @@ function StatusPill({ s }: { s: string }) {
 
 export function Dashboard() {
   const { t, isZh } = useLocale();
+  const { snapshot } = useDashboardSnapshot();
+  const { tierGauge, ratioSliders, emissionsBreakdown, processMatrix } = snapshot;
+  const pointsToNext = tierGauge.pointsToNext ?? 32;
   const routeIcon = (r: string) =>
     r === "Loan" ? Banknote : r === "Grant" ? Leaf : Ship;
 
@@ -215,9 +216,9 @@ export function Dashboard() {
           <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
             <CircleDot className="h-3.5 w-3.5 text-gold" /> {t(dashboardSections.distanceTier.en, dashboardSections.distanceTier.zh)}
           </div>
-          <div className="mt-4"><TierGauge /></div>
+          <div className="mt-4"><TierGauge value={tierGauge.value} nextTier={tierGauge.nextTier} zh={tierGauge.zh} /></div>
           <div className="mt-2 text-[11.5px] text-muted-foreground text-center">
-            {t(dashboardSections.tierUnlock.en(32), dashboardSections.tierUnlock.zh(32))}{" "}
+            {t(dashboardSections.tierUnlock.en(pointsToNext), dashboardSections.tierUnlock.zh(pointsToNext))}{" "}
             <span className="text-carbon">{isZh ? "B 级 — 深绿" : "Tier B — 深绿"}</span>
             {isZh ? "（补贴评分）" : " on the grant rubric."}
           </div>

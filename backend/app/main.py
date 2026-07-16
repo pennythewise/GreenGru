@@ -5,7 +5,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import init_db
-from app.routers import advisory, baowu, calculate, classify, companies, copilot, documents, intake, integration_v1, iot, routes, score, submissions
+from app.routers import advisory, baowu, calculate, classify, companies, copilot, documents, intake, integration_v1, iot, ocr, pipeline, routes, score, submissions
 
 settings = get_settings()
 
@@ -29,6 +29,8 @@ app.add_middleware(
 app.include_router(companies.router)
 app.include_router(submissions.router)
 app.include_router(intake.router)
+app.include_router(pipeline.router)
+app.include_router(ocr.router, prefix="/ocr", tags=["OCR"])
 app.include_router(classify.router)
 app.include_router(calculate.router)
 app.include_router(score.router)
@@ -49,6 +51,16 @@ async def health():
         "llm_mock_mode": settings.llm_mock_mode or not settings.dashscope_api_key,
         "copilot_mock_mode": settings.llm_mock_mode or not copilot_key,
         "copilot_model": settings.model_copilot,
+        "classifier_model": settings.model_classifier,
+        "writing_model": settings.model_writing,
+        "intake_model": settings.model_intake_vision,
+        "embedding_model": settings.model_embedding,
         "chinese_ocr_url": settings.chinese_ocr_url,
+        "chinese_ocr_note": (
+            "CHINESE_OCR_URL must point at the chineseocr sidecar (e.g. :8081/ocr), "
+            "not the Vite frontend on :8080"
+            if settings.chinese_ocr_url and ":8080/" in settings.chinese_ocr_url
+            else None
+        ),
         "supabase_configured": bool(settings.supabase_url and settings.supabase_service_role_key),
     }

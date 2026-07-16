@@ -1,6 +1,6 @@
-"""CN code classifier agent (PRD §8.3) — Qwen-Flash first pass, single
-escalation to Qwen-Plus on low confidence. The only model-escalation path
-in the whole system (PRD §4.1)."""
+"""CN code classifier agent (PRD §8.3) — qwen3.7-plus first pass, single
+escalation retry on low confidence (same model). The only model-escalation
+path in the whole system (PRD §4.1)."""
 
 from dataclasses import dataclass
 

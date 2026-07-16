@@ -14,7 +14,8 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { ExtractedInvoiceCard } from "@/components/ExtractedInvoiceCard";
 import { PipelineTracker } from "@/components/PipelineTracker";
 import { UpstreamAuthorizationModal } from "@/components/UpstreamAuthorizationModal";
-import { previewOcr, type OcrPreviewResponse } from "@/lib/api";
+import { previewOcr, runPipeline, type OcrPreviewResponse, type PipelineRunResponse } from "@/lib/api";
+import { useDashboardSnapshot } from "@/hooks/useDashboardSnapshot";
 import { useLocale } from "@/lib/locale";
 import { crumbs, newPage } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,10 @@ function NewSubmission() {
   const [submitted, setSubmitted] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [pipelineLoading, setPipelineLoading] = useState(false);
+  const [pipelineResult, setPipelineResult] = useState<PipelineRunResponse | null>(null);
+  const [pipelineError, setPipelineError] = useState<string | null>(null);
+  const { applyPipelineSnapshot } = useDashboardSnapshot();
 
   const processFiles = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
@@ -115,7 +120,30 @@ function NewSubmission() {
   const readyDocs = documents.filter((d) => d.ocrPreview && !d.ocrError);
   const hasErrors = documents.some((d) => d.ocrError);
   const canSubmit =
-    documents.length > 0 && !anyLoading && readyDocs.length > 0 && !hasErrors && !submitted;
+    documents.length > 0 && !anyLoading && readyDocs.length > 0 && !hasErrors && !submitted && !pipelineLoading;
+
+  const handleSubmit = useCallback(async () => {
+    const primary = readyDocs[0]?.ocrPreview;
+    if (!primary) return;
+    setPipelineLoading(true);
+    setPipelineError(null);
+    setSubmitted(true);
+    try {
+      const result = await runPipeline({
+        invoice: primary.invoice,
+        classification_route: primary.classification.route,
+        production_volume_tonnes: primary.production_volume_tonnes,
+        ocr_source: primary.ocr_source,
+        mock_fields: primary.mock_fields,
+      });
+      setPipelineResult(result);
+      applyPipelineSnapshot(result.dashboard_snapshot);
+    } catch (err) {
+      setPipelineError(err instanceof Error ? err.message : "Pipeline failed");
+    } finally {
+      setPipelineLoading(false);
+    }
+  }, [readyDocs, applyPipelineSnapshot]);
 
   const totalTonnage = readyDocs.reduce((sum, d) => sum + (d.ocrPreview?.production_volume_tonnes ?? 0), 0);
   const { t, isZh } = useLocale();
@@ -280,6 +308,8 @@ function NewSubmission() {
                 running={submitted}
                 authorized={authorized}
                 onAuthorize={() => setAuthModalOpen(true)}
+                backendStages={pipelineResult?.stages ?? null}
+                pipelineError={pipelineError}
               />
             </div>
 
@@ -308,7 +338,7 @@ function NewSubmission() {
                 <button
                   type="button"
                   disabled={!canSubmit}
-                  onClick={() => setSubmitted(true)}
+                  onClick={() => void handleSubmit()}
                   className={cn(
                     "mt-5 w-full flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-md text-[13.5px] font-medium transition",
                     canSubmit

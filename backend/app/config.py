@@ -36,19 +36,20 @@ class Settings(BaseSettings):
 
     # Copilot chat uses a dedicated key + model (sidebar + /entry chat).
     dashscope_copilot_api_key: str | None = None
-    model_copilot: str = "qwen3.7-plus"
-
-    model_intake_vision: str = "qwen3-vl-flash"
-    model_classifier: str = "qwen-flash"
-    model_classifier_escalation: str = "qwen-plus"
-    model_writing: str = "qwen-plus"  # passport, financing report, advisory
+    # All chat/vision agents use qwen3.7-plus — embedding is the only separate model.
+    model_copilot: str = "qwen/qwen3.7-plus"
+    model_intake_vision: str = "qwen/qwen3.7-plus"
+    model_classifier: str = "qwen/qwen3.7-plus"
+    model_classifier_escalation: str = "qwen/qwen3.7-plus"
+    model_writing: str = "qwen/qwen3.7-plus"  # passport, financing report, advisory, invoice parse
     model_embedding: str = "text-embedding-v4"
 
     # --- chineseocr (optional Stage-0 / Stage-1 OCR service) ---------------
     # Run separately: clone https://github.com/chineseocr/chineseocr and
     # `python app.py 8080` — then point this at http://localhost:8080/ocr
     chinese_ocr_url: str | None = None
-    chinese_ocr_timeout_s: float = 90.0
+    chinese_ocr_timeout_s: float = 90.0  # legacy default for non-intake callers
+    ocr_intake_timeout_s: float = 5.0  # per-step timeout: chineseocr → qwen3.7-plus → mock
 
     # If no API key is configured, every agent call returns a deterministic,
     # clearly-labeled mock response instead of failing — this is what lets
@@ -80,6 +81,17 @@ class Settings(BaseSettings):
     # HMAC secret for signing generated documents (PRD §9.3 — hash+signature,
     # explicitly not blockchain). Change this in any real deployment.
     document_signing_secret: str = "dev-only-insecure-secret-change-me"
+
+    # --- Nuonuo (诺诺) invoice查验 — authorized 税务局 third-party proxy ----
+    nuonuo_app_key: str | None = None
+    nuonuo_app_secret: str | None = None
+    nuonuo_access_token: str | None = None
+    nuonuo_tax_num: str | None = None
+    nuonuo_sandbox: bool = True
+
+    @property
+    def nuonuo_configured(self) -> bool:
+        return bool(self.nuonuo_app_key and self.nuonuo_access_token and self.nuonuo_tax_num)
 
     # --- Baowu/Ansteel integration API (read-only Scope 3 feed) ------------
     integration_api_key: str | None = None  # defaults to greengru-demo-key in router

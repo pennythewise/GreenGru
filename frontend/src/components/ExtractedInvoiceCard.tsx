@@ -251,9 +251,9 @@ export function ExtractedInvoiceCard({
           <span className="text-[11.5px] text-muted-foreground">{classification.cnLabel}</span>
         </div>
         <div className="mt-2 text-[11px] font-mono text-muted-foreground">
-          qwen-flash {classification.flashConfidence}%
+          qwen3.7-plus {classification.flashConfidence}%
           {classification.escalated && classification.plusConfidence != null && (
-            <> · {t(invoiceCard.lowConfidence.en, invoiceCard.lowConfidence.zh)} qwen-plus {classification.plusConfidence}%</>
+            <> · {t(invoiceCard.lowConfidence.en, invoiceCard.lowConfidence.zh)} qwen3.7-plus {classification.plusConfidence}%</>
           )}
         </div>
         <div className="mt-2 pt-2 border-t border-border/60 text-[11.5px]">

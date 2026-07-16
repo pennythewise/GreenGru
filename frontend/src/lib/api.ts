@@ -95,6 +95,69 @@ export async function previewOcr(file: File): Promise<OcrPreviewResponse> {
   return res.json() as Promise<OcrPreviewResponse>;
 }
 
+export type PipelineStageDetail = {
+  n: number;
+  key: string;
+  zh: string;
+  status: string;
+  elapsed: string | null;
+  summary: string;
+  detail: Record<string, unknown>;
+};
+
+export type PipelineRunResponse = {
+  stages: PipelineStageDetail[];
+  dashboard_snapshot: {
+    tierGauge: { value: number; nextTier: string; zh: string; pointsToNext?: number };
+    ratioSliders: { key: string; label: string; zh: string; value: number; target: number; unit: string }[];
+    emissionsBreakdown: { key: string; label: string; value: number; color: string }[];
+    processMatrix: {
+      stage: string;
+      zh: string;
+      energy: string;
+      intensity: string;
+      metering: string;
+      audit: string;
+    }[];
+    cisaGrade?: string;
+    intensity?: number;
+    updatedAt?: string;
+  };
+  package: {
+    body: Record<string, unknown>;
+    content_hash: string;
+    signature: string;
+  };
+};
+
+export async function runPipeline(payload: {
+  invoice: InvoiceData;
+  classification_route: string;
+  production_volume_tonnes: number | null;
+  ocr_source: string;
+  mock_fields: string[];
+}): Promise<PipelineRunResponse> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/pipeline/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      throw new Error("Cannot reach backend pipeline. Start backend on :8000.");
+    }
+    throw err;
+  }
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Pipeline failed (${res.status})`);
+  }
+  return res.json() as Promise<PipelineRunResponse>;
+}
+
 export async function checkApiHealth(): Promise<boolean> {
   try {
     const res = await fetch(`${API_BASE}/health`);

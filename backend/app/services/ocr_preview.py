@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from pathlib import Path
 
+from app.config import get_settings
 from app.data.cn_codes import SUPPORTED_CN_CODES
 from app.schemas import (
     ClassificationPreviewOut,
@@ -15,6 +18,7 @@ from app.schemas import (
     SourceCitation,
 )
 from app.services.chineseocr_client import ocr_image_bytes
+from app.services.ocr_vision import ocr_image_with_vision
 from app.services.classifier_agent import classify_product
 from app.services.invoice_parser import (
     parse_invoice_from_text,
@@ -22,6 +26,9 @@ from app.services.invoice_parser import (
     total_tonnes_from_invoice,
 )
 from app.services.pdf_embedding import embed_pdf_and_store, extract_pdf_text
+
+logger = logging.getLogger(__name__)
+settings = get_settings()
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 PDF_EXT = {".pdf"}
@@ -113,6 +120,48 @@ def _mock_classification_preview(product_desc: str) -> ClassificationPreviewOut:
     )
 
 
+async def _ocr_image_intake(content: bytes, filename: str) -> tuple[str, str, list[str]]:
+    """chineseocr (5s) → qwen3.7-plus (5s) → mock."""
+    flags: list[str] = []
+    timeout = settings.ocr_intake_timeout_s
+
+    # 1 · chineseocr sidecar
+    try:
+        lines, source = await asyncio.wait_for(
+            ocr_image_bytes(content, filename=filename, timeout_s=timeout),
+            timeout=timeout,
+        )
+        if lines and source == "chineseocr":
+            return "\n".join(lines), "chineseocr", flags
+        flags.append("ocr:chineseocr_empty_or_unavailable")
+    except TimeoutError:
+        logger.warning("chineseocr timed out after %ss for %s", timeout, filename)
+        flags.append(f"ocr:chineseocr_timeout_{timeout}s")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("chineseocr failed for %s: %s", filename, exc)
+        flags.append("ocr:chineseocr_failed")
+
+    # 2 · qwen3.7-plus
+    try:
+        vision_text, vision_source = await asyncio.wait_for(
+            ocr_image_with_vision(content, filename=filename),
+            timeout=timeout,
+        )
+        if vision_text.strip() and vision_source == "qwen3.7-plus":
+            return vision_text, "qwen3.7-plus", flags
+        flags.append("ocr:qwen37_empty_or_unavailable")
+    except TimeoutError:
+        logger.warning("qwen3.7-plus OCR timed out after %ss for %s", timeout, filename)
+        flags.append(f"ocr:qwen37_timeout_{timeout}s")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("qwen3.7-plus OCR failed for %s: %s", filename, exc)
+        flags.append("ocr:qwen37_failed")
+
+    # 3 · mock template fill (no OCR text)
+    flags.append("ocr:mock_fallback")
+    return "", "mock", flags
+
+
 async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
     ext = Path(filename or "").suffix.lower()
     ocr_source = "mock"
@@ -128,12 +177,7 @@ async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
         except Exception:
             pdf_embedding = PdfEmbeddingOut(embedded=False, reason="embedding_failed", storage="none")
     elif ext in IMAGE_EXT:
-        lines, source = await ocr_image_bytes(content, filename=filename)
-        if lines:
-            ocr_text = "\n".join(lines)
-            ocr_source = source
-        else:
-            ocr_source = "mock"
+        ocr_text, ocr_source, intake_flags = await _ocr_image_intake(content, filename)
     else:
         try:
             ocr_text = content.decode("utf-8")
@@ -142,6 +186,10 @@ async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
             ocr_source = "mock"
 
     invoice_dict, mock_fields = parse_invoice_from_text(ocr_text, filename)
+    if ext in IMAGE_EXT:
+        mock_fields = intake_flags + list(mock_fields)
+    elif ocr_source == "mock":
+        mock_fields = ["ocr:mock_fallback_no_text"] + list(mock_fields)
     product_desc = product_description_from_invoice(invoice_dict)
     try:
         classification = classify_product(product_desc, cn_code_hint=None)
@@ -155,7 +203,7 @@ async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
         SourceCitation(
             constant="OCR engine",
             value=ocr_source,
-            citation="chineseocr/chineseocr (optional HTTP service)",
+            citation=f"chineseocr → qwen3.7-plus → mock ({settings.ocr_intake_timeout_s}s per step)",
         ),
     ]
     if pdf_embedding and pdf_embedding.embedded:

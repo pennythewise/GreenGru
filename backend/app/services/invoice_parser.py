@@ -11,7 +11,10 @@ from copy import deepcopy
 from typing import Any
 
 from app.data.mock_invoices import pick_mock_invoice
+from app.config import get_settings
 from app.services.llm_client import call_structured
+
+settings = get_settings()
 
 INVOICE_PARSE_SYSTEM = """You extract fields from a Chinese 增值税专用发票 OCR text blob.
 Return JSON only:
@@ -121,7 +124,7 @@ def parse_invoice_from_text(text: str, filename: str, *, use_llm: bool = True) -
     if use_llm and text and len(text) > 40:
         try:
             llm_parsed = call_structured(
-                model="qwen-flash",
+                model=settings.model_writing,
                 system_prompt=INVOICE_PARSE_SYSTEM,
                 user_prompt=f"Filename: {filename}\n\nOCR text:\n{text[:12000]}",
                 mock_response=regex_parsed or pick_mock_invoice(filename, text),

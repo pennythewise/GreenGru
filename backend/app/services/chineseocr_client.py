@@ -23,7 +23,12 @@ settings = get_settings()
 OcrSource = Literal["chineseocr", "unavailable"]
 
 
-async def ocr_image_bytes(content: bytes, *, filename: str = "upload") -> tuple[list[str], OcrSource]:
+async def ocr_image_bytes(
+    content: bytes,
+    *,
+    filename: str = "upload",
+    timeout_s: float | None = None,
+) -> tuple[list[str], OcrSource]:
     """Run chineseocr on image bytes. Returns (text_lines, source)."""
     if not settings.chinese_ocr_url:
         return [], "unavailable"
@@ -36,8 +41,10 @@ async def ocr_image_bytes(content: bytes, *, filename: str = "upload") -> tuple[
         "textLine": False,
     }
 
+    http_timeout = timeout_s if timeout_s is not None else settings.chinese_ocr_timeout_s
+
     try:
-        async with httpx.AsyncClient(timeout=settings.chinese_ocr_timeout_s) as client:
+        async with httpx.AsyncClient(timeout=http_timeout) as client:
             resp = await client.post(settings.chinese_ocr_url, json=payload)
             resp.raise_for_status()
             data = resp.json()

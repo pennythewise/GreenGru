@@ -149,6 +149,34 @@ class OcrPreviewOut(BaseModel):
     sources: list[SourceCitation] = []
 
 
+# --- Pipeline run (New Submission) -------------------------------------------
+
+
+class PipelineRunRequest(BaseModel):
+    invoice: InvoiceDataOut
+    classification_route: str = "BF-BOF"
+    production_volume_tonnes: float | None = None
+    ocr_source: str = "mock"
+    mock_fields: list[str] = []
+    year: int = 2026
+
+
+class PipelineStageDetailOut(BaseModel):
+    n: int
+    key: str
+    zh: str
+    status: str
+    elapsed: str | None = None
+    summary: str
+    detail: dict
+
+
+class PipelineRunResponse(BaseModel):
+    stages: list[PipelineStageDetailOut]
+    dashboard_snapshot: dict
+    package: dict
+
+
 # --- Classification ------------------------------------------------------------
 
 

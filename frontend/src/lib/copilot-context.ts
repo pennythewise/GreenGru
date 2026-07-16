@@ -189,13 +189,13 @@ const RESPONSES: Record<string, string> = {
   "grant-policy":
     "工信部联节〔2026〕13号 is the MIIT zero-carbon factory subsidy notice. It requires renewable-energy share evidence — your green-electricity PPA at 45% is close but below the 60% target in Advisory (+6 pts if you close that gap).",
   "new-files":
-    "Accepted formats: PDF, CSV, XLSX, PNG, JPG/JPEG. Structured CSV/XLSX skip the vision model entirely. Photos and scans go through Qwen3-VL-Flash intake after the local Stage-0 pre-screen.",
+    "Accepted formats: PDF, CSV, XLSX, PNG, JPG/JPEG. Structured CSV/XLSX skip the vision model entirely. Photos and scans go through qwen3.7-plus intake after the local Stage-0 pre-screen.",
   "new-pipeline":
     "After submit: Stage 0 pre-screen → intake extraction → validation → deterministic calculation → parallel passport + financing agents → advisory. Each regulated number is computed in code before any LLM writes prose.",
   "new-guardrails":
     "No — Stage 0 (StructBERT + DAMO OCR, local) rejects selfies, blank pages, and wrong document types before any DashScope call. You also must tick the authorization checkbox before submit runs.",
   "entry-router":
-    "The router (qwen-flash) classifies your intent into Loan, Grant, and/or CBAM with a confidence score. Routes above 0.70 pre-select; below that they stay off. You always confirm the ticked routes before anything runs — never a silent override.",
+    "The router (qwen3.7-plus) classifies your intent into Loan, Grant, and/or CBAM with a confidence score. Routes above 0.70 pre-select; below that they stay off. You always confirm the ticked routes before anything runs — never a silent override.",
   "entry-floor":
     "CBAM is below 0.70 because you declared no EU-bound tonnage this period (mostly domestic, EU maybe Q3). Without declared export volume, CBAM isn't in scope — you can re-enable it anytime before confirming.",
   "entry-combine":

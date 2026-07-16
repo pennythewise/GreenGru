@@ -179,8 +179,8 @@ export const submissions = [
 // Six-stage pipeline per section 4 of brief.
 export const pipelineStages = [
   { n: 1, key: "Intake",                zh: "接入",     model: "deterministic · OCR + StructBERT",       status: "done",    elapsed: "812 ms" },
-  { n: 2, key: "Validate",              zh: "校验",     model: "deterministic · 国家税务总局 API",         status: "done",    elapsed: "428 ms" },
-  { n: 3, key: "Classify",              zh: "分类",     model: "qwen-flash · CN code classifier → picks calc. method", status: "active", elapsed: "1.2 s" },
+  { n: 2, key: "Validate",              zh: "校验",     model: "诺诺 Nuonuo · invoiceInspection → 税务局", status: "done",    elapsed: "428 ms" },
+  { n: 3, key: "Classify",              zh: "分类",     model: "qwen3.7-plus · CN code classifier → picks calc. method", status: "active", elapsed: "1.2 s" },
   { n: 4, key: "Calculate",             zh: "计算",     model: "python · rule-based",                      status: "pending", elapsed: null },
   { n: 5, key: "Update dashboard",      zh: "更新总览", model: "deterministic · data commit (no model)",  status: "pending", elapsed: null },
   { n: 6, key: "Authorize → Upstream",  zh: "授权上传", model: "operator confirm → Baowu API",    status: "pending", elapsed: null, requiresAuth: true },
@@ -193,7 +193,7 @@ export function routeStrip(kb: string) {
     { n: 2, key: "Report",           zh: "报告",       method: "python · rule-based",              status: "done",    elapsed: "1.4 s" },
     { n: 3, key: "Score",            zh: "评分",       method: `rule-based · ${kb}`,               status: "active",  elapsed: "0.6 s" },
     { n: 4, key: "Pull factory data",zh: "工厂数据",   method: "deterministic · dashboard bus",    status: "pending", elapsed: null },
-    { n: 5, key: "Advisory",         zh: "建议",       method: "qwen-plus · EN / 中文",             status: "pending", elapsed: null },
+    { n: 5, key: "Advisory",         zh: "建议",       method: "qwen3.7-plus · EN / 中文",             status: "pending", elapsed: null },
   ];
 }
 

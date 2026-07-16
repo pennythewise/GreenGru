@@ -9,10 +9,10 @@
 #   cd chineseocr
 #   pip install -r requirements.txt
 #   # download models into ./models per upstream README
-#   python app.py 8080
+#   python app.py 8081
 #
 # Then in backend/.env:
-#   CHINESE_OCR_URL=http://localhost:8080/ocr
+#   CHINESE_OCR_URL=http://localhost:8081/ocr
 #
 # Without chineseocr running, the backend still returns structured invoice
 # data using mock templates keyed by filename (sample_A1, sample_A2, etc.).
@@ -25,7 +25,7 @@ services:
     volumes:
       - ${CHINESE_OCR_DIR:-./vendor/chineseocr}:/srv/chineseocr
     ports:
-      - "8080:8080"
+      - "8081:8081"
     command: >
-      bash -lc "pip install -r requirements.txt && python app.py 8080"
+      bash -lc "pip install -r requirements.txt && python app.py 8081"
     restart: unless-stopped

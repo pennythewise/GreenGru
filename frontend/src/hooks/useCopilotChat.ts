@@ -58,5 +58,14 @@ export function useCopilotChat(page: CopilotPage, greeting: string) {
     [messages, page, pending],
   );
 
-  return { messages, pending, modelLabel, sendMessage, reset };
+  const appendLocalExchange = useCallback((userText: string, assistantText: string) => {
+    const ts = Date.now();
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${ts}`, role: "user", text: userText },
+      { id: `a-${ts + 1}`, role: "assistant", text: assistantText },
+    ]);
+  }, []);
+
+  return { messages, pending, modelLabel, sendMessage, appendLocalExchange, reset };
 }
