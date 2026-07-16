@@ -13,6 +13,7 @@ import {
   Play,
   Radio,
   Shield,
+  TriangleAlert,
 } from "lucide-react";
 import {
   INTEGRATION_BASE_URL,
@@ -25,10 +26,81 @@ import { cn } from "@/lib/utils";
 const SECTIONS = [
   { id: "intro", label: "简介" },
   { id: "getting-started", label: "快速开始" },
+  { id: "errors", label: "HTTP 状态码" },
   { id: "concepts", label: "核心概念" },
   { id: "endpoints", label: "接口参考" },
   { id: "webhooks", label: "Webhooks" },
   { id: "scope-mapping", label: "Scope 映射" },
+] as const;
+
+const HTTP_STATUS_CODES = [
+  {
+    code: 200,
+    label: "Success",
+    labelZh: "成功",
+    tone: "carbon" as const,
+    description:
+      "请求成功。GET 返回 JSON 对象或列表（如 suppliers 数组、portfolio 汇总）；POST /webhooks 返回已注册的 webhook 对象。",
+    example: `{
+  "anchor_enterprise": "Baowu / Ansteel (demo tenant)",
+  "supplier_count": 8,
+  "total_scope3_category_10_tco2e": 92940
+}`,
+  },
+  {
+    code: 401,
+    label: "Unauthorized",
+    labelZh: "未授权",
+    tone: "danger" as const,
+    description: "无效或缺失 api_key 查询参数。每个请求必须附带 ?api_key=YOUR_API_KEY。",
+    example: `{
+  "detail": "Invalid or missing api_key"
+}`,
+    tryPath: "/portfolio/summary",
+    tryApiKey: "invalid-key-demo",
+  },
+  {
+    code: 404,
+    label: "Not found",
+    labelZh: "未找到",
+    tone: "warning" as const,
+    description: "supplier_id 不存在，或请求了未实现的资源路径。",
+    example: `{
+  "detail": "supplier SUP-999 not found"
+}`,
+    tryPath: "/suppliers/SUP-999",
+  },
+  {
+    code: 422,
+    label: "Validation error",
+    labelZh: "参数校验失败",
+    tone: "gold" as const,
+    description:
+      "请求参数格式错误 — 例如缺少必填 api_key、POST /webhooks 的 url 字段为空、或 verification_status 枚举值无效。",
+    example: `{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": ["query", "api_key"],
+      "msg": "Field required"
+    }
+  ]
+}`,
+    tryPath: "/portfolio/summary",
+    omitApiKey: true,
+  },
+  {
+    code: 429,
+    label: "Rate limit exceeded",
+    labelZh: "超出速率限制",
+    tone: "danger" as const,
+    description:
+      "租户请求频率超过套餐配额。请实现指数退避（exponential backoff）后重试；联系 GreenGru 运营提升限额。",
+    example: `{
+  "detail": "Rate limit exceeded for tenant baowu-prod",
+  "retry_after_seconds": 60
+}`,
+  },
 ] as const;
 
 type EndpointDef = {
@@ -139,6 +211,84 @@ function CopyButton({ text }: { text: string }) {
       {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
       {copied ? "已复制" : "复制"}
     </button>
+  );
+}
+
+function StatusCodeRow({
+  row,
+}: {
+  row: (typeof HTTP_STATUS_CODES)[number];
+}) {
+  const [result, setResult] = useState<IntegrationTryResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const canTry = "tryPath" in row && row.tryPath;
+
+  async function handleTryError() {
+    if (!("tryPath" in row) || !row.tryPath) return;
+    setLoading(true);
+    const res = await tryIntegrationEndpoint(row.tryPath, {
+      apiKey: "tryApiKey" in row ? row.tryApiKey : INTEGRATION_DEMO_API_KEY,
+      omitApiKey: "omitApiKey" in row && row.omitApiKey,
+      method: row.tryPath === "/webhooks" ? "POST" : "GET",
+    });
+    setResult(res);
+    setLoading(false);
+  }
+
+  const toneCls =
+    row.tone === "carbon"
+      ? "border-carbon/40 bg-carbon/10 text-carbon"
+      : row.tone === "warning"
+        ? "border-warning/40 bg-warning/10 text-warning"
+        : row.tone === "gold"
+          ? "border-gold/40 bg-gold/10 text-gold"
+          : "border-danger/40 bg-danger/10 text-danger";
+
+  return (
+    <div className="rounded-lg border border-border bg-surface/30 overflow-hidden">
+      <div className="px-4 py-3 flex flex-wrap items-center gap-3 border-b border-border/60">
+        <span className={cn("text-[13px] font-mono font-bold px-2.5 py-1 rounded", toneCls)}>
+          {row.code}
+        </span>
+        <div>
+          <span className="text-[14px] font-semibold">{row.label}</span>
+          <span className="ml-2 text-[11px] font-mono text-muted-foreground">{row.labelZh}</span>
+        </div>
+      </div>
+      <div className="p-4 space-y-3">
+        <p className="text-[13px] text-muted-foreground leading-relaxed">{row.description}</p>
+        <div className="rounded-lg border border-border bg-background/60 p-3">
+          <p className="text-[10px] font-mono uppercase text-muted-foreground mb-1.5">Example response body</p>
+          <pre className="text-[11px] font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap">{row.example}</pre>
+        </div>
+        {canTry && row.code !== 200 && (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void handleTryError()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-[11px] font-mono text-muted-foreground hover:text-primary hover:border-primary/40 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+            模拟 {row.code} 响应
+          </button>
+        )}
+        {result && canTry && (
+          <div
+            className={cn(
+              "rounded-lg border p-3 text-[11px] font-mono",
+              result.status === row.code ? "border-carbon/30 bg-carbon/5" : "border-border bg-surface/50",
+            )}
+          >
+            <div className="text-muted-foreground mb-1">
+              HTTP {result.status} · {result.url}
+            </div>
+            <pre className="overflow-x-auto whitespace-pre-wrap text-foreground/90 max-h-[200px] overflow-y-auto">
+              {JSON.stringify(result.body, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -305,6 +455,47 @@ export function ApiDocumentationArticle() {
               />
               <pre className="mt-2 text-[11px] font-mono overflow-x-auto">{`curl -X GET "${INTEGRATION_BASE_URL}/portfolio/summary?api_key=${INTEGRATION_DEMO_API_KEY}"`}</pre>
             </div>
+          </section>
+
+          <section id="errors" className="scroll-mt-24 space-y-4">
+            <h2 className="text-[18px] font-semibold flex items-center gap-2">
+              <TriangleAlert className="h-4 w-4 text-warning" /> HTTP 状态码
+            </h2>
+            <p className="text-[13px] text-muted-foreground leading-relaxed">
+              集成时请处理以下常见响应。除 <code className="text-teal">200</code> 外，错误体通常为 FastAPI 标准
+              <code className="text-teal"> {"{ detail: ... }"}</code> 格式。
+            </p>
+            <div className="rounded-xl border border-border overflow-hidden">
+              <table className="w-full text-[12px] hidden sm:table">
+                <thead className="bg-surface/60 border-b border-border">
+                  <tr className="text-[10px] font-mono uppercase text-muted-foreground">
+                    <th className="py-2 px-3 text-left w-16">Code</th>
+                    <th className="py-2 px-3 text-left w-36">Status</th>
+                    <th className="py-2 px-3 text-left">When it happens</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {HTTP_STATUS_CODES.map((row) => (
+                    <tr key={row.code}>
+                      <td className="py-2.5 px-3 font-mono font-bold text-foreground">{row.code}</td>
+                      <td className="py-2.5 px-3">
+                        <span className="font-medium">{row.label}</span>
+                        <span className="block text-[10px] text-muted-foreground">{row.labelZh}</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-muted-foreground leading-snug">{row.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="space-y-3">
+              {HTTP_STATUS_CODES.map((row) => (
+                <StatusCodeRow key={row.code} row={row} />
+              ))}
+            </div>
+            <p className="text-[12px] text-muted-foreground italic">
+              429 在生产环境由 API 网关强制执行；本地演示环境默认不触发，上表示例为对接参考格式。
+            </p>
           </section>
 
           <section id="concepts" className="scroll-mt-24 space-y-4">

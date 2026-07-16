@@ -21,12 +21,15 @@ export type IntegrationTryResult = {
 
 export async function tryIntegrationEndpoint(
   path: string,
-  options?: { method?: "GET" | "POST"; body?: object; apiKey?: string },
+  options?: { method?: "GET" | "POST"; body?: object; apiKey?: string; omitApiKey?: boolean },
 ): Promise<IntegrationTryResult> {
-  const apiKey = options?.apiKey ?? INTEGRATION_DEMO_API_KEY;
   const method = options?.method ?? "GET";
-  const sep = path.includes("?") ? "&" : "?";
-  const url = `${API_BASE}/api/v1${path}${sep}api_key=${encodeURIComponent(apiKey)}`;
+  let url = `${API_BASE}/api/v1${path}`;
+  if (!options?.omitApiKey) {
+    const apiKey = options?.apiKey ?? INTEGRATION_DEMO_API_KEY;
+    const sep = path.includes("?") ? "&" : "?";
+    url = `${url}${sep}api_key=${encodeURIComponent(apiKey)}`;
+  }
 
   try {
     const res = await fetch(url, {
