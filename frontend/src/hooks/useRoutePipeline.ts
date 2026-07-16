@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { routeStrip } from "@/lib/dashboard-data";
+import { runGrantScore, type GrantScoreResult } from "@/lib/api";
+import { collectGrantScoreInputs } from "@/lib/grant-score-inputs";
 
 export type PipelineStageStatus = "pending" | "loading" | "done";
 
@@ -14,8 +16,8 @@ export type PipelineStage = {
 
 const STAGE_DURATIONS_MS = [400, 1200, 650, 900, 1800];
 
-function initialStages(kb: string): PipelineStage[] {
-  return routeStrip(kb).map((s) => ({
+function initialStages(kb: string, slug?: "loan" | "grant" | "passport"): PipelineStage[] {
+  return routeStrip(kb, slug).map((s) => ({
     n: s.n,
     key: s.key,
     zh: s.zh,
@@ -30,16 +32,18 @@ function formatElapsed(ms: number) {
   return `${(ms / 1000).toFixed(1)} s`;
 }
 
-export function useRoutePipeline(kb: string) {
-  const [stages, setStages] = useState<PipelineStage[]>(() => initialStages(kb));
+export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport") {
+  const [stages, setStages] = useState<PipelineStage[]>(() => initialStages(kb, slug));
   const [running, setRunning] = useState(false);
   const [complete, setComplete] = useState(false);
+  const [grantScore, setGrantScore] = useState<GrantScoreResult | null>(null);
+  const [scoreError, setScoreError] = useState<string | null>(null);
   const abortRef = useRef(false);
 
   const reset = useCallback(() => {
     abortRef.current = true;
     setStages(
-      routeStrip(kb).map((s) => ({
+      routeStrip(kb, slug).map((s) => ({
         n: s.n,
         key: s.key,
         zh: s.zh,
@@ -50,15 +54,19 @@ export function useRoutePipeline(kb: string) {
     );
     setComplete(false);
     setRunning(false);
-  }, [kb]);
+    setGrantScore(null);
+    setScoreError(null);
+  }, [kb, slug]);
 
   const runPipeline = useCallback(async (): Promise<PipelineStage[]> => {
     if (running) return stages;
     abortRef.current = false;
     setRunning(true);
     setComplete(false);
+    setGrantScore(null);
+    setScoreError(null);
 
-    const meta = routeStrip(kb);
+    const meta = routeStrip(kb, slug);
     let current: PipelineStage[] = meta.map((s) => ({
       n: s.n,
       key: s.key,
@@ -80,7 +88,31 @@ export function useRoutePipeline(kb: string) {
       setStages(current);
 
       const start = performance.now();
-      await new Promise((r) => setTimeout(r, duration));
+
+      // Stage 3 for grant: real GB/T 36132—2025 score from backend
+      if (slug === "grant" && meta[idx]?.n === 3) {
+        try {
+          const inputs = collectGrantScoreInputs();
+          const score = await runGrantScore({
+            scrap_ratio_pct: inputs.scrap_ratio_pct,
+            green_electricity_pct: inputs.green_electricity_pct,
+            intensity_tco2e_per_t: inputs.intensity_tco2e_per_t,
+            metering_pct: inputs.metering_pct,
+            water_reuse_pct: inputs.water_reuse_pct,
+            solid_waste_util_pct: inputs.solid_waste_util_pct,
+            production_tonnes: inputs.production_tonnes,
+            checklist: inputs.checklist,
+            application_form: inputs.application_form,
+          });
+          setGrantScore(score);
+        } catch (err) {
+          setScoreError(err instanceof Error ? err.message : "Grant score failed");
+        }
+        await new Promise((r) => setTimeout(r, Math.max(duration, 600)));
+      } else {
+        await new Promise((r) => setTimeout(r, duration));
+      }
+
       const elapsed = formatElapsed(Math.round(performance.now() - start));
 
       if (abortRef.current) break;
@@ -96,7 +128,7 @@ export function useRoutePipeline(kb: string) {
     }
     setRunning(false);
     return current;
-  }, [kb, running, stages]);
+  }, [kb, running, stages, slug]);
 
-  return { stages, running, complete, runPipeline, reset };
+  return { stages, running, complete, runPipeline, reset, grantScore, scoreError };
 }

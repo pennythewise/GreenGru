@@ -18,6 +18,7 @@ import {
 import { AppShell, CitationFooter, PageHeader } from "@/components/AppShell";
 import { CbamWorkbookPanel } from "@/components/CbamWorkbookPanel";
 import { GrantApplicationForm } from "@/components/GrantApplicationForm";
+import { GreenFactoryScorePanel } from "@/components/GreenFactoryScorePanel";
 import { LoanApplicationForm } from "@/components/LoanApplicationForm";
 import { useRouteChecklist } from "@/hooks/useRouteChecklist";
 import { useRoutePipeline } from "@/hooks/useRoutePipeline";
@@ -159,18 +160,24 @@ function Checklist({
 /* ---------- Horizontal stage strip ---------- */
 function StageStrip({
   kb,
+  slug,
   stages,
   running,
   complete,
   unlocked,
   onRun,
+  grantScore,
+  scoreError,
 }: {
   kb: string;
+  slug: Slug;
   stages: ReturnType<typeof useRoutePipeline>["stages"];
   running: boolean;
   complete: boolean;
   unlocked: boolean;
   onRun: () => void;
+  grantScore: ReturnType<typeof useRoutePipeline>["grantScore"];
+  scoreError: string | null;
 }) {
   const { t, isZh } = useLocale();
   return (
@@ -211,6 +218,7 @@ function StageStrip({
           const done = s.status === "done";
           const loading = s.status === "loading";
           const pending = s.status === "pending";
+          const isGrantScore = slug === "grant" && s.n === 3;
           return (
             <li
               key={s.n}
@@ -219,6 +227,7 @@ function StageStrip({
                 done && "border-carbon/40 bg-carbon/[0.06]",
                 loading && "border-primary/50 bg-primary/[0.08] teal-glow",
                 pending && "border-border bg-surface/50",
+                isGrantScore && (done || loading) && "ring-1 ring-primary/30",
               )}
             >
               <div className="flex items-baseline justify-between">
@@ -246,10 +255,27 @@ function StageStrip({
               >
                 {s.method}
               </div>
+              {isGrantScore && slug === "grant" && (
+                <div className="mt-1.5 text-[9.5px] font-mono text-primary/80 leading-snug">
+                  {isZh
+                    ? "依据《绿色工厂评价通则》GB/T 36132—2025"
+                    : "Per 绿色工厂评价通则 GB/T 36132—2025"}
+                </div>
+              )}
             </li>
           );
         })}
       </ol>
+      {scoreError && (
+        <div className="mt-3 rounded-md border border-danger/40 bg-danger/[0.06] p-2 text-[11px] text-danger">
+          {scoreError}
+        </div>
+      )}
+      {grantScore && slug === "grant" && (
+        <div className="mt-4">
+          <GreenFactoryScorePanel result={grantScore} />
+        </div>
+      )}
       <p className="mt-3 text-[11.5px] text-muted-foreground italic">
         {t(routePage.factoryNote.en, routePage.factoryNote.zh)}
       </p>
@@ -295,7 +321,7 @@ export function RoutePage({ slug }: { slug: Slug }) {
   const gapList = gaps[slug];
   const flow = getFlowProgress(slug);
   const checklist = useRouteChecklist(slug);
-  const { stages, running, complete, runPipeline } = useRoutePipeline(cfg.kb);
+  const { stages, running, complete, runPipeline, grantScore, scoreError } = useRoutePipeline(cfg.kb, slug);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
 
@@ -430,11 +456,14 @@ export function RoutePage({ slug }: { slug: Slug }) {
       {slug === "grant" && <GrantApplicationForm />}
       <StageStrip
         kb={cfg.kb}
+        slug={slug}
         stages={stages}
         running={running}
         complete={complete}
         unlocked={checklist.allDone}
         onRun={runPipeline}
+        grantScore={grantScore}
+        scoreError={scoreError}
       />
 
       <div className="grid lg:grid-cols-2 gap-4">
@@ -452,7 +481,10 @@ export function RoutePage({ slug }: { slug: Slug }) {
           <p className="text-[11.5px] font-mono text-muted-foreground">{cfg.scoreLabel} · {cfg.scoreValue}</p>
 
           <div className="mt-4 rounded-lg border border-border bg-surface/40 p-4">
-            <ScoreGauge value={cfg.gauge} grade={cfg.scoreGrade} />
+            <ScoreGauge
+              value={grantScore && slug === "grant" ? Math.round(grantScore.total_score) : cfg.gauge}
+              grade={grantScore && slug === "grant" ? (grantScore.qualified ? "B" : "C") : cfg.scoreGrade}
+            />
           </div>
 
           <div className="mt-4">

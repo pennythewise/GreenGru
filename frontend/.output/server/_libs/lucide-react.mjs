@@ -324,6 +324,28 @@ var CircleDot = createLucideIcon("circle-dot", [["circle", {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var CircleX = createLucideIcon("circle-x", [
+	["circle", {
+		cx: "12",
+		cy: "12",
+		r: "10",
+		key: "1mglay"
+	}],
+	["path", {
+		d: "m15 9-6 6",
+		key: "1uzhvr"
+	}],
+	["path", {
+		d: "m9 9 6 6",
+		key: "z0biqf"
+	}]
+]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var Circle = createLucideIcon("circle", [["circle", {
 	cx: "12",
 	cy: "12",
@@ -1150,4 +1172,4 @@ var Zap = createLucideIcon("zap", [["path", {
 	key: "1xq2db"
 }]]);
 //#endregion
-export { BookOpen as $, Leaf as A, ExternalLink as B, Minimize2 as C, LogOut as D, Mail as E, FileUp as F, Circle as G, Download as H, FileText as I, CircleAlert as J, CircleDot as K, FileSpreadsheet as L, Info as M, Gauge as N, Lock as O, Flame as P, Building2 as Q, FileCheckCorner as R, Paperclip as S, Maximize2 as T, Copy as U, Earth as V, CodeXml as W, ChevronDown as X, ChevronRight as Y, Check as Z, RotateCcw as _, Users as a, Play as b, TrendingUp as c, Sparkles as d, Banknote as et, Ship as f, Search as g, Send as h, Wallet as i, ArrowLeft as it, KeyRound as j, LoaderCircle as k, TrendingDown as l, ShieldCheck as m, X as n, ArrowUpRight as nt, Upload as o, Shield as p, CircleCheck as q, WandSparkles as r, ArrowRight as rt, TriangleAlert as s, Zap as t, BadgeCheck as tt, SquareFunction as u, Radio as v, MessagesSquare as w, Pencil as x, Plus as y, Factory as z };
+export { Building2 as $, Leaf as A, ExternalLink as B, Minimize2 as C, LogOut as D, Mail as E, FileUp as F, Circle as G, Download as H, FileText as I, CircleCheck as J, CircleX as K, FileSpreadsheet as L, Info as M, Gauge as N, Lock as O, Flame as P, Check as Q, FileCheckCorner as R, Paperclip as S, Maximize2 as T, Copy as U, Earth as V, CodeXml as W, ChevronRight as X, CircleAlert as Y, ChevronDown as Z, RotateCcw as _, Users as a, ArrowLeft as at, Play as b, TrendingUp as c, Sparkles as d, BookOpen as et, Ship as f, Search as g, Send as h, Wallet as i, ArrowRight as it, KeyRound as j, LoaderCircle as k, TrendingDown as l, ShieldCheck as m, X as n, BadgeCheck as nt, Upload as o, Shield as p, CircleDot as q, WandSparkles as r, ArrowUpRight as rt, TriangleAlert as s, Zap as t, Banknote as tt, SquareFunction as u, Radio as v, MessagesSquare as w, Pencil as x, Plus as y, Factory as z };

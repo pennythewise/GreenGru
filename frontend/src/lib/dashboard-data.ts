@@ -187,11 +187,15 @@ export const pipelineStages = [
 ];
 
 // Horizontal per-route stage strip (Section 6 / B in brief).
-export function routeStrip(kb: string) {
+export function routeStrip(kb: string, slug?: "loan" | "grant" | "passport") {
+  const scoreMethod =
+    slug === "grant"
+      ? "GB/T 36132—2025 绿色工厂评价通则 · deterministic"
+      : `rule-based · ${kb}`;
   return [
     { n: 1, key: "Pre-screener",     zh: "预筛",       method: "deterministic · doc checklist",   status: "done",    elapsed: "310 ms" },
     { n: 2, key: "Report",           zh: "报告",       method: "python · rule-based",              status: "done",    elapsed: "1.4 s" },
-    { n: 3, key: "Score",            zh: "评分",       method: `rule-based · ${kb}`,               status: "active",  elapsed: "0.6 s" },
+    { n: 3, key: "Score",            zh: "评分",       method: scoreMethod,                      status: "active",  elapsed: "0.6 s" },
     { n: 4, key: "Pull factory data",zh: "工厂数据",   method: "deterministic · dashboard bus",    status: "pending", elapsed: null },
     { n: 5, key: "Advisory",         zh: "建议",       method: "qwen3.7-plus · EN / 中文",             status: "pending", elapsed: null },
   ];

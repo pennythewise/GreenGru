@@ -277,6 +277,78 @@ export type RoutePreviewPdfPayload = {
   lang?: string;
 };
 
+export type GrantScoreResult = {
+  standard: string;
+  standard_zh: string;
+  guideline_doc: string;
+  total_score: number;
+  max_score: number;
+  qualified: boolean;
+  veto_passed: boolean;
+  veto_items: { key: string; label_en: string; label_zh: string; passed: boolean; source: string }[];
+  dimensions: {
+    key: string;
+    name_en: string;
+    name_zh: string;
+    weight_pct: number;
+    score: number;
+    max_score: number;
+    indicators: {
+      seq: number;
+      name_en: string;
+      name_zh: string;
+      indicator_type: string;
+      unit: string;
+      weight_points: number;
+      score: number;
+      actual: number | string | null;
+      leading: number | string | null;
+      benchmark: number | string | null;
+      formula_ref: string | null;
+      data_source: string;
+      explanation_en: string;
+      explanation_zh: string;
+    }[];
+  }[];
+  tier_label: string;
+  tier_label_zh: string;
+  formulas: { eq: string; label: string; latex: string; values: Record<string, unknown>; result: number }[];
+  summary_en: string;
+  summary_zh: string;
+};
+
+export async function runGrantScore(payload: {
+  scrap_ratio_pct: number;
+  green_electricity_pct: number;
+  intensity_tco2e_per_t: number;
+  metering_pct: number | null;
+  water_reuse_pct: number;
+  solid_waste_util_pct: number;
+  production_tonnes: number | null;
+  checklist: { name: string; done: boolean; file_name?: string | null }[];
+  application_form: unknown;
+}): Promise<GrantScoreResult> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/routes/grant-score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      throw new Error("Cannot reach backend grant scorer. Start backend on :8000.");
+    }
+    throw err;
+  }
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Grant score failed (${res.status})`);
+  }
+  return res.json() as Promise<GrantScoreResult>;
+}
+
 export async function downloadRoutePreviewPdf(payload: RoutePreviewPdfPayload): Promise<void> {
   let res: Response;
   try {
