@@ -44,13 +44,16 @@ class Settings(BaseSettings):
     model_writing: str = "qwen/qwen3.7-plus"  # passport, financing report, advisory, invoice parse
     model_embedding: str = "text-embedding-v4"
 
-    # --- chineseocr (optional Stage-0 / Stage-1 OCR service) ---------------
-    # Run separately: clone https://github.com/chineseocr/chineseocr and
-    # `python app.py 8080` — then point this at http://localhost:8080/ocr
-    chinese_ocr_url: str | None = None
-    chinese_ocr_timeout_s: float = 90.0  # legacy default for non-intake callers
-    ocr_intake_timeout_s: float = 5.0  # per-step timeout: chineseocr → qwen3.7-plus → mock
-    # Temp dev flag — skip chineseocr + qwen vision on upload; mock templates only.
+    # --- PaddleOCR (Stage-1 image OCR, in-process) -------------------------
+    # lang='ch' = simplified Chinese + English (PP-OCR Chinese model).
+    # Models auto-download on first request (~20s). Set enable_mkldnn=false on Windows CPU.
+    paddleocr_enabled: bool = True
+    paddleocr_lang: str = "ch"
+    paddleocr_version: str = "PP-OCRv4"
+    paddleocr_enable_mkldnn: bool = False
+    paddleocr_timeout_s: float = 45.0
+    ocr_intake_timeout_s: float = 5.0  # qwen3.7-plus vision fallback step
+    # Temp dev flag — skip PaddleOCR + qwen vision on upload; mock templates only.
     ocr_mock_only: bool = False
 
     # If no API key is configured, every agent call returns a deterministic,

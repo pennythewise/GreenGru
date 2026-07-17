@@ -17,7 +17,7 @@ from app.schemas import (
     PdfEmbeddingOut,
     SourceCitation,
 )
-from app.services.chineseocr_client import ocr_image_bytes
+from app.services.paddleocr_client import ocr_image_bytes
 from app.services.ocr_vision import ocr_image_with_vision
 from app.services.classifier_agent import classify_product
 from app.services.invoice_parser import (
@@ -121,41 +121,35 @@ def _mock_classification_preview(product_desc: str) -> ClassificationPreviewOut:
 
 
 async def _ocr_image_intake(content: bytes, filename: str) -> tuple[str, str, list[str]]:
-    """chineseocr (5s) → qwen3.7-plus (5s) → mock — or mock only when OCR_MOCK_ONLY=true."""
+    """PaddleOCR (zh+en) → qwen3.7-plus (5s) → mock — or mock only when OCR_MOCK_ONLY=true."""
     if settings.ocr_mock_only:
         return "", "mock", ["ocr:mock_only_mode"]
 
     flags: list[str] = []
-    timeout = settings.ocr_intake_timeout_s
+    qwen_timeout = settings.ocr_intake_timeout_s
 
-    # 1 · chineseocr sidecar
+    # 1 · PaddleOCR (in-process, lang=ch = 简体中文 + English)
     try:
-        lines, source = await asyncio.wait_for(
-            ocr_image_bytes(content, filename=filename, timeout_s=timeout),
-            timeout=timeout,
-        )
-        if lines and source == "chineseocr":
-            return "\n".join(lines), "chineseocr", flags
-        flags.append("ocr:chineseocr_empty_or_unavailable")
-    except TimeoutError:
-        logger.warning("chineseocr timed out after %ss for %s", timeout, filename)
-        flags.append(f"ocr:chineseocr_timeout_{timeout}s")
+        lines, source = await ocr_image_bytes(content, filename=filename)
+        if lines and source == "paddleocr":
+            return "\n".join(lines), "paddleocr", flags
+        flags.append("ocr:paddleocr_empty_or_unavailable")
     except Exception as exc:  # noqa: BLE001
-        logger.warning("chineseocr failed for %s: %s", filename, exc)
-        flags.append("ocr:chineseocr_failed")
+        logger.warning("PaddleOCR intake failed for %s: %s", filename, exc)
+        flags.append("ocr:paddleocr_failed")
 
-    # 2 · qwen3.7-plus
+    # 2 · qwen3.7-plus vision fallback
     try:
         vision_text, vision_source = await asyncio.wait_for(
             ocr_image_with_vision(content, filename=filename),
-            timeout=timeout,
+            timeout=qwen_timeout,
         )
         if vision_text.strip() and vision_source == "qwen3.7-plus":
             return vision_text, "qwen3.7-plus", flags
         flags.append("ocr:qwen37_empty_or_unavailable")
     except TimeoutError:
-        logger.warning("qwen3.7-plus OCR timed out after %ss for %s", timeout, filename)
-        flags.append(f"ocr:qwen37_timeout_{timeout}s")
+        logger.warning("qwen3.7-plus OCR timed out after %ss for %s", qwen_timeout, filename)
+        flags.append(f"ocr:qwen37_timeout_{qwen_timeout}s")
     except Exception as exc:  # noqa: BLE001
         logger.warning("qwen3.7-plus OCR failed for %s: %s", filename, exc)
         flags.append("ocr:qwen37_failed")
@@ -214,7 +208,10 @@ async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
         SourceCitation(
             constant="OCR engine",
             value=ocr_source,
-            citation=f"chineseocr → qwen3.7-plus → mock ({settings.ocr_intake_timeout_s}s per step)",
+            citation=(
+                f"PaddleOCR (lang={settings.paddleocr_lang}, {settings.paddleocr_version}) "
+                f"→ qwen3.7-plus → mock ({settings.ocr_intake_timeout_s}s qwen step)"
+            ),
         ),
     ]
     if pdf_embedding and pdf_embedding.embedded:

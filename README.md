@@ -83,6 +83,13 @@ To use real Qwen models, set `DASHSCOPE_API_KEY` in `.env` and
 `.env.example`) — this is load-bearing for data sovereignty (PRD §10), not
 a default to leave unset. Never point it at `dashscope-intl.aliyuncs.com`.
 
+**Invoice photo OCR (PaddleOCR):** Stage-1 image intake runs **PaddleOCR
+in-process** (`lang=ch` → simplified Chinese + English). Set
+`OCR_MOCK_ONLY=false` and `PADDLEOCR_ENABLED=true` in `.env`. First upload
+downloads PP-OCRv4 models (~15 MB). On Windows CPU keep
+`PADDLEOCR_ENABLE_MKLDNN=false`. See `backend/PADDLEOCR.md` for the full
+chain (PaddleOCR → qwen3.7-plus vision → mock templates).
+
 To use a real Supabase project instead of local SQLite: run
 `supabase/migrations/0001_init.sql` against your Supabase project (via the
 Supabase CLI or the SQL editor), then set `DATABASE_URL` in `.env` to your

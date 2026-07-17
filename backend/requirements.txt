@@ -14,5 +14,10 @@ asyncpg==0.30.0
 supabase==2.10.0
 python-dotenv==1.0.1
 pypdf==5.1.0
+# PaddleOCR — in-process Stage-1 image OCR (lang=ch: 简体中文 + English)
+paddlepaddle>=3.3.0
+paddleocr>=3.7.0
+numpy<2
+pillow>=10.0.0
 pytest==8.3.4
 pytest-asyncio==0.24.0

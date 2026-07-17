@@ -169,7 +169,7 @@ export function ExtractedInvoiceCard({
         onRemove={onRemove}
         locked={locked}
         status="loading"
-        summary="chineseocr → classify"
+        summary="PaddleOCR → classify"
       >
         <div className="py-6 text-center">
           <Loader2 className="h-7 w-7 text-primary mx-auto animate-spin" />

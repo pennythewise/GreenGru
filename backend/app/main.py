@@ -56,12 +56,8 @@ async def health():
         "intake_model": settings.model_intake_vision,
         "embedding_model": settings.model_embedding,
         "ocr_mock_only": settings.ocr_mock_only,
-        "chinese_ocr_url": settings.chinese_ocr_url,
-        "chinese_ocr_note": (
-            "CHINESE_OCR_URL must point at the chineseocr sidecar (e.g. :8081/ocr), "
-            "not the Vite frontend on :8080"
-            if settings.chinese_ocr_url and ":8080/" in settings.chinese_ocr_url
-            else None
-        ),
+        "paddleocr_enabled": settings.paddleocr_enabled,
+        "paddleocr_lang": settings.paddleocr_lang,
+        "paddleocr_version": settings.paddleocr_version,
         "supabase_configured": bool(settings.supabase_url and settings.supabase_service_role_key),
     }

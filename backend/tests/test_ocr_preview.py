@@ -1,4 +1,4 @@
-"""Tests for OCR preview endpoint (chineseocr integration + mock fallback)."""
+"""Tests for OCR preview endpoint (PaddleOCR integration + mock fallback)."""
 
 from io import BytesIO
 
@@ -21,7 +21,7 @@ def test_ocr_preview_image_returns_invoice_and_classification():
     data = resp.json()
     assert data["invoice"]["invoiceCode"]
     assert data["classification"]["cnCode"]
-    assert data["ocr_source"] in {"mock", "chineseocr"}
+    assert data["ocr_source"] in {"mock", "paddleocr", "qwen3.7-plus"}
     assert "buyer" in data["invoice"]
 
 

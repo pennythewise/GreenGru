@@ -55,7 +55,7 @@ GreenGru turns invisible emissions into **three usable outputs**: CBAM export pa
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         SME DATA INGESTION LAYER                             │
-│  Invoices/photos/PDF ──► OCR (chineseocr) + Qwen parse                      │
+│  Invoices/photos/PDF ──► OCR (PaddleOCR in-process) + Qwen parse            │
 │  CSV/XLSX ────────────► Deterministic parser (no vision LLM)                 │
 │  IoT sensors ─────────► MQTT → /api/iot/ingest (optional, decoupled)         │
 └───────────────────────────────────┬─────────────────────────────────────────┘
@@ -100,7 +100,7 @@ GreenGru turns invisible emissions into **three usable outputs**: CBAM export pa
 
 | Source | Processing | Human in loop |
 |--------|------------|---------------|
-| **增值税专用发票** (photos, scans, PDF) | chineseocr HTTP service → field parse (regex + Qwen) → mock fill for gaps | Edit extracted fields before submit |
+| **增值税专用发票** (photos, scans, PDF) | PaddleOCR (lang=ch, zh+en) → field parse (regex + Qwen) → mock fill for gaps | Edit extracted fields before submit |
 | **Structured CSV/XLSX** | Deterministic column map | Column mapping confirm if ambiguous |
 | **Utility / production records** | Same OCR path or manual form | Optional |
 | **IoT (ESP32 + EmonLib)** | MQTT → `POST /api/iot/ingest` | Toggle on New Submission |
@@ -109,7 +109,7 @@ GreenGru turns invisible emissions into **three usable outputs**: CBAM export pa
 
 | Component | Role | Config |
 |-----------|------|--------|
-| [chineseocr](https://github.com/chineseocr/chineseocr) | Image text detection + recognition | `CHINESE_OCR_URL` (use port **8081+**, not 8080 — Vite uses 8080) |
+| [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) | Image text detection + recognition (in-process) | `PADDLEOCR_ENABLED`, `PADDLEOCR_LANG=ch` |
 | Qwen structured extraction | Invoice field JSON from OCR text | `DASHSCOPE_API_KEY` + `text-embedding-v4` for PDFs |
 | Mock invoice templates | Filename-keyed fallback (`sample_A1`, `sample_A2`, WhatsApp photo) | Always available |
 
@@ -445,7 +445,7 @@ Header **G** icon opens full-height right panel:
 | Frontend | TanStack Start, React 19, TypeScript, Tailwind, shadcn/ui, Recharts, React Three Fiber | Port 8080 dev |
 | Backend | Python 3.11, FastAPI | Port 8000; Vite proxies `/api` in dev |
 | LLM | Qwen via QwenCloud / DashScope OpenAI-compatible API | `text-embedding-v4`, `qwen-flash`, `qwen-plus`, `qwen3-vl-flash` |
-| OCR | chineseocr (optional sidecar) | HTTP POST `/ocr` |
+| OCR | PaddleOCR (in-process) | `paddleocr_client.ocr_image_bytes` |
 | DB | Supabase Postgres + pgvector | SQLite fallback for local dev |
 | PDF | WeasyPrint + Jinja2 | CJK fonts bundled |
 | IoT | ESP32 + MQTT → FastAPI ingest | Decoupled optional module |
@@ -462,7 +462,8 @@ Header **G** icon opens full-height right panel:
 | `LLM_MOCK_MODE` | Yes | `false` when key set |
 | `MODEL_EMBEDDING` | Yes | `text-embedding-v4` |
 | `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` | For PDF vectors | pgvector storage |
-| `CHINESE_OCR_URL` | Optional | e.g. `http://localhost:8081/ocr` |
+| `PADDLEOCR_ENABLED` | Optional | `true` — in-process PP-OCRv4 |
+| `PADDLEOCR_LANG` | Optional | `ch` (简体中文 + English) |
 
 **Frontend (`frontend/.env`):**
 
@@ -561,7 +562,7 @@ sme_locations       (company_id, province, lat, lng, map_cluster_id)
 
 | Capability | Backend | Frontend | Notes |
 |------------|---------|----------|-------|
-| Invoice OCR upload | ✅ `ocr-preview` | ✅ `new.tsx` | chineseocr optional + mock |
+| Invoice OCR upload | ✅ `ocr-preview` | ✅ `new.tsx` | PaddleOCR + qwen fallback + mock |
 | PDF text-embedding-v4 | ✅ | ✅ shows in card | Supabase or local JSON |
 | Qwen classify + parse | ✅ | ✅ | QwenCloud intl endpoint |
 | Intake validator (plausibility) | ✅ | — | |
@@ -635,7 +636,7 @@ sme_locations       (company_id, province, lat, lng, map_cluster_id)
 | Diagnosis separate from Advisory | User request: more focus on gaps before solutions |
 | Nuonuo as cited validator | User spec; simulated, not wired to real API yet |
 | QwenCloud intl endpoint for hackathon | User's key source; production should migrate to Beijing Model Studio for data sovereignty |
-| chineseocr as sidecar | Heavy deps; HTTP integration keeps backend lean |
+| PaddleOCR in-process | Avoids dead chineseocr model links; single-process deploy |
 | 8 CN codes locked | PRD scope guardrail |
 
 ---
@@ -676,7 +677,7 @@ GreenGru-1/
 - 中国人民银行碳减排支持工具 (2026 expansion)  
 - 中国银行 / 建设银行 / 招商银行 / 江苏银行 / 民生银行 — industry credit & ESG rubrics (partner screenshots)  
 - Nuonuo Open Platform, Yonyou, Huawei Cloud — invoice validation (simulated in MVP)  
-- [chineseocr](https://github.com/chineseocr/chineseocr) — OCR sidecar
+- [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) — Stage-1 image OCR
 
 ---
 

@@ -1,4 +1,4 @@
-"""Deterministic mock invoice payloads for OCR preview when chineseocr is
+"""Deterministic mock invoice payloads for OCR preview when PaddleOCR is
 unavailable or fields cannot be parsed from noisy OCR text."""
 
 from __future__ import annotations

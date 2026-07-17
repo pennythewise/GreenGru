@@ -1,4 +1,4 @@
-"""Qwen3.7-plus OCR fallback when chineseocr is unavailable or times out."""
+"""Qwen3.7-plus OCR fallback when PaddleOCR is unavailable or times out."""
 
 from __future__ import annotations
 
