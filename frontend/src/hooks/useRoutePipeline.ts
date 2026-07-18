@@ -1,8 +1,16 @@
 import { useCallback, useRef, useState } from "react";
 import { routeStrip } from "@/lib/dashboard-data";
-import { runCbamScore, runGrantScore, type CbamScoreResult, type GrantScoreResult } from "@/lib/api";
+import {
+  runCbamScore,
+  runGrantScore,
+  runLoanScore,
+  type CbamScoreResult,
+  type GrantScoreResult,
+  type LoanScoreResult,
+} from "@/lib/api";
 import { collectCbamScoreInputs } from "@/lib/cbam-score-inputs";
 import { collectGrantScoreInputs } from "@/lib/grant-score-inputs";
+import { collectLoanScoreInputs } from "@/lib/loan-score-inputs";
 
 export type PipelineStageStatus = "pending" | "loading" | "done";
 
@@ -38,6 +46,7 @@ export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport
   const [running, setRunning] = useState(false);
   const [complete, setComplete] = useState(false);
   const [grantScore, setGrantScore] = useState<GrantScoreResult | null>(null);
+  const [loanScore, setLoanScore] = useState<LoanScoreResult | null>(null);
   const [cbamScore, setCbamScore] = useState<CbamScoreResult | null>(null);
   const [scoreError, setScoreError] = useState<string | null>(null);
   const abortRef = useRef(false);
@@ -57,6 +66,7 @@ export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport
     setComplete(false);
     setRunning(false);
     setGrantScore(null);
+    setLoanScore(null);
     setCbamScore(null);
     setScoreError(null);
   }, [kb, slug]);
@@ -67,6 +77,7 @@ export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport
     setRunning(true);
     setComplete(false);
     setGrantScore(null);
+    setLoanScore(null);
     setCbamScore(null);
     setScoreError(null);
 
@@ -112,6 +123,15 @@ export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport
           setScoreError(err instanceof Error ? err.message : "Grant score failed");
         }
         await new Promise((r) => setTimeout(r, Math.max(duration, 600)));
+      } else if (slug === "loan" && meta[idx]?.n === 3) {
+        try {
+          const inputs = collectLoanScoreInputs();
+          const score = await runLoanScore(inputs);
+          setLoanScore(score);
+        } catch (err) {
+          setScoreError(err instanceof Error ? err.message : "Loan score failed");
+        }
+        await new Promise((r) => setTimeout(r, Math.max(duration, 600)));
       } else if (slug === "passport" && meta[idx]?.n === 3) {
         try {
           const inputs = collectCbamScoreInputs();
@@ -142,5 +162,15 @@ export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport
     return current;
   }, [kb, running, stages, slug]);
 
-  return { stages, running, complete, runPipeline, reset, grantScore, cbamScore, scoreError };
+  return {
+    stages,
+    running,
+    complete,
+    runPipeline,
+    reset,
+    grantScore,
+    loanScore,
+    cbamScore,
+    scoreError,
+  };
 }

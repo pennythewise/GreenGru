@@ -349,8 +349,38 @@ export async function runGrantScore(payload: {
   return res.json() as Promise<GrantScoreResult>;
 }
 
-/** Same response shape as grant Stage-3 — CBAM operator readiness. */
+/** Same response shape as grant Stage-3 — CBAM operator readiness / loan dual-source. */
 export type CbamScoreResult = GrantScoreResult;
+export type LoanScoreResult = GrantScoreResult;
+
+export async function runLoanScore(payload: {
+  scrap_ratio_pct: number;
+  green_electricity_pct: number;
+  intensity_tco2e_per_t: number;
+  metering_pct: number | null;
+  checklist: { name: string; done: boolean; file_name?: string | null }[];
+  application_form: unknown;
+}): Promise<LoanScoreResult> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/routes/loan-score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      throw new Error("Cannot reach backend loan scorer. Start backend on :8000.");
+    }
+    throw err;
+  }
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Loan score failed (${res.status})`);
+  }
+  return res.json() as Promise<LoanScoreResult>;
+}
 
 export async function runCbamScore(payload: {
   cn_code: string | null;

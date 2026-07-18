@@ -191,9 +191,11 @@ export function routeStrip(kb: string, slug?: "loan" | "grant" | "passport") {
   const scoreMethod =
     slug === "grant"
       ? "GB/T 36132—2025 绿色工厂评价通则 · deterministic"
-      : slug === "passport"
-        ? "EU CBAM Operator Guidance (DG TAXUD) · deterministic"
-        : `rule-based · ${kb}`;
+      : slug === "loan"
+        ? "GB/T 36132—2025 + 绿色金融支持项目目录（2025）· deterministic"
+        : slug === "passport"
+          ? "EU CBAM Operator Guidance (DG TAXUD) · deterministic"
+          : `rule-based · ${kb}`;
   return [
     { n: 1, key: "Pre-screener",     zh: "预筛",       method: "deterministic · doc checklist",   status: "done",    elapsed: "310 ms" },
     { n: 2, key: "Report",           zh: "报告",       method: "python · rule-based",              status: "done",    elapsed: "1.4 s" },
@@ -207,7 +209,7 @@ export function routeStrip(kb: string, slug?: "loan" | "grant" | "passport") {
 export const docChecklists = {
   loan: {
     title: "Green loan — required documents",
-    kb: "PBOC 2025 Green Finance Catalogue",
+    kb: "绿色金融支持项目目录（2025）· GB/T 36132—2025",
     items: [
       { name: "Business licence · 营业执照", done: true },
       { name: "Latest 12-mo utility invoices", done: true },
@@ -253,16 +255,16 @@ export const routePages = {
     label: "Loan", zh: "贷款", n: "06",
     title: "Green Loan Preview",
     titleZh: "绿色贷款预览",
-    subtitle: "Deterministic rubric — passes are auditable line by line.",
-    subtitleZh: "确定性评分规则 — 每项通过均可逐行审计。",
-    kb: "PBOC 2025 Green Finance Catalogue",
-    scoreLabel: "Loan risk tier",
-    scoreValue: "Low-risk",
+    subtitle: "Scored against GB/T 36132—2025 and the 2025 Green Finance Catalogue.",
+    subtitleZh: "依据 GB/T 36132—2025 与《绿色金融支持项目目录（2025 年版）》评分。",
+    kb: "绿色金融支持项目目录（2025）· GB/T 36132—2025",
+    scoreLabel: "Loan readiness",
+    scoreValue: "Score /100",
     scoreGrade: "B",
     gauge: 78,
     gapUnit: "risk pts",
     advisoryImpactUnit: "loan score",
-    citations: "PBOC 2025 · IR (EU) 2025/2621 · Reg (EU) 2023/956",
+    citations: "GB/T 36132—2025 · 绿色金融支持项目目录（2025）· PBOC",
   },
   grant: {
     slug: "grant" as const,

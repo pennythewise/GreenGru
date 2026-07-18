@@ -21,6 +21,7 @@ import { GrantApplicationForm } from "@/components/GrantApplicationForm";
 import { CbamOperatorScorePanel } from "@/components/CbamOperatorScorePanel";
 import { GreenFactoryScorePanel } from "@/components/GreenFactoryScorePanel";
 import { LoanApplicationForm } from "@/components/LoanApplicationForm";
+import { LoanGreenFinanceScorePanel } from "@/components/LoanGreenFinanceScorePanel";
 import { useRouteChecklist } from "@/hooks/useRouteChecklist";
 import { useRoutePipeline } from "@/hooks/useRoutePipeline";
 import {
@@ -36,6 +37,7 @@ import {
   downloadRoutePreviewPdf,
   type CbamScoreResult,
   type GrantScoreResult,
+  type LoanScoreResult,
 } from "@/lib/api";
 import { defaultGrantApplication } from "@/lib/application-forms/grant-template";
 import { defaultLoanApplication } from "@/lib/application-forms/loan-template";
@@ -175,6 +177,7 @@ function StageStrip({
   unlocked,
   onRun,
   grantScore,
+  loanScore,
   cbamScore,
   scoreError,
 }: {
@@ -186,6 +189,7 @@ function StageStrip({
   unlocked: boolean;
   onRun: () => void;
   grantScore: GrantScoreResult | null;
+  loanScore: LoanScoreResult | null;
   cbamScore: CbamScoreResult | null;
   scoreError: string | null;
 }) {
@@ -229,6 +233,7 @@ function StageStrip({
           const loading = s.status === "loading";
           const pending = s.status === "pending";
           const isGrantScore = slug === "grant" && s.n === 3;
+          const isLoanScore = slug === "loan" && s.n === 3;
           const isCbamScore = slug === "passport" && s.n === 3;
           return (
             <li
@@ -238,7 +243,9 @@ function StageStrip({
                 done && "border-carbon/40 bg-carbon/[0.06]",
                 loading && "border-primary/50 bg-primary/[0.08] teal-glow",
                 pending && "border-border bg-surface/50",
-                (isGrantScore || isCbamScore) && (done || loading) && "ring-1 ring-primary/30",
+                (isGrantScore || isLoanScore || isCbamScore) &&
+                  (done || loading) &&
+                  "ring-1 ring-primary/30",
               )}
             >
               <div className="flex items-baseline justify-between">
@@ -273,6 +280,13 @@ function StageStrip({
                     : "Per 绿色工厂评价通则 GB/T 36132—2025"}
                 </div>
               )}
+              {isLoanScore && (
+                <div className="mt-1.5 text-[9.5px] font-mono text-gold/90 leading-snug">
+                  {isZh
+                    ? "依据通则 GB/T 36132—2025 + 绿色金融支持项目目录（2025）"
+                    : "Per GB/T 36132—2025 + Green Finance Catalogue 2025"}
+                </div>
+              )}
               {isCbamScore && (
                 <div className="mt-1.5 text-[9.5px] font-mono text-teal/90 leading-snug">
                   {isZh
@@ -292,6 +306,11 @@ function StageStrip({
       {grantScore && slug === "grant" && (
         <div className="mt-4">
           <GreenFactoryScorePanel result={grantScore} />
+        </div>
+      )}
+      {loanScore && slug === "loan" && (
+        <div className="mt-4">
+          <LoanGreenFinanceScorePanel result={loanScore} />
         </div>
       )}
       {cbamScore && slug === "passport" && (
@@ -344,10 +363,8 @@ export function RoutePage({ slug }: { slug: Slug }) {
   const gapList = gaps[slug];
   const flow = getFlowProgress(slug);
   const checklist = useRouteChecklist(slug);
-  const { stages, running, complete, runPipeline, grantScore, cbamScore, scoreError } = useRoutePipeline(
-    cfg.kb,
-    slug,
-  );
+  const { stages, running, complete, runPipeline, grantScore, loanScore, cbamScore, scoreError } =
+    useRoutePipeline(cfg.kb, slug);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
 
@@ -378,7 +395,9 @@ export function RoutePage({ slug }: { slug: Slug }) {
         const scoreSummary =
           slug === "grant" && grantScore
             ? `${grantScore.total_score}/${grantScore.max_score} · ${grantScore.tier_label} · ${grantScore.standard}`
-            : null;
+            : slug === "loan" && loanScore
+              ? `${loanScore.total_score}/${loanScore.max_score} · ${loanScore.tier_label} · ${loanScore.standard}`
+              : null;
         await downloadApplicationFormPdf({
           route: slug,
           application_form: applicationForm,
@@ -504,6 +523,7 @@ export function RoutePage({ slug }: { slug: Slug }) {
         unlocked={checklist.allDone}
         onRun={runPipeline}
         grantScore={grantScore}
+        loanScore={loanScore}
         cbamScore={cbamScore}
         scoreError={scoreError}
       />
@@ -553,20 +573,26 @@ export function RoutePage({ slug }: { slug: Slug }) {
                 value={
                   grantScore && slug === "grant"
                     ? Math.round(grantScore.total_score)
-                    : cbamScore && slug === "passport"
-                      ? Math.round(cbamScore.total_score)
-                      : cfg.gauge
+                    : loanScore && slug === "loan"
+                      ? Math.round(loanScore.total_score)
+                      : cbamScore && slug === "passport"
+                        ? Math.round(cbamScore.total_score)
+                        : cfg.gauge
                 }
                 grade={
                   grantScore && slug === "grant"
                     ? grantScore.qualified
                       ? "B"
                       : "C"
-                    : cbamScore && slug === "passport"
-                      ? cbamScore.qualified
+                    : loanScore && slug === "loan"
+                      ? loanScore.qualified
                         ? "B"
                         : "C"
-                      : cfg.scoreGrade
+                      : cbamScore && slug === "passport"
+                        ? cbamScore.qualified
+                          ? "B"
+                          : "C"
+                        : cfg.scoreGrade
                 }
               />
             </div>

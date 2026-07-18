@@ -413,6 +413,38 @@ class ApplicationFormPdfRequest(BaseModel):
     score_summary: str | None = None
 
 
+class LoanChecklistItemIn(BaseModel):
+    name: str
+    done: bool = False
+    file_name: str | None = None
+
+
+class LoanScoreRequest(BaseModel):
+    scrap_ratio_pct: float = 24.5
+    green_electricity_pct: float = 45.0
+    intensity_tco2e_per_t: float = 3.506
+    metering_pct: float | None = None
+    checklist: list[LoanChecklistItemIn] = []
+    application_form: dict | None = None
+
+
+class LoanScoreResponse(BaseModel):
+    standard: str
+    standard_zh: str
+    guideline_doc: str
+    total_score: float
+    max_score: float
+    qualified: bool
+    veto_passed: bool
+    veto_items: list[dict]
+    dimensions: list[dict]
+    tier_label: str
+    tier_label_zh: str
+    formulas: list[dict]
+    summary_en: str
+    summary_zh: str
+
+
 class GrantChecklistItemIn(BaseModel):
     name: str
     done: bool = False

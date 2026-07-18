@@ -9,6 +9,8 @@ from app.schemas import (
     CbamScoreResponse,
     GrantScoreRequest,
     GrantScoreResponse,
+    LoanScoreRequest,
+    LoanScoreResponse,
     RoutePreviewPdfRequest,
     RoutePreviewPdfResponse,
 )
@@ -17,6 +19,10 @@ from app.services.cbam_operator_scorer import (
     result_to_dict as cbam_result_to_dict,
 )
 from app.services.green_factory_scorer import compute_green_factory_score, result_to_dict
+from app.services.loan_green_finance_scorer import (
+    compute_loan_green_finance_score,
+    result_to_dict as loan_result_to_dict,
+)
 from app.services.pdf_generator import render_filled_application_form_pdf, render_route_preview_pdf
 
 router = APIRouter(prefix="/api/routes", tags=["routes"])
@@ -59,6 +65,20 @@ async def cbam_operator_readiness_score(payload: CbamScoreRequest):
         has_certificates_ledger=payload.has_certificates_ledger,
     )
     return CbamScoreResponse(**cbam_result_to_dict(result))
+
+
+@router.post("/loan-score", response_model=LoanScoreResponse)
+async def loan_green_finance_score(payload: LoanScoreRequest):
+    """Loan Stage 3 — GB/T 36132—2025 + 绿色金融支持项目目录（2025）deterministic score."""
+    result = compute_loan_green_finance_score(
+        scrap_ratio_pct=payload.scrap_ratio_pct,
+        green_electricity_pct=payload.green_electricity_pct,
+        intensity_tco2e_per_t=payload.intensity_tco2e_per_t,
+        metering_pct=payload.metering_pct,
+        checklist=[c.model_dump() for c in payload.checklist],
+        application_form=payload.application_form,
+    )
+    return LoanScoreResponse(**loan_result_to_dict(result))
 
 
 @router.post("/preview-pdf", response_model=RoutePreviewPdfResponse)
