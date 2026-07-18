@@ -191,7 +191,9 @@ export function routeStrip(kb: string, slug?: "loan" | "grant" | "passport") {
   const scoreMethod =
     slug === "grant"
       ? "GB/T 36132—2025 绿色工厂评价通则 · deterministic"
-      : `rule-based · ${kb}`;
+      : slug === "passport"
+        ? "EU CBAM Operator Guidance (DG TAXUD) · deterministic"
+        : `rule-based · ${kb}`;
   return [
     { n: 1, key: "Pre-screener",     zh: "预筛",       method: "deterministic · doc checklist",   status: "done",    elapsed: "310 ms" },
     { n: 2, key: "Report",           zh: "报告",       method: "python · rule-based",              status: "done",    elapsed: "1.4 s" },
@@ -230,7 +232,7 @@ export const docChecklists = {
   passport: {
     title: "EU license (CBAM) — required documents",
     titleZh: "欧盟许可（CBAM）— 必填文件",
-    kb: "Reg (EU) 2023/956 · EU Communication Template",
+    kb: "CBAM Operator Guidance (DG TAXUD) · Reg (EU) 2023/956",
     items: [
       { name: "Summary_Process · Summary_Communication / Processes / Products", nameZh: "Summary_Process · 汇总沟通/工序/产品", done: false },
       { name: "A_InstData — installation, processes, purchased precursors", nameZh: "A_InstData — 装置、工序、购入前体", done: false },
@@ -283,16 +285,16 @@ export const routePages = {
     label: "EU license", zh: "碳护照", n: "05",
     title: "CBAM Readiness Preview",
     titleZh: "CBAM 就绪预览",
-    subtitle: "Benchmark gap against Reg (EU) 2023/956 default values.",
-    subtitleZh: "对照 Reg (EU) 2023/956 默认值的基准差距。",
-    kb: "Reg (EU) 2023/956 benchmark gap",
-    scoreLabel: "CBAM tier",
-    scoreValue: "Exposed",
+    subtitle: "Operator readiness scored against the EU installation-operator CBAM guidance.",
+    subtitleZh: "依据欧委会非欧盟装置运营方 CBAM 实施指南的就绪评分。",
+    kb: "CBAM Operator Guidance · DG TAXUD 21 Nov 2023",
+    scoreLabel: "CBAM readiness",
+    scoreValue: "Operator score /100",
     scoreGrade: "C",
     gauge: 41,
     gapUnit: "€ / t exposure",
     advisoryImpactUnit: "€/t saved",
-    citations: "Reg (EU) 2023/956 · IR (EU) 2025/2621 · CISA",
+    citations: "CBAM Operator Guidance · Reg (EU) 2023/956 · IR (EU) 2025/2621",
   },
 };
 

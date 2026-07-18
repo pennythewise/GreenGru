@@ -199,3 +199,66 @@ def render_route_preview_pdf(*, payload: dict, route: str) -> GeneratedDocument:
         storage_path=storage_path,
         used_pdf_fallback_html=used_fallback,
     )
+
+
+def render_filled_application_form_pdf(
+    *,
+    route: str,
+    application_form: dict,
+    score_summary: str | None = None,
+) -> GeneratedDocument:
+    """Fill Grant / Loan official-style application form PDF from edited form data.
+
+    Templates mirror GreenGru_Green_Factory_Grant_Application_Form.pdf and
+    GreenGru_Green_Loan_Intake_Form.pdf structure and field layout.
+    """
+    if route not in ("grant", "loan"):
+        raise ValueError(f"Filled application form PDF only supports grant|loan, got {route!r}")
+
+    generated_at = datetime.now(timezone.utc).isoformat()
+    import json
+
+    hashable = json.dumps(application_form, sort_keys=True, ensure_ascii=False, default=str)
+    content_hash = hashlib.sha256(hashable.encode("utf-8")).hexdigest()
+    signature = _sign(content_hash)
+
+    template_name = "grant_application_form.html" if route == "grant" else "loan_intake_form.html"
+    template = _env.get_template(template_name)
+    font_path_uri = _FONT_PATH.as_uri() if _FONT_PATH.exists() else ""
+
+    html_content = template.render(
+        form=application_form,
+        score_summary=score_summary or "",
+        content_hash=content_hash,
+        signature=signature,
+        generated_at=generated_at,
+        font_path=font_path_uri,
+    )
+
+    storage_dir = Path(settings.local_storage_dir) / "documents"
+    storage_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    base_name = f"application_form_{route}_{stamp}"
+
+    used_fallback = False
+    pdf_path = storage_dir / f"{base_name}.pdf"
+    try:
+        from weasyprint import HTML
+
+        HTML(string=html_content, base_url=str(_TEMPLATE_DIR)).write_pdf(str(pdf_path))
+        storage_path = str(pdf_path)
+    except Exception as exc:  # noqa: BLE001
+        used_fallback = True
+        html_path = storage_dir / f"{base_name}.fallback.html"
+        html_path.write_text(
+            f"<!-- WeasyPrint PDF rendering failed: {exc!r} -->\n" + html_content,
+            encoding="utf-8",
+        )
+        storage_path = str(html_path)
+
+    return GeneratedDocument(
+        content_hash=content_hash,
+        signature=signature,
+        storage_path=storage_path,
+        used_pdf_fallback_html=used_fallback,
+    )

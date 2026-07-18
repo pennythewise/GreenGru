@@ -405,6 +405,14 @@ class RoutePreviewPdfResponse(BaseModel):
     used_pdf_fallback_html: bool
 
 
+class ApplicationFormPdfRequest(BaseModel):
+    """Filled Grant / Loan application form PDF (matches official GreenGru form layout)."""
+
+    route: Literal["loan", "grant"]
+    application_form: dict
+    score_summary: str | None = None
+
+
 class GrantChecklistItemIn(BaseModel):
     name: str
     done: bool = False
@@ -424,6 +432,42 @@ class GrantScoreRequest(BaseModel):
 
 
 class GrantScoreResponse(BaseModel):
+    standard: str
+    standard_zh: str
+    guideline_doc: str
+    total_score: float
+    max_score: float
+    qualified: bool
+    veto_passed: bool
+    veto_items: list[dict]
+    dimensions: list[dict]
+    tier_label: str
+    tier_label_zh: str
+    formulas: list[dict]
+    summary_en: str
+    summary_zh: str
+
+
+class CbamChecklistItemIn(BaseModel):
+    name: str
+    done: bool = False
+    file_name: str | None = None
+
+
+class CbamScoreRequest(BaseModel):
+    cn_code: str | None = None
+    production_route: str | None = "BF-BOF"
+    intensity_tco2e_per_t: float = 3.506
+    metering_pct: float | None = None
+    scrap_ratio_pct: float = 24.5
+    production_tonnes: float | None = None
+    checklist: list[CbamChecklistItemIn] = []
+    process_matrix: list[dict] = []
+    has_verifier: bool | None = None
+    has_certificates_ledger: bool | None = None
+
+
+class CbamScoreResponse(BaseModel):
     standard: str
     standard_zh: str
     guideline_doc: str

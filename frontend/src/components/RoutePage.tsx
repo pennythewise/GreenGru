@@ -18,6 +18,7 @@ import {
 import { AppShell, CitationFooter, PageHeader } from "@/components/AppShell";
 import { CbamWorkbookPanel } from "@/components/CbamWorkbookPanel";
 import { GrantApplicationForm } from "@/components/GrantApplicationForm";
+import { CbamOperatorScorePanel } from "@/components/CbamOperatorScorePanel";
 import { GreenFactoryScorePanel } from "@/components/GreenFactoryScorePanel";
 import { LoanApplicationForm } from "@/components/LoanApplicationForm";
 import { useRouteChecklist } from "@/hooks/useRouteChecklist";
@@ -30,7 +31,14 @@ import {
   kpis,
   routePages,
 } from "@/lib/dashboard-data";
-import { downloadRoutePreviewPdf } from "@/lib/api";
+import {
+  downloadApplicationFormPdf,
+  downloadRoutePreviewPdf,
+  type CbamScoreResult,
+  type GrantScoreResult,
+} from "@/lib/api";
+import { defaultGrantApplication } from "@/lib/application-forms/grant-template";
+import { defaultLoanApplication } from "@/lib/application-forms/loan-template";
 import { advanceRouteFlow, getFlowProgress, getRouteLabel } from "@/lib/route-flow";
 import { useLocale } from "@/lib/locale";
 import { pipeline, routeFlow, routePage } from "@/lib/ui-strings";
@@ -167,6 +175,7 @@ function StageStrip({
   unlocked,
   onRun,
   grantScore,
+  cbamScore,
   scoreError,
 }: {
   kb: string;
@@ -176,7 +185,8 @@ function StageStrip({
   complete: boolean;
   unlocked: boolean;
   onRun: () => void;
-  grantScore: ReturnType<typeof useRoutePipeline>["grantScore"];
+  grantScore: GrantScoreResult | null;
+  cbamScore: CbamScoreResult | null;
   scoreError: string | null;
 }) {
   const { t, isZh } = useLocale();
@@ -219,6 +229,7 @@ function StageStrip({
           const loading = s.status === "loading";
           const pending = s.status === "pending";
           const isGrantScore = slug === "grant" && s.n === 3;
+          const isCbamScore = slug === "passport" && s.n === 3;
           return (
             <li
               key={s.n}
@@ -227,7 +238,7 @@ function StageStrip({
                 done && "border-carbon/40 bg-carbon/[0.06]",
                 loading && "border-primary/50 bg-primary/[0.08] teal-glow",
                 pending && "border-border bg-surface/50",
-                isGrantScore && (done || loading) && "ring-1 ring-primary/30",
+                (isGrantScore || isCbamScore) && (done || loading) && "ring-1 ring-primary/30",
               )}
             >
               <div className="flex items-baseline justify-between">
@@ -255,11 +266,18 @@ function StageStrip({
               >
                 {s.method}
               </div>
-              {isGrantScore && slug === "grant" && (
+              {isGrantScore && (
                 <div className="mt-1.5 text-[9.5px] font-mono text-primary/80 leading-snug">
                   {isZh
                     ? "依据《绿色工厂评价通则》GB/T 36132—2025"
                     : "Per 绿色工厂评价通则 GB/T 36132—2025"}
+                </div>
+              )}
+              {isCbamScore && (
+                <div className="mt-1.5 text-[9.5px] font-mono text-teal/90 leading-snug">
+                  {isZh
+                    ? "依据欧委会《非欧盟装置运营方 CBAM 实施指南》"
+                    : "Per EU CBAM Operator Guidance (DG TAXUD)"}
                 </div>
               )}
             </li>
@@ -274,6 +292,11 @@ function StageStrip({
       {grantScore && slug === "grant" && (
         <div className="mt-4">
           <GreenFactoryScorePanel result={grantScore} />
+        </div>
+      )}
+      {cbamScore && slug === "passport" && (
+        <div className="mt-4">
+          <CbamOperatorScorePanel result={cbamScore} />
         </div>
       )}
       <p className="mt-3 text-[11.5px] text-muted-foreground italic">
@@ -321,7 +344,10 @@ export function RoutePage({ slug }: { slug: Slug }) {
   const gapList = gaps[slug];
   const flow = getFlowProgress(slug);
   const checklist = useRouteChecklist(slug);
-  const { stages, running, complete, runPipeline, grantScore, scoreError } = useRoutePipeline(cfg.kb, slug);
+  const { stages, running, complete, runPipeline, grantScore, cbamScore, scoreError } = useRoutePipeline(
+    cfg.kb,
+    slug,
+  );
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
 
@@ -338,28 +364,38 @@ export function RoutePage({ slug }: { slug: Slug }) {
     setPdfBusy(true);
     setPdfMsg(null);
     try {
+      // Grant / Loan: filled official application form PDF (user-edited fields)
+      if (slug === "grant" || slug === "loan") {
+        const key = slug === "grant" ? "greengru-application-grant" : "greengru-application-loan";
+        let applicationForm: unknown =
+          slug === "grant" ? defaultGrantApplication() : defaultLoanApplication();
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) applicationForm = JSON.parse(raw);
+        } catch {
+          /* keep defaults */
+        }
+        const scoreSummary =
+          slug === "grant" && grantScore
+            ? `${grantScore.total_score}/${grantScore.max_score} · ${grantScore.tier_label} · ${grantScore.standard}`
+            : null;
+        await downloadApplicationFormPdf({
+          route: slug,
+          application_form: applicationForm,
+          score_summary: scoreSummary,
+        });
+        setPdfMsg(t(routePage.pdfReady.en, routePage.pdfReady.zh));
+        return;
+      }
+
+      // Passport (CBAM): themed route preview PDF
       const stagesForPdf = complete ? stages : await runPipeline();
-      const kpiRows =
-        slug === "passport"
-          ? [
-              { label: "Intensity tCO2e/t", value: String(kpis.intensity) },
-              { label: "Benchmark gap %", value: `${kpis.benchmarkGap}%` },
-              { label: "CBAM 2026 €", value: kpis.cbam2026.toLocaleString() },
-              { label: "Net tariff €/t", value: String(kpis.netTariff) },
-            ]
-          : slug === "grant"
-            ? [
-                { label: "Grant score", value: `${cfg.gauge}/100` },
-                { label: "Scrap ratio %", value: "24.5" },
-                { label: "Green elec %", value: "45.0" },
-                { label: "Metering %", value: "78.0" },
-              ]
-            : [
-                { label: "Loan score", value: `${cfg.gauge}/100` },
-                { label: "Risk tier", value: cfg.scoreValue },
-                { label: "Grade", value: cfg.scoreGrade },
-                { label: "Route", value: company.route },
-              ];
+      const kpiRows = [
+        { label: "Intensity tCO2e/t", value: String(kpis.intensity) },
+        { label: "Benchmark gap %", value: `${kpis.benchmarkGap}%` },
+        { label: "CBAM 2026 €", value: kpis.cbam2026.toLocaleString() },
+        { label: "Net tariff €/t", value: String(kpis.netTariff) },
+      ];
 
       await downloadRoutePreviewPdf({
         route: slug,
@@ -373,9 +409,14 @@ export function RoutePage({ slug }: { slug: Slug }) {
         company_id: company.id,
         production_route: company.route,
         score_label: cfg.scoreLabel,
-        score_value: cfg.scoreValue,
-        score_grade: cfg.scoreGrade,
-        gauge: cfg.gauge,
+        score_value:
+          cbamScore && slug === "passport"
+            ? `${Math.round(cbamScore.total_score)}/100`
+            : cfg.scoreValue,
+        score_grade:
+          cbamScore && slug === "passport" ? (cbamScore.qualified ? "B" : "C") : cfg.scoreGrade,
+        gauge:
+          cbamScore && slug === "passport" ? Math.round(cbamScore.total_score) : cfg.gauge,
         checklist: checklist.items.map((it) => ({
           name: it.name,
           name_zh: "nameZh" in it ? (it.nameZh as string | undefined) : null,
@@ -463,105 +504,151 @@ export function RoutePage({ slug }: { slug: Slug }) {
         unlocked={checklist.allDone}
         onRun={runPipeline}
         grantScore={grantScore}
+        cbamScore={cbamScore}
         scoreError={scoreError}
       />
 
-      <div className="grid lg:grid-cols-2 gap-4">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="panel-lift p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-              <FileText className="h-3.5 w-3.5 text-teal" /> {t(routePage.sectionCPreview.en, routePage.sectionCPreview.zh)}
+      {!complete && (
+        <div className="rounded-xl border border-dashed border-border bg-surface/20 px-5 py-8 text-center">
+          <p className="text-[13px] font-medium text-muted-foreground">
+            {isZh
+              ? "完成上方 5 个阶段流水线后，将弹出预览与建议"
+              : "Run the 5-stage pipeline above — Preview and Advisory will appear next"}
+          </p>
+          <p className="mt-1.5 text-[11px] font-mono text-muted-foreground/80">
+            {isZh
+              ? "Section C · Preview + Advisory 在流水线结束后显示"
+              : "Section C · Preview + Advisory unlock after all stages finish"}
+          </p>
+        </div>
+      )}
+
+      {complete && (
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+          className="grid lg:grid-cols-2 gap-4"
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="panel-lift p-5"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+                <FileText className="h-3.5 w-3.5 text-teal" /> {t(routePage.sectionCPreview.en, routePage.sectionCPreview.zh)}
+              </div>
+              <span className="text-[10.5px] font-mono text-carbon inline-flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-carbon" /> {t(routePage.deterministic.en, routePage.deterministic.zh)}
+              </span>
             </div>
-            <span className="text-[10.5px] font-mono text-carbon inline-flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-carbon" /> {t(routePage.deterministic.en, routePage.deterministic.zh)}
-            </span>
-          </div>
 
-          <h3 className="mt-2 text-[17px] font-semibold tracking-tight">{isZh ? (cfg.titleZh ?? cfg.title) : cfg.title}</h3>
-          <p className="text-[11.5px] font-mono text-muted-foreground">{cfg.scoreLabel} · {cfg.scoreValue}</p>
+            <h3 className="mt-2 text-[17px] font-semibold tracking-tight">{isZh ? (cfg.titleZh ?? cfg.title) : cfg.title}</h3>
+            <p className="text-[11.5px] font-mono text-muted-foreground">{cfg.scoreLabel} · {cfg.scoreValue}</p>
 
-          <div className="mt-4 rounded-lg border border-border bg-surface/40 p-4">
-            <ScoreGauge
-              value={grantScore && slug === "grant" ? Math.round(grantScore.total_score) : cfg.gauge}
-              grade={grantScore && slug === "grant" ? (grantScore.qualified ? "B" : "C") : cfg.scoreGrade}
-            />
-          </div>
+            <div className="mt-4 rounded-lg border border-border bg-surface/40 p-4">
+              <ScoreGauge
+                value={
+                  grantScore && slug === "grant"
+                    ? Math.round(grantScore.total_score)
+                    : cbamScore && slug === "passport"
+                      ? Math.round(cbamScore.total_score)
+                      : cfg.gauge
+                }
+                grade={
+                  grantScore && slug === "grant"
+                    ? grantScore.qualified
+                      ? "B"
+                      : "C"
+                    : cbamScore && slug === "passport"
+                      ? cbamScore.qualified
+                        ? "B"
+                        : "C"
+                      : cfg.scoreGrade
+                }
+              />
+            </div>
 
-          <div className="mt-4">
-            <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">{t(routePage.gapList.en, routePage.gapList.zh)}</div>
-            <ul className="mt-2 space-y-1.5">
-              {gapList.map((g) => (
-                <li key={g} className="flex items-start gap-2 text-[12.5px]">
-                  <CircleAlert className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
-                  <span>{g}</span>
+            <div className="mt-4">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">{t(routePage.gapList.en, routePage.gapList.zh)}</div>
+              <ul className="mt-2 space-y-1.5">
+                {gapList.map((g) => (
+                  <li key={g} className="flex items-start gap-2 text-[12.5px]">
+                    <CircleAlert className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+                    <span>{g}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={pdfBusy}
+                onClick={() => void handleDownloadPdf()}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-primary text-primary-foreground text-[12.5px] font-medium teal-glow hover:brightness-110 transition disabled:opacity-50"
+              >
+                {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                {pdfBusy ? t(routePage.generatingPdf.en, routePage.generatingPdf.zh) : t(routePage.downloadPdf.en, routePage.downloadPdf.zh)}
+              </button>
+              <span className="text-[10.5px] font-mono text-muted-foreground">{t(routePage.pdfNote.en, routePage.pdfNote.zh)}</span>
+            </div>
+            {pdfMsg && <p className="mt-2 text-[11px] font-mono text-carbon">{pdfMsg}</p>}
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="panel p-5"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+                <Wand2 className="h-3.5 w-3.5 text-gold" /> {t(routePage.sectionCAdvisory.en, routePage.sectionCAdvisory.zh)}
+              </div>
+              <span className="text-[10.5px] font-mono text-muted-foreground">{t(routePage.advisoryNote.en, routePage.advisoryNote.zh)}</span>
+            </div>
+
+            <ul className="mt-3 space-y-2">
+              {advice.map((a) => (
+                <li key={a.title} className="rounded-lg border border-border bg-surface/50 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-[13px] font-medium">{a.title}</div>
+                    <span className="shrink-0 text-[10.5px] font-mono px-1.5 py-0.5 rounded bg-gold/15 text-gold border border-gold/30">
+                      {a.impact} {cfg.advisoryImpactUnit}
+                    </span>
+                  </div>
+                  <details className="mt-1.5">
+                    <summary className="text-[11.5px] font-mono text-muted-foreground cursor-pointer hover:text-foreground">
+                      {t(routePage.why.en, routePage.why.zh)}
+                    </summary>
+                    <p className="mt-1.5 text-[11.5px] text-muted-foreground leading-relaxed">{a.why}</p>
+                  </details>
+                  <div className="mt-2">
+                    <span
+                      className={cn(
+                        "text-[10.5px] font-mono px-1.5 py-0.5 rounded border",
+                        a.status.startsWith("Implemented")
+                          ? "bg-carbon/10 text-carbon border-carbon/30"
+                          : "bg-muted/60 text-muted-foreground border-border",
+                      )}
+                    >
+                      {a.status}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
-          </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              disabled={pdfBusy}
-              onClick={() => void handleDownloadPdf()}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-primary text-primary-foreground text-[12.5px] font-medium teal-glow hover:brightness-110 transition disabled:opacity-50"
-            >
-              {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              {pdfBusy ? t(routePage.generatingPdf.en, routePage.generatingPdf.zh) : t(routePage.downloadPdf.en, routePage.downloadPdf.zh)}
-            </button>
-            <span className="text-[10.5px] font-mono text-muted-foreground">{t(routePage.pdfNote.en, routePage.pdfNote.zh)}</span>
-          </div>
-          {pdfMsg && <p className="mt-2 text-[11px] font-mono text-carbon">{pdfMsg}</p>}
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="panel p-5"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-              <Wand2 className="h-3.5 w-3.5 text-gold" /> {t(routePage.sectionCAdvisory.en, routePage.sectionCAdvisory.zh)}
+            <div className="mt-4 flex items-start gap-2 text-[11px] text-muted-foreground">
+              <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>{t(routePage.advisoryFooter.en, routePage.advisoryFooter.zh)}</span>
             </div>
-            <span className="text-[10.5px] font-mono text-muted-foreground">{t(routePage.advisoryNote.en, routePage.advisoryNote.zh)}</span>
-          </div>
-
-          <ul className="mt-3 space-y-2">
-            {advice.map((a) => (
-              <li key={a.title} className="rounded-lg border border-border bg-surface/50 p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="text-[13px] font-medium">{a.title}</div>
-                  <span className="shrink-0 text-[10.5px] font-mono px-1.5 py-0.5 rounded bg-gold/15 text-gold border border-gold/30">
-                    {a.impact} {cfg.advisoryImpactUnit}
-                  </span>
-                </div>
-                <details className="mt-1.5">
-                  <summary className="text-[11.5px] font-mono text-muted-foreground cursor-pointer hover:text-foreground">
-                    {t(routePage.why.en, routePage.why.zh)}
-                  </summary>
-                  <p className="mt-1.5 text-[11.5px] text-muted-foreground leading-relaxed">{a.why}</p>
-                </details>
-                <div className="mt-2">
-                  <span
-                    className={cn(
-                      "text-[10.5px] font-mono px-1.5 py-0.5 rounded border",
-                      a.status.startsWith("Implemented") ? "bg-carbon/10 text-carbon border-carbon/30" : "bg-muted/60 text-muted-foreground border-border",
-                    )}
-                  >
-                    {a.status}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-4 flex items-start gap-2 text-[11px] text-muted-foreground">
-            <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span>{t(routePage.advisoryFooter.en, routePage.advisoryFooter.zh)}</span>
-          </div>
+          </motion.div>
         </motion.div>
-      </div>
+      )}
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <Link to="/" className="text-[12.5px] font-mono text-muted-foreground hover:text-foreground inline-flex items-center gap-1">

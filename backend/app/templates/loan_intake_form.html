@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Green Loan Intake Form</title>
+<style>
+  @page { size: A4; margin: 11mm 13mm; }
+  @font-face {
+    font-family: 'DocumentCJK';
+    src: url('{{ font_path }}') format('truetype');
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'DocumentCJK', 'Noto Sans SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+    font-size: 8.5pt;
+    color: #111;
+    background: #fff;
+    line-height: 1.35;
+    margin: 0;
+  }
+  h1 { font-size: 13.5pt; margin: 0 0 2px; text-align: center; }
+  .en-title { font-size: 11pt; text-align: center; font-weight: 600; margin: 0 0 6px; }
+  .intro { font-size: 7.5pt; color: #333; margin: 0 0 8px; text-align: justify; }
+  h2 { font-size: 9.5pt; margin: 10px 0 5px; border-bottom: 1.5px solid #111; padding-bottom: 2px; }
+  table.fields { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  table.fields td { border: 1px solid #222; padding: 4px 6px; vertical-align: top; }
+  table.fields .label { width: 34%; background: #f4f4f4; font-size: 7.5pt; font-weight: 600; }
+  table.fields .value { width: 66%; min-height: 16px; font-size: 8.5pt; }
+  .check {
+    display: inline-block; width: 10px; height: 10px; border: 1.2px solid #111;
+    margin-right: 3px; vertical-align: -1px; text-align: center; font-size: 8px; line-height: 9px;
+  }
+  .check.on { background: #111; color: #fff; }
+  .row-check { margin: 2px 0; font-size: 8pt; }
+  .note { font-size: 7pt; color: #444; margin: 5px 0; font-style: italic; }
+  .sig-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .sig-box { border: 1px solid #222; min-height: 44px; padding: 5px; font-size: 8pt; }
+  .footer { margin-top: 12px; font-size: 6.5pt; color: #555; border-top: 1px solid #ccc; padding-top: 5px; }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+{% set c = form.company_information %}
+{% set sz = c.enterprise_size %}
+{% set lp = form.loan_project_information %}
+{% set lt = lp.loan_type %}
+{% set rf = lp.refinancing %}
+{% set mop = lp.management_of_proceeds %}
+{% set uof = form.use_of_funds_category %}
+{% set glp = uof.glp_evaluation_and_selection_process %}
+{% set ca = form.carbon_account_addon %}
+{% set env = form.environmental_benefit_and_reporting %}
+{% set comp = form.compliance_declaration %}
+{% set glpv = form.glp_alignment_verification %}
+{% set sub = form.interest_subsidy_addon %}
+{% set decl = form.declaration %}
+
+{% macro yn(v) -%}
+  {%- if v is sameas true -%}Yes / 是{%- elif v is sameas false -%}No / 否{%- else -%}{%- endif -%}
+{%- endmacro %}
+{% macro ck(flag) -%}
+<span class="check {% if flag %}on{% endif %}">{% if flag %}✓{% endif %}</span>
+{%- endmacro %}
+
+<h1>绿色贷款申请信息表</h1>
+<div class="en-title">Green Loan Intake Form</div>
+<p class="intro">
+  For SME use when approaching a bank for a green loan, and/or applying for a local-government green-loan interest subsidy (贴息).
+  Fields are built from PBOC’s green-loan use-of-funds taxonomy and disclosure/eligibility items typically required by provincial 贴息 schemes.
+</p>
+
+<h2>1. Applicant / Company Information 申请企业信息</h2>
+<table class="fields">
+  <tr><td class="label">企业名称 Company name</td><td class="value">{{ c.company_name }}</td></tr>
+  <tr><td class="label">统一社会信用代码 Unified social credit code</td><td class="value">{{ c.unified_social_credit_code }}</td></tr>
+  <tr><td class="label">注册地址 Registered address</td><td class="value">{{ c.registered_address }}</td></tr>
+  <tr><td class="label">所属行业（GB/T4754-2017）Industry classification</td><td class="value">{{ c.industry_classification }}</td></tr>
+  <tr><td class="label">法定代表人 Legal representative</td><td class="value">{{ c.legal_representative }}</td></tr>
+  <tr><td class="label">联系人 / 职务 Contact person / title</td><td class="value">{{ c.contact_person_title }}</td></tr>
+  <tr><td class="label">联系电话 Phone</td><td class="value">{{ c.phone }}</td></tr>
+  <tr><td class="label">电子邮箱 Email</td><td class="value">{{ c.email }}</td></tr>
+  <tr>
+    <td class="label">企业规模 Enterprise size</td>
+    <td class="value">
+      {{ ck(sz.large) }}大型 Large
+      {{ ck(sz.medium) }}中型 Medium
+      {{ ck(sz.small) }}小型 Small
+      {{ ck(sz.micro) }}微型 Micro
+    </td>
+  </tr>
+</table>
+
+<h2>2. Loan / Project Basic Information 贷款及项目基本信息</h2>
+<table class="fields">
+  <tr><td class="label">拟申请银行/机构 Lender applied to</td><td class="value">{{ lp.lender_applied_to }}</td></tr>
+  <tr>
+    <td class="label">贷款种类 Loan type</td>
+    <td class="value">
+      {{ ck(lt.working_capital) }}流动资金 Working capital
+      {{ ck(lt.fixed_asset) }}固定资产 Fixed-asset
+      {{ ck(lt.project_loan) }}项目贷款 Project
+      {{ ck(lt.tech_upgrade) }}技改贷款 Tech-upgrade
+      {{ ck(lt.other | length > 0) }}其他 Other: {{ lt.other }}
+    </td>
+  </tr>
+  <tr><td class="label">申请贷款金额（元）Requested amount (RMB)</td><td class="value">{{ lp.requested_amount_rmb if lp.requested_amount_rmb is not none else '' }}</td></tr>
+  <tr><td class="label">贷款期限 Tenor</td><td class="value">{{ lp.tenor }}</td></tr>
+  <tr><td class="label">贷款合同签订日期 Contract signing date</td><td class="value">{{ lp.contract_signing_date }}</td></tr>
+  <tr><td class="label">贷款发放日期 Disbursement date</td><td class="value">{{ lp.disbursement_date }}</td></tr>
+  <tr><td class="label">项目名称 Project name</td><td class="value">{{ lp.project_name }}</td></tr>
+  <tr><td class="label">项目简要描述 Project description</td><td class="value">{{ lp.project_description }}</td></tr>
+  <tr><td class="label">是否包含再融资 Includes refinancing?</td><td class="value">{{ yn(rf.includes_refinancing_portion) }}</td></tr>
+  <tr><td class="label">融资/再融资占比估算 Financing vs refinancing share</td><td class="value">{{ rf.estimated_financing_vs_refinancing_share }}</td></tr>
+  <tr><td class="label">被再融资项目回溯期 Look-back period</td><td class="value">{{ rf.look_back_period_for_refinanced_projects }}</td></tr>
+  <tr>
+    <td class="label">资金管理方式 Proceeds management</td>
+    <td class="value">
+      {{ ck(mop.method.dedicated_account) }}专项账户 Dedicated account
+      {{ ck(mop.method.internal_tracking_ledger) }}台账跟踪 Internal tracking ledger
+      {{ ck(mop.method.other | length > 0) }}其他 Other: {{ mop.method.other }}
+    </td>
+  </tr>
+  <tr><td class="label">未提用资金临时存放 Temporary placement of unallocated proceeds</td><td class="value">{{ mop.temporary_placement_arrangement_for_unallocated_proceeds }}</td></tr>
+  <tr><td class="label">是否多档贷款中的一档 One tranche of multi-tranche?</td><td class="value">{{ yn(mop.is_one_tranche_of_multi_tranche_facility) }}</td></tr>
+  <tr><td class="label">本档是否单独标记绿色并核算 Separately labelled green?</td><td class="value">{{ yn(mop.tranche_separately_labelled_green_and_tracked) }}</td></tr>
+</table>
+<p class="note">Per PBOC classification rules: the project description must match the use of funds in the loan contract, and a loan cannot be split across multiple green categories.</p>
+
+<div class="page-break"></div>
+
+<h2>3. Use-of-Funds Category — PBOC Green Loan Classification 绿色贷款用途分类</h2>
+{% for cat in uof.categories %}
+<div class="row-check">{{ ck(cat.selected) }}{{ cat.number }}. {{ cat.name_cn }} / {{ cat.name_en }}</div>
+{% endfor %}
+<table class="fields" style="margin-top:8px">
+  <tr><td class="label">项目环境可持续发展目标 Environmental sustainability objective(s)</td><td class="value">{{ glp.environmental_sustainability_objectives }}</td></tr>
+  <tr><td class="label">认定流程/分类标准 Taxonomy / eligibility process</td><td class="value">{{ glp.taxonomy_or_process_used_for_eligibility }}</td></tr>
+  <tr><td class="label">排除标准 Exclusion criteria</td><td class="value">{{ glp.exclusion_criteria }}</td></tr>
+  <tr><td class="label">环境和社会风险识别与管理流程 E&amp;S risk process</td><td class="value">{{ glp.environmental_social_risk_identification_process }}</td></tr>
+  <tr><td class="label">已识别重大风险及缓解措施 Material risks &amp; mitigants</td><td class="value">{{ glp.material_risks_identified_and_mitigants }}</td></tr>
+</table>
+
+<h2>3B. Enterprise Carbon Account Financing Add-On 企业碳账户融资（可选）</h2>
+{% if ca.applicable %}
+<table class="fields">
+  <tr><td class="label">是否已开通企业碳账户 Carbon account opened?</td><td class="value">{{ yn(ca.enterprise_carbon_account_opened) }}</td></tr>
+  <tr><td class="label">碳账户运营平台名称 Platform name</td><td class="value">{{ ca.carbon_account_platform_name }}</td></tr>
+  <tr><td class="label">是否已授权出具碳信用报告 Authorised Carbon Credit Report?</td><td class="value">{{ yn(ca.authorised_platform_to_issue_carbon_credit_report_to_lender) }}</td></tr>
+  <tr><td class="label">最新碳排放表现评价 Latest carbon performance rating</td><td class="value">{{ ca.latest_carbon_emission_performance_rating }}</td></tr>
+  <tr><td class="label">注册资本 Registered capital</td><td class="value">{{ ca.registered_capital }}</td></tr>
+  <tr><td class="label">成立年限 Years in operation</td><td class="value">{{ ca.years_in_operation }}</td></tr>
+  <tr><td class="label">近三年盈利情况 Profitability summary (3 yrs)</td><td class="value">{{ ca.profitability_summary_past_3yrs }}</td></tr>
+  <tr><td class="label">现有融资性负债总额 Existing financing liabilities</td><td class="value">{{ ca.existing_financing_liabilities_total }}</td></tr>
+  <tr><td class="label">法定代表人及管理团队资信 Credit standing</td><td class="value">{{ ca.legal_rep_and_management_credit_standing }}</td></tr>
+  <tr><td class="label">贷款期内重大投资计划 Material investment plans</td><td class="value">{{ ca.material_investment_plans_during_loan_term }}</td></tr>
+  <tr><td class="label">拟提供的抵质押/担保方式 Collateral / guarantee</td><td class="value">{{ ca.proposed_collateral_guarantee_type }}</td></tr>
+  <tr><td class="label">转型计划披露 Transition plan</td><td class="value">{{ ca.transition_plan_disclosed_to_lender }}</td></tr>
+</table>
+{% else %}
+<p class="note">Not applicable — carbon-account add-on not selected.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<h2>4. Quantified Environmental Benefit &amp; Reporting Commitment 环境效益量化与报告承诺</h2>
+<table class="fields">
+  <tr><td class="label">预计/已实现 tCO2e 减排量 Expected/realised tCO2e reduction</td><td class="value">{{ env.expected_realised_tco2e_reduction }}</td></tr>
+  <tr><td class="label">预计/已实现节能量 Expected/realised energy savings</td><td class="value">{{ env.expected_realised_energy_savings }}</td></tr>
+  <tr><td class="label">预计/已实现节水量 Expected/realised water savings</td><td class="value">{{ env.expected_realised_water_savings }}</td></tr>
+  <tr><td class="label">预计/已实现污染物减排量 Expected/realised pollutant reduction</td><td class="value">{{ env.expected_realised_pollutant_reduction }}</td></tr>
+  <tr><td class="label">其他环境效益说明 Other notes</td><td class="value">{{ env.other_notes }}</td></tr>
+  <tr><td class="label">核算方法/假设披露 Methodology / assumptions</td><td class="value">{{ env.methodology_assumptions_disclosed }}</td></tr>
+  <tr>
+    <td class="label">报告频率 Reporting frequency</td>
+    <td class="value">
+      {{ ck(env.reporting_frequency.annual) }}年度 Annual
+      {{ ck(env.reporting_frequency.semi_annual) }}半年度 Semi-annual
+      {{ ck(env.reporting_frequency.other | length > 0) }}其他 Other: {{ env.reporting_frequency.other }}
+    </td>
+  </tr>
+  <tr>
+    <td class="label">报告更新至 Reports renewed until</td>
+    <td class="value">
+      {{ ck(env.reports_renewed_until.loan_fully_allocated) }}资金全部拨付完毕 Fully allocated
+      {{ ck(env.reports_renewed_until.loan_maturity_revolving_facility) }}贷款到期（循环）Maturity
+    </td>
+  </tr>
+  <tr><td class="label">下次报告应提交日期 Next report due date</td><td class="value">{{ env.next_report_due_date }}</td></tr>
+  <tr>
+    <td class="label">报告接收方 Report recipients</td>
+    <td class="value">
+      {{ ck(env.report_recipients.lender) }}贷款行 Lender
+      {{ ck(env.report_recipients.public_disclosure) }}公开披露 Public
+      {{ ck(env.report_recipients.both) }}两者 Both
+    </td>
+  </tr>
+</table>
+
+<h2>5. Compliance, Eligibility &amp; Review Declaration 合规、资格与外部评审声明</h2>
+<div class="row-check">{{ ck(comp.no_major_environmental_violation_3yrs) }}本企业近三年内无重大环境保护违法违规记录 — No major environmental violation (3 yrs)</div>
+<div class="row-check">{{ ck(comp.no_safety_production_violation) }}本企业无安全生产违法违规记录 — No safety-production violation</div>
+<div class="row-check">{{ ck(comp.not_on_phased_out_capacity_list) }}未被列入落后产能淘汰名单 — Not on phased-out capacity list</div>
+<div class="row-check">{{ ck(comp.holds_valid_discharge_permit) }}持有有效排污许可证 — Valid discharge permit</div>
+<div class="row-check">{{ ck(comp.has_ems_iso14001_or_equivalent) }}已建立环境管理体系（如 ISO 14001）— EMS in place</div>
+<div class="row-check">{{ ck(comp.use_of_funds_maps_clearly_to_one_category) }}资金用途可明确对应第3节绿色分类 — Use of funds maps to one §3 category</div>
+<div class="row-check">{{ ck(comp.meets_gzgfa_baseline_eligibility) }}符合 T/GZGFA 1—2024 基线资格 — Meets GZGFA baseline eligibility</div>
+
+{% if glpv.applicable %}
+<p style="margin-top:8px;font-weight:700;font-size:8.5pt">GLP Alignment Verification 《绿色贷款原则》一致性核实</p>
+<div class="row-check">{{ ck(glpv.external_review.selected) }}外部评审 External review — reviewer: {{ glpv.external_review.reviewer_name }}</div>
+<div class="row-check">{{ ck(glpv.self_certification.selected) }}自我认证 Self-certification — docs available to lenders: {{ yn(glpv.self_certification.documentation_available_to_lenders) }}</div>
+<div class="row-check">{{ ck(glpv.not_yet_determined) }}尚未确定 Not yet determined</div>
+{% endif %}
+
+<div class="page-break"></div>
+
+<h2>6. Interest-Subsidy (贴息) Add-On 贴息附加（如申请）</h2>
+{% if sub.applying_for_subsidy %}
+<table class="fields">
+  <tr><td class="label">合同签订/发放是否在政策有效期内 Within policy period?</td><td class="value">{{ yn(sub.contract_disbursement_within_policy_period) }}</td></tr>
+  <tr><td class="label">申请贴息年度 Subsidy year</td><td class="value">{{ sub.subsidy_year }}</td></tr>
+  <tr><td class="label">本年度已支付利息金额 Interest paid this year (RMB)</td><td class="value">{{ sub.interest_paid_this_year_rmb if sub.interest_paid_this_year_rmb is not none else '' }}</td></tr>
+  <tr><td class="label">本年度已申请贴息合计 Total subsidy claimed this year (RMB)</td><td class="value">{{ sub.total_subsidy_claimed_this_year_rmb if sub.total_subsidy_claimed_this_year_rmb is not none else '' }}</td></tr>
+  <tr><td class="label">是否在规定窗口期内提交 Submitted within required window?</td><td class="value">{{ yn(sub.submitted_within_required_window) }}</td></tr>
+</table>
+{% else %}
+<p class="note">Not applying for interest subsidy / 未申请贴息.</p>
+{% endif %}
+
+<h2>7. Declaration &amp; Signature 声明与签署</h2>
+<p class="intro">
+  本企业承诺以上所填信息真实、准确、完整，如有虚假，愿承担相应法律责任及退回已获扶持资金。 /
+  The applicant confirms the information above is true, accurate and complete, and accepts liability — including repayment of any subsidy received — for any misstatement.
+</p>
+<div class="sig-row">
+  <div class="sig-box"><strong>法定代表人签字 Legal rep. signature</strong><br>{{ decl.legal_rep_signature }}</div>
+  <div class="sig-box"><strong>日期 Date</strong><br>{{ decl.date }}</div>
+  <div class="sig-box"><strong>企业公章 Company seal</strong><br>{% if decl.company_seal_applied %}☑ Applied{% else %}☐ Not applied{% endif %}</div>
+</div>
+
+<p class="footer">
+  This intake form is GreenGru’s working document consolidating PBOC green-loan taxonomy, provincial 贴息 fields,
+  T/GZGFA 1—2024 carbon-account financing, and LMA/APLMA/LSTA Green Loan Principles components.
+  It is not an official bank or PBOC form. Generated {{ generated_at }} · hash {{ content_hash[:16] }}…
+</p>
+</body>
+</html>

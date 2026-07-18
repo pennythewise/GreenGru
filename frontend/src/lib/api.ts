@@ -349,6 +349,81 @@ export async function runGrantScore(payload: {
   return res.json() as Promise<GrantScoreResult>;
 }
 
+/** Same response shape as grant Stage-3 — CBAM operator readiness. */
+export type CbamScoreResult = GrantScoreResult;
+
+export async function runCbamScore(payload: {
+  cn_code: string | null;
+  production_route: string;
+  intensity_tco2e_per_t: number;
+  metering_pct: number | null;
+  scrap_ratio_pct: number;
+  production_tonnes: number | null;
+  checklist: { name: string; done: boolean; file_name?: string | null }[];
+  process_matrix: unknown[];
+}): Promise<CbamScoreResult> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/routes/cbam-score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      throw new Error("Cannot reach backend CBAM scorer. Start backend on :8000.");
+    }
+    throw err;
+  }
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `CBAM score failed (${res.status})`);
+  }
+  return res.json() as Promise<CbamScoreResult>;
+}
+
+export async function downloadApplicationFormPdf(payload: {
+  route: "loan" | "grant";
+  application_form: unknown;
+  score_summary?: string | null;
+}): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/routes/application-form-pdf/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      throw new Error(
+        "Cannot reach backend. Start it: cd backend && python -m uvicorn app.main:app --reload --port 8000",
+      );
+    }
+    throw err;
+  }
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Application form PDF failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition");
+  const match = disposition?.match(/filename="?([^"]+)"?/);
+  const filename =
+    match?.[1] ??
+    (payload.route === "grant"
+      ? "GreenGru_Green_Factory_Grant_Application_Form.pdf"
+      : "GreenGru_Green_Loan_Intake_Form.pdf");
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function downloadRoutePreviewPdf(payload: RoutePreviewPdfPayload): Promise<void> {
   let res: Response;
   try {

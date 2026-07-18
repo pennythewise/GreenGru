@@ -1,7 +1,12 @@
 # EU Guidance Document on CBAM Implementation for Installation Operators Outside the EU
 Source: European Commission, Directorate-General for Taxation and Customs Union
 Document date: 8 December 2023 (transitional-period edition — see caveat below)
-Full document: https://taxation-customs.ec.europa.eu/system/files/2023-12/Guidance%20document%20on%20CBAM%20implementation%20for%20installation%20operators%20outside%20the%20EU.pdf
+Full document (local): `cbam-installation-operator-guidance-EN.pdf` (21 Nov 2023 edition)
+Official URL: https://taxation-customs.ec.europa.eu/system/files/2023-12/Guidance%20document%20on%20CBAM%20implementation%20for%20installation%20operators%20outside%20the%20EU.pdf
+
+**Product wiring**: passport Stage 3 Score uses a deterministic readiness scorer
+(`backend/app/services/cbam_operator_scorer.py`) mapped to Quick Guide §3,
+Monitoring §6, and Iron & Steel §5.6/§7.2 — UI mirrors grant Stage 3.
 
 ## Provenance — read this before trusting anything below
 This file was built from an **actual PDF text extraction** (web_fetch with

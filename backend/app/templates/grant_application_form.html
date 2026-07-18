@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Green Factory Grant — Application & Self-Evaluation Form</title>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  @font-face {
+    font-family: 'DocumentCJK';
+    src: url('{{ font_path }}') format('truetype');
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'DocumentCJK', 'Noto Sans SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+    font-size: 9pt;
+    color: #111;
+    background: #fff;
+    line-height: 1.4;
+    margin: 0;
+  }
+  h1 {
+    font-size: 14pt;
+    margin: 0 0 2px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .en-title {
+    font-size: 11pt;
+    text-align: center;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+  .intro {
+    font-size: 7.5pt;
+    color: #333;
+    margin: 0 0 10px;
+    text-align: justify;
+  }
+  h2 {
+    font-size: 10pt;
+    margin: 12px 0 6px;
+    border-bottom: 1.5px solid #111;
+    padding-bottom: 2px;
+  }
+  table.fields {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 6px;
+  }
+  table.fields td {
+    border: 1px solid #222;
+    padding: 5px 7px;
+    vertical-align: top;
+  }
+  table.fields .label {
+    width: 32%;
+    background: #f4f4f4;
+    font-size: 8pt;
+    font-weight: 600;
+  }
+  table.fields .value {
+    width: 68%;
+    min-height: 18px;
+    font-size: 9pt;
+  }
+  .check {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    border: 1.2px solid #111;
+    margin-right: 4px;
+    vertical-align: -1px;
+    text-align: center;
+    font-size: 9px;
+    line-height: 10px;
+  }
+  .check.on { background: #111; color: #fff; }
+  .row-check { margin: 3px 0; font-size: 8.5pt; }
+  .note {
+    font-size: 7.5pt;
+    color: #444;
+    margin: 6px 0;
+    font-style: italic;
+  }
+  table.score {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0;
+  }
+  table.score th, table.score td {
+    border: 1px solid #222;
+    padding: 5px 6px;
+    font-size: 8pt;
+    text-align: left;
+  }
+  table.score th { background: #ececec; font-weight: 700; }
+  .sig-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .sig-box {
+    border: 1px solid #222;
+    min-height: 48px;
+    padding: 6px;
+    font-size: 8pt;
+  }
+  .footer {
+    margin-top: 14px;
+    font-size: 7pt;
+    color: #555;
+    border-top: 1px solid #ccc;
+    padding-top: 6px;
+  }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+{% set f = form.factory_basic_information %}
+{% set own = f.ownership_type %}
+{% set cert = form.certification_level_applied_for %}
+{% set veto = form.basic_veto_requirements %}
+{% set se = form.indicator_scoring_self_evaluation %}
+{% set em = form.evaluation_method %}
+{% set outline = form.evaluation_report_outline_attached %}
+{% set decl = form.declaration %}
+
+<h1>GreenGru 绿色工厂申报自评价表</h1>
+<div class="en-title">Green Factory Grant — Application &amp; Self-Evaluation Form</div>
+<p class="intro">
+  Structured from MIIT’s official 绿色制造体系建设 申报书/评价报告 templates and 绿色工厂评价通则 (GB/T36132)
+  indicator framework. Use for national/provincial/municipal green-factory certification, which unlocks the one-off grant (奖补) rather than a loan.
+</p>
+
+<h2>1. Factory Basic Information 工厂基本信息</h2>
+<table class="fields">
+  <tr><td class="label">工厂名称 Factory name</td><td class="value">{{ f.factory_name }}</td></tr>
+  <tr><td class="label">工厂地址 Factory address</td><td class="value">{{ f.factory_address }}</td></tr>
+  <tr><td class="label">所属行业（统计局四位代码）Industry code (4-digit, NBS)</td><td class="value">{{ f.industry_code_nbs_4digit }}</td></tr>
+  <tr><td class="label">主要产品 Main product(s)</td><td class="value">{{ f.main_products }}</td></tr>
+  <tr>
+    <td class="label">单位性质 Ownership type</td>
+    <td class="value">
+      <span class="check {% if own.domestic_state_owned %}on{% endif %}">{% if own.domestic_state_owned %}✓{% endif %}</span>内资-国有
+      <span class="check {% if own.domestic_collective %}on{% endif %}">{% if own.domestic_collective %}✓{% endif %}</span>内资-集体
+      <span class="check {% if own.domestic_private %}on{% endif %}">{% if own.domestic_private %}✓{% endif %}</span>内资-民营
+      <span class="check {% if own.sino_foreign_joint_venture %}on{% endif %}">{% if own.sino_foreign_joint_venture %}✓{% endif %}</span>中外合资
+      <span class="check {% if own.hk_macau_taiwan_invested %}on{% endif %}">{% if own.hk_macau_taiwan_invested %}✓{% endif %}</span>港澳台
+      <span class="check {% if own.wholly_foreign_owned %}on{% endif %}">{% if own.wholly_foreign_owned %}✓{% endif %}</span>外商独资
+    </td>
+  </tr>
+  <tr><td class="label">统一社会信用代码 Unified social credit code</td><td class="value">{{ f.unified_social_credit_code }}</td></tr>
+  <tr><td class="label">法定代表人 / 电话 Legal representative / phone</td><td class="value">{{ f.legal_representative }} / {{ f.legal_representative_phone }}</td></tr>
+  <tr><td class="label">申报工作联系人 Application contact</td><td class="value">{{ f.application_contact_person }}</td></tr>
+  <tr><td class="label">联系部门 Contact department</td><td class="value">{{ f.contact_department }}</td></tr>
+  <tr><td class="label">联系电话 Phone</td><td class="value">{{ f.contact_phone }}</td></tr>
+  <tr><td class="label">电子邮箱 Email</td><td class="value">{{ f.contact_email }}</td></tr>
+</table>
+
+<h2>2. 申报级别 Certification Level Applied For</h2>
+<div class="row-check"><span class="check {% if cert.national %}on{% endif %}">{% if cert.national %}✓{% endif %}</span>国家级绿色工厂 National-level green factory</div>
+<div class="row-check"><span class="check {% if cert.provincial %}on{% endif %}">{% if cert.provincial %}✓{% endif %}</span>省级绿色工厂 Provincial-level green factory</div>
+<div class="row-check"><span class="check {% if cert.municipal %}on{% endif %}">{% if cert.municipal %}✓{% endif %}</span>市级绿色工厂 Municipal-level green factory</div>
+<p class="note">For high-energy-consumption industries (steel, cement, flat glass, electrolytic aluminium, crude-oil processing, caustic soda, coking), the recommended enterprise’s energy-intensity level should in principle meet or exceed the applicable national energy-consumption-limit standard’s advanced value.</p>
+
+<h2>3. Basic (Veto) Requirements — Must All Be Met 基本要求（一票否决项）</h2>
+{% macro veto_row(flag, zh_en) %}
+<div class="row-check"><span class="check {% if flag %}on{% endif %}">{% if flag %}✓{% endif %}</span>{{ zh_en }}</div>
+{% endmacro %}
+{{ veto_row(veto.registered_in_china_manufacturing_gb_t4754, '本企业为中国境内注册、具有加工/制造/组装等实际生产过程的制造业工厂 — Registered in China, manufacturing under GB/T4754 with real production') }}
+{{ veto_row(veto.qms_gb_t19001_in_place, '已建立并实施质量管理体系（GB/T19001）— QMS in place (GB/T19001)') }}
+{{ veto_row(veto.ohsms_gb_t45001_28001_in_place, '已建立并实施职业健康安全管理体系（GB/T45001/28001）— OHSMS in place') }}
+{{ veto_row(veto.ems_gb_t24001_in_place, '已建立并实施环境管理体系（GB/T24001）— EMS in place (GB/T24001)') }}
+{{ veto_row(veto.energy_mgmt_system_gb_t23331_in_place, '已建立并实施能源管理体系（GB/T23331）— Energy management system in place') }}
+{{ veto_row(veto.no_phased_out_banned_tech_process_equipment, '未使用国家或有关部门发布的淘汰或禁止的技术、工艺、装备及相关物质 — No phased-out/banned technology, process, equipment, or substances') }}
+{{ veto_row(veto.dedicated_solid_waste_storage_and_dust_recovery, '固体废物有专门贮存场所，生产过程配备粉尘回收装置 — Dedicated solid-waste storage; dust recovery equipment in place') }}
+{{ veto_row(veto.emissions_comply_with_control_and_permit_requirements, '污染物排放达到国家和地方排放总量控制及排污许可管理要求 — Emissions comply with total-control and discharge-permit requirements') }}
+{{ veto_row(veto.energy_metering_per_gb17167, '按 GB17167 配备能源计量器具 — Energy metering instruments per GB17167') }}
+{{ veto_row(veto.no_major_environmental_incident_past_3yrs, '近三年内（投产不足三年自投产之日起）无重大环境污染事件 — No major environmental pollution incident in the past 3 years') }}
+<p class="note">If ANY box above is unchecked, the factory does not qualify for green-factory certification regardless of indicator score — this is a hard gate, not a weighted factor.</p>
+
+<div class="page-break"></div>
+
+<h2>4. Indicator Scoring — Self-Evaluation 指标得分自评</h2>
+<table class="score">
+  <thead>
+    <tr>
+      <th>一级指标 Category</th>
+      <th>说明 Description</th>
+      <th>权重 Weight</th>
+      <th>自评得分 Self-score</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>基础设施 Infrastructure</td>
+      <td>Site/plant-level infrastructure meeting green-manufacturing standards</td>
+      <td>{{ se.infrastructure.weight_pct }}%</td>
+      <td>{{ se.infrastructure.self_score if se.infrastructure.self_score is not none else '' }}</td>
+    </tr>
+    <tr>
+      <td>管理体系 Management system</td>
+      <td>QMS/EMS/OHSMS/energy-management systems in place and implemented</td>
+      <td>{{ se.management_system.weight_pct }}%</td>
+      <td>{{ se.management_system.self_score if se.management_system.self_score is not none else '' }}</td>
+    </tr>
+    <tr>
+      <td>能源资源投入 Energy &amp; resource input</td>
+      <td>Energy intensity, water intensity, raw-material use per unit output</td>
+      <td>{{ se.energy_resource_input.weight_pct }}%</td>
+      <td>{{ se.energy_resource_input.self_score if se.energy_resource_input.self_score is not none else '' }}</td>
+    </tr>
+    <tr>
+      <td>产品 Product</td>
+      <td>Green-design attributes of the product itself</td>
+      <td>{{ se.product.weight_pct }}%</td>
+      <td>{{ se.product.self_score if se.product.self_score is not none else '' }}</td>
+    </tr>
+    <tr>
+      <td>环境排放 Environmental emissions</td>
+      <td>Wastewater, exhaust gas, solid waste, noise compliance and reduction</td>
+      <td>{{ se.environmental_emissions.weight_pct }}%</td>
+      <td>{{ se.environmental_emissions.self_score if se.environmental_emissions.self_score is not none else '' }}</td>
+    </tr>
+    <tr>
+      <td>绩效 Performance</td>
+      <td>Overall energy/carbon/resource performance vs. industry benchmark</td>
+      <td>{{ se.performance.weight_pct }}%</td>
+      <td>{{ se.performance.self_score if se.performance.self_score is not none else '' }}</td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>合计 Total (100 分/points)</strong></td>
+      <td>100%</td>
+      <td><strong>{{ se.total_score if se.total_score is not none else '' }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+<p class="note">Weights and categories per GB/T36132 绿色工厂评价通则 (used where no industry-specific standard has been published for this sector).</p>
+
+{% if score_summary %}
+<p class="note"><strong>GreenGru Stage-3 score (GB/T 36132—2025 engine):</strong> {{ score_summary }}</p>
+{% endif %}
+
+<h2>5. Evaluation Method 评价方式</h2>
+<div class="row-check"><span class="check {% if em.self_evaluation %}on{% endif %}">{% if em.self_evaluation %}✓{% endif %}</span>自评价 Self-evaluation</div>
+<div class="row-check"><span class="check {% if em.third_party_evaluation %}on{% endif %}">{% if em.third_party_evaluation %}✓{% endif %}</span>委托第三方机构评价 Third-party evaluation</div>
+<table class="fields">
+  <tr><td class="label">若采用第三方评价，机构名称 / If third-party, institution name</td><td class="value">{{ em.third_party_institution_name }}</td></tr>
+</table>
+
+<h2>6. Evaluation Report Outline — To Be Attached 评价报告提纲（附件）</h2>
+{{ veto_row(outline.section1_overview, '一、概述 — Overview: purpose/scope/criteria; company background, process/products, green-development achievements') }}
+{{ veto_row(outline.section2_evaluation_content, '二、评价内容 — Evaluation content across the indicator dimensions') }}
+{{ veto_row(outline.section3_evaluation_conclusion, '三、评价结论 — Conclusion: score, key practices/highlights, remaining gaps') }}
+{{ veto_row(outline.section4_recommendations, '四、建议 — Recommendations for continued improvement') }}
+{{ veto_row(outline.section5_reference_documents, '五、参考文件 — References / supporting-material index') }}
+{{ veto_row(outline.annex_onsite_supporting_materials_checklist, '附表：现场评价证明材料清单 — On-site evaluation supporting-material checklist') }}
+
+<div class="page-break"></div>
+
+<h2>7. Declaration &amp; Signature 声明与签署</h2>
+<p class="intro">
+  本单位评价报告真实有效、充分，真实、准确地反映了企业情况。已充分了解评价报告的严肃性，评价过程若存在弄虚作假或故意隐瞒问题，愿承担所有责任。 /
+  This unit confirms the evaluation report is true, complete and accurate, and accepts full responsibility for any misrepresentation or concealment.
+</p>
+<div class="sig-row">
+  <div class="sig-box"><strong>法定代表人签字 Legal rep. signature</strong><br>{{ decl.legal_rep_signature }}</div>
+  <div class="sig-box"><strong>日期 Date</strong><br>{{ decl.date }}</div>
+  <div class="sig-box"><strong>企业公章 Company seal</strong><br>{% if decl.company_seal_applied %}☑ Applied{% else %}☐ Not applied{% endif %}</div>
+</div>
+
+<p class="footer">
+  This is GreenGru's own working template, structured from MIIT's published 绿色工厂第三方评价报告 format and provincial notices.
+  Actual submission channels, deadlines, and annex format are set by the province/municipality's annual 绿色制造名单 notice.
+  Generated {{ generated_at }} · hash {{ content_hash[:16] }}…
+</p>
+</body>
+</html>
