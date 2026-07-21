@@ -141,6 +141,55 @@ flowchart TB
 | **1.3 Grant** | Zero-carbon factory grant · score gaps |
 | **2 Advisory** | Scores + factory data → actionable advice |
 
+#### RAG · Pre-screener knowledge base
+
+Pre-screeners don’t memorize regulations from a naked model — they use **RAG**: official compliance docs → clean & chunk → vector store → channel-scoped retrieval into the matching agent. Built for **bilingual CN/EN** and **formula-heavy** regulatory text.
+
+```mermaid
+flowchart LR
+  subgraph RAW["Official sources"]
+    CBAM_DOC["EU CBAM<br/>Guidance"]
+    LOAN_DOC["Green loan / factory<br/>GB · policy"]
+    GRANT_DOC["Grant · zero-carbon<br/>evaluation standards"]
+  end
+  subgraph PREP["Preprocess · MinerU"]
+    MD["→ clean Markdown"]
+    TEX["formulas → LaTeX"]
+  end
+  subgraph CHUNK["Process · LangChain"]
+    SPLIT["MarkdownTextSplitter"]
+    MATH["Math-safe chunking<br/>keep formula context"]
+  end
+  subgraph EMB["Embed · Qwen3"]
+    QE["Qwen3-Embedding<br/>CN/EN · math-aware"]
+  end
+  subgraph STORE["Vector DB · Supabase"]
+    VEC[("pgvector<br/>Hybrid Search")]
+  end
+  subgraph AG["Channel agents"]
+    A1["1.1 CBAM"]
+    A2["1.2 Loan"]
+    A3["1.3 Grant"]
+  end
+  CBAM_DOC --> PREP
+  LOAN_DOC --> PREP
+  GRANT_DOC --> PREP
+  PREP --> CHUNK --> EMB --> VEC
+  VEC --> A1
+  VEC --> A2
+  VEC --> A3
+```
+
+| Step | Tech | Why |
+|------|------|-----|
+| Extract | **MinerU** | PDF/scans → Markdown; formulas → LaTeX |
+| Chunk | **LangChain** MarkdownTextSplitter | Structure-aware; **math-safe** (don’t split equations) |
+| Embed | **Qwen3-Embedding** (MVP via OpenRouter) | Multilingual + math/table semantics |
+| Store / retrieve | **Supabase pgvector** | **Hybrid search** (keyword + vector — critical for math); channel isolation so agents don’t cross-contaminate |
+| Consume | Pre-screeners 1.1 / 1.2 / 1.3 | Retrieve only that channel’s corpus → score + gap list |
+
+Production swap: **Bailian embedding / ModelScope `Qwen3-Embedding-*`** + **PolarDB** — same pipeline shape.
+
 #### 3. Six-stage pipeline (code-orchestrated)
 
 ```mermaid
@@ -265,6 +314,7 @@ DDL: `supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 - **One spine, two buyers** — SME monetization + anchor Scope 3  
 - **Meters as evidence** — IoT windows feed green finance only, never CBAM  
 - **HMAC that ships** — integrity + trade-secret privacy without heavy crypto theater  
+- **RAG, channel-isolated** — MinerU → LangChain → Qwen Embedding → Supabase; each pre-screener hits its own corpus  
 - **MVP → China stack** — OpenRouter / Supabase today; Bailian / PolarDB tomorrow  
 
 | Capability | MVP | Production |
@@ -282,6 +332,7 @@ DDL: `supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 | Frontend | TanStack Start · React 19 · Tailwind · Recharts |
 | Backend | FastAPI · calc engine · scorers · OCR · IoT · pipeline |
 | Agents | Copilot · CBAM / Loan / Grant pre-screeners · Advisory (Qwen) |
+| RAG | MinerU · LangChain · Qwen3-Embedding · Supabase pgvector / hybrid search |
 | LLM | OpenRouter (MVP) → Bailian / ModelScope (prod) |
 | DB | Supabase (MVP) → PolarDB (prod) |
 | Edge | ESP32 · ZMPT101B · SCT-013 · HTTP ingest |

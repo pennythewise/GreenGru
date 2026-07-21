@@ -141,6 +141,55 @@ flowchart TB
 | **1.3 Grant** | 零碳工厂补贴 · 评分缺口 |
 | **2 Advisory** | 汇总分数 + 工厂数据 → 可执行建议 |
 
+#### RAG · 预筛知识库
+
+三通道预筛不靠「裸模型硬背法规」，而是 **RAG**：官方合规文档 → 清洗分块 → 向量入库 → 按通道检索，喂给对应 Agent。专治 **中英双语 + 公式/表格** 类监管文本。
+
+```mermaid
+flowchart LR
+  subgraph RAW["原始合规文档"]
+    CBAM_DOC["EU CBAM<br/>Guidance"]
+    LOAN_DOC["绿贷 / 绿色工厂<br/>国标 · 政策"]
+    GRANT_DOC["补贴 · 零碳工厂<br/>评价通则"]
+  end
+  subgraph PREP["预处理 · MinerU"]
+    MD["→ 干净 Markdown"]
+    TEX["公式 → LaTeX"]
+  end
+  subgraph CHUNK["处理 · LangChain"]
+    SPLIT["MarkdownTextSplitter"]
+    MATH["Math-safe chunking<br/>保公式上下文"]
+  end
+  subgraph EMB["向量化 · Qwen3"]
+    QE["Qwen3-Embedding<br/>中英 · 懂数学环境"]
+  end
+  subgraph STORE["向量库 · Supabase"]
+    VEC[("pgvector<br/>Hybrid Search")]
+  end
+  subgraph AG["通道专家 Agent"]
+    A1["1.1 CBAM"]
+    A2["1.2 Loan"]
+    A3["1.3 Grant"]
+  end
+  CBAM_DOC --> PREP
+  LOAN_DOC --> PREP
+  GRANT_DOC --> PREP
+  PREP --> CHUNK --> EMB --> VEC
+  VEC --> A1
+  VEC --> A2
+  VEC --> A3
+```
+
+| 步骤 | 技术 | 解决什么 |
+|------|------|----------|
+| 抽取 | **MinerU** | PDF/扫描件 → Markdown；公式标准化为 LaTeX |
+| 分块 | **LangChain** MarkdownTextSplitter | 按结构切；**Math-safe** 不打断公式块 |
+| 嵌入 | **Qwen3-Embedding**（MVP 经 OpenRouter） | 中英双语 + 复杂数学/表格语义 |
+| 存储检索 | **Supabase pgvector** | **Hybrid Search**（关键词+向量，公式友好）；通道隔离，避免 Agent 串库 |
+| 消费 | 预筛 Agent 1.1 / 1.2 / 1.3 | 只检索本通道语料 → 分数与缺口清单 |
+
+生产可迁：**百炼 Embedding / ModelScope `Qwen3-Embedding-*`** + **PolarDB**，管线形状不变。
+
 #### 3. 六阶段流水线（代码编排）
 
 ```mermaid
@@ -265,6 +314,7 @@ DDL：`supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 - **双端同一脊梁** — SME 变现 + 链主 Scope 3  
 - **电表即证据** — IoT 时间窗只服务绿融，不污染 CBAM  
 - **HMAC 可落地** — 防篡改 + 保护商业秘密，无需重链  
+- **RAG 通道隔离** — MinerU → LangChain → Qwen Embedding → Supabase；三预筛各取各的法规库  
 - **MVP → 中国栈** — OpenRouter / Supabase 今天跑；百炼 / PolarDB 明天切
 
 | 能力 | MVP | 生产 |
@@ -282,6 +332,7 @@ DDL：`supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 | Frontend | TanStack Start · React 19 · Tailwind · Recharts |
 | Backend | FastAPI · 确定性引擎 · 评分器 · OCR · IoT · 流水线 |
 | Agents | Copilot · CBAM / Loan / Grant 预筛 · Advisory（Qwen） |
+| RAG | MinerU · LangChain · Qwen3-Embedding · Supabase pgvector / Hybrid Search |
 | LLM | OpenRouter（MVP）→ 百炼 / ModelScope（生产） |
 | DB | Supabase（MVP）→ PolarDB（生产） |
 | Edge | ESP32 · ZMPT101B · SCT-013 · HTTP ingest |
