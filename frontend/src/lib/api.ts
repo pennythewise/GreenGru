@@ -136,6 +136,7 @@ export async function runPipeline(payload: {
   production_volume_tonnes: number | null;
   ocr_source: string;
   mock_fields: string[];
+  iot_snapshot_id?: string | null;
 }): Promise<PipelineRunResponse> {
   let res: Response;
   try {
@@ -505,6 +506,22 @@ export async function fetchLatestIotReading(
   return data as IotReading;
 }
 
+export async function fetchIotHistory(
+  companyId = "demo-hengfeng",
+  limit = 48,
+): Promise<IotReading[]> {
+  let res: Response;
+  try {
+    res = await fetch(
+      `${API_BASE}/api/iot/history?company_id=${encodeURIComponent(companyId)}&limit=${limit}`,
+    );
+  } catch {
+    return [];
+  }
+  if (!res.ok) return [];
+  return (await res.json()) as IotReading[];
+}
+
 export type IotReading = {
   id: string;
   company_id: string;
@@ -515,6 +532,47 @@ export type IotReading = {
   kwh: number;
   ingested_at: string;
 };
+
+export type IotSnapshot = {
+  id: string;
+  company_id: string;
+  window_minutes: number;
+  green_trading: string;
+  emission_factor_t_per_mwh: number;
+  window_start: string;
+  window_end: string;
+  sample_count: number;
+  kwh_start: number;
+  kwh_end: number;
+  delta_kwh: number;
+  avg_power_w: number | null;
+  tco2e: number;
+  submission_id: string | null;
+  created_at: string;
+  note_en: string;
+  note_zh: string;
+};
+
+export async function createIotSnapshot(payload: {
+  company_id?: string;
+  window_minutes: 10 | 30 | 60;
+  green_trading: "yes" | "no";
+}): Promise<IotSnapshot> {
+  const res = await fetch(`${API_BASE}/api/iot/snapshot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      company_id: payload.company_id ?? "demo-hengfeng",
+      window_minutes: payload.window_minutes,
+      green_trading: payload.green_trading,
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Save IoT window failed (${res.status})`);
+  }
+  return res.json() as Promise<IotSnapshot>;
+}
 
 export async function downloadApplicationFormPdf(payload: {
   route: "loan" | "grant";

@@ -46,12 +46,37 @@ async def run_pipeline_from_preview(
     ocr_source: str,
     mock_fields: list[str],
     year: int = 2026,
+    iot_snapshot_id: str | None = None,
 ) -> dict:
     """Execute stages 1–5; stage 6 returns a signable package only."""
     stages: list[dict] = []
     product_desc = product_description_from_invoice(invoice)
     tonnes = production_volume_tonnes or total_tonnes_from_invoice(invoice) or 100.0
     route = classification_route or "BF-BOF"
+
+    iot_evidence: dict | None = None
+    if iot_snapshot_id:
+        from app.db import async_session_factory
+        from app.models_orm import IotWindowSnapshot
+        from sqlalchemy import select
+
+        async with async_session_factory() as session:
+            result = await session.execute(
+                select(IotWindowSnapshot).where(IotWindowSnapshot.id == iot_snapshot_id)
+            )
+            snap = result.scalar_one_or_none()
+            if snap:
+                iot_evidence = {
+                    "snapshot_id": snap.id,
+                    "window_minutes": snap.window_minutes,
+                    "green_trading": snap.green_trading,
+                    "emission_factor_t_per_mwh": snap.emission_factor_t_per_mwh,
+                    "sample_count": snap.sample_count,
+                    "delta_kwh": snap.delta_kwh,
+                    "avg_power_w": snap.avg_power_w,
+                    "tco2e": snap.tco2e,
+                    "scope": "financing_electricity_only_not_cbam",
+                }
 
     # --- Stage 1: Intake ---
     t0 = time.perf_counter()
@@ -71,10 +96,18 @@ async def run_pipeline_from_preview(
             "zh": "接入",
             "status": "done",
             "elapsed": _elapsed_ms(t0),
-            "summary": f"OCR source: {ocr_source} · volume {tonnes:.1f} t",
+            "summary": (
+                f"OCR source: {ocr_source} · volume {tonnes:.1f} t"
+                + (
+                    f" · IoT {iot_evidence['window_minutes']}m window ({iot_evidence['sample_count']} samples)"
+                    if iot_evidence
+                    else ""
+                )
+            ),
             "detail": {
                 "ocr_source": ocr_source,
                 "mock_fields": mock_fields,
+                "iot_window_snapshot": iot_evidence,
                 "extracted": {
                     "production_volume_tonnes": tonnes,
                     "billing_period": extraction.billing_period,
@@ -234,6 +267,7 @@ async def run_pipeline_from_preview(
         "cisa_grade": scoring.cisa_grade,
         "nuonuo_status": nuonuo.status,
         "stages_complete": 5,
+        "iot_window_snapshot": iot_evidence,
     }
     content_hash, signature = _sign_payload(package_body)
 

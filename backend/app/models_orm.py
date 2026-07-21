@@ -166,9 +166,32 @@ class IotReading(Base):
     __tablename__ = "iot_readings"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    company_id: Mapped[str] = mapped_column(ForeignKey("companies.id"))
+    # Demo company ids (e.g. demo-hengfeng) are string keys — not always a companies row.
+    company_id: Mapped[str] = mapped_column(String(64), index=True)
     reading_timestamp: Mapped[datetime]
     voltage: Mapped[float | None] = mapped_column(nullable=True)
     current: Mapped[float | None] = mapped_column(nullable=True)
     kwh: Mapped[float]
     ingested_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+class IotWindowSnapshot(Base):
+    """Saved ESP32 time-window attached to a New Submission (financing evidence only)."""
+
+    __tablename__ = "iot_window_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(String(64), index=True)
+    window_minutes: Mapped[int]  # 10 | 30 | 60
+    green_trading: Mapped[str] = mapped_column(String(8))  # "yes" | "no"
+    emission_factor_t_per_mwh: Mapped[float]
+    window_start: Mapped[datetime]
+    window_end: Mapped[datetime]
+    sample_count: Mapped[int]
+    kwh_start: Mapped[float]
+    kwh_end: Mapped[float]
+    delta_kwh: Mapped[float]
+    avg_power_w: Mapped[float | None] = mapped_column(nullable=True)
+    tco2e: Mapped[float]
+    submission_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(default=_now)

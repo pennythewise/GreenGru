@@ -18,6 +18,7 @@ async def pipeline_run(payload: PipelineRunRequest):
         ocr_source=payload.ocr_source,
         mock_fields=payload.mock_fields,
         year=payload.year,
+        iot_snapshot_id=payload.iot_snapshot_id,
     )
     return PipelineRunResponse(
         stages=[PipelineStageDetailOut(**s) for s in result["stages"]],

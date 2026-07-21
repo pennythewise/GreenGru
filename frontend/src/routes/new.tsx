@@ -15,10 +15,12 @@ import { ExtractedInvoiceCard } from "@/components/ExtractedInvoiceCard";
 import { PipelineTracker } from "@/components/PipelineTracker";
 import { UpstreamAuthorizationModal } from "@/components/UpstreamAuthorizationModal";
 import {
+  createIotSnapshot,
   fetchLatestIotReading,
   previewOcr,
   runPipeline,
   type IotReading,
+  type IotSnapshot,
   type OcrPreviewResponse,
   type PipelineRunResponse,
 } from "@/lib/api";
@@ -75,12 +77,33 @@ function NewSubmission() {
   const [greenTrading, setGreenTrading] = useState<GreenPowerTradingChoice>(() =>
     typeof window !== "undefined" ? loadGreenPowerTradingChoice() : "no",
   );
+  const [iotWindow, setIotWindow] = useState<10 | 30 | 60>(30);
+  const [iotSnapshot, setIotSnapshot] = useState<IotSnapshot | null>(null);
+  const [iotSaving, setIotSaving] = useState(false);
+  const [iotSaveError, setIotSaveError] = useState<string | null>(null);
   const { applyPipelineSnapshot } = useDashboardSnapshot();
 
   const setGreenTradingChoice = useCallback((choice: GreenPowerTradingChoice) => {
     setGreenTrading(choice);
     saveGreenPowerTradingChoice(choice);
   }, []);
+
+  const handleSaveIotWindow = useCallback(async () => {
+    setIotSaving(true);
+    setIotSaveError(null);
+    try {
+      const snap = await createIotSnapshot({
+        window_minutes: iotWindow,
+        green_trading: greenTrading,
+      });
+      setIotSnapshot(snap);
+    } catch (err) {
+      setIotSnapshot(null);
+      setIotSaveError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setIotSaving(false);
+    }
+  }, [iotWindow, greenTrading]);
 
   useEffect(() => {
     if (!esp32Enabled) {
@@ -186,6 +209,7 @@ function NewSubmission() {
         production_volume_tonnes: primary.production_volume_tonnes,
         ocr_source: primary.ocr_source,
         mock_fields: primary.mock_fields,
+        iot_snapshot_id: esp32Enabled ? iotSnapshot?.id ?? null : null,
       });
       setPipelineResult(result);
       applyPipelineSnapshot(result.dashboard_snapshot);
@@ -194,7 +218,7 @@ function NewSubmission() {
     } finally {
       setPipelineLoading(false);
     }
-  }, [readyDocs, applyPipelineSnapshot]);
+  }, [readyDocs, applyPipelineSnapshot, esp32Enabled, iotSnapshot]);
 
   const totalTonnage = readyDocs.reduce((sum, d) => sum + (d.ocrPreview?.production_volume_tonnes ?? 0), 0);
   const { t, isZh } = useLocale();
@@ -446,6 +470,73 @@ function NewSubmission() {
                     {isZh ? "tCO₂e = kWh÷1000 × EF" : "tCO₂e = kWh/1000 × EF"}
                   </div>
                 )}
+
+                <div className="mt-4 rounded-md border border-border bg-surface/50 p-3 space-y-3">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                    {isZh ? "保存时间窗 · 供流水线引用" : "Save time window · attach to pipeline"}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {([10, 30, 60] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setIotWindow(m)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-md border text-[12px] font-medium transition",
+                          iotWindow === m
+                            ? "border-teal/40 bg-teal/10 text-teal"
+                            : "border-border bg-surface text-muted-foreground hover:bg-surface-2",
+                        )}
+                      >
+                        {isZh
+                          ? m === 60
+                            ? "最近 1 小时"
+                            : `最近 ${m} 分钟`
+                          : m === 60
+                            ? "Last 1 hour"
+                            : `Last ${m} min`}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={iotSaving || !esp32Enabled}
+                    onClick={() => void handleSaveIotWindow()}
+                    className="w-full sm:w-auto px-3.5 py-2 rounded-md border border-carbon/40 bg-carbon/10 text-carbon text-[12.5px] font-medium hover:bg-carbon/15 transition disabled:opacity-50"
+                  >
+                    {iotSaving
+                      ? isZh
+                        ? "保存中…"
+                        : "Saving…"
+                      : isZh
+                        ? `保存最近 ${iotWindow === 60 ? "1 小时" : `${iotWindow} 分钟`} 读数`
+                        : `Save last ${iotWindow === 60 ? "1 hour" : `${iotWindow} min`} readings`}
+                  </button>
+                  {iotSaveError && (
+                    <div className="text-[11px] text-warning leading-snug">{iotSaveError}</div>
+                  )}
+                  {iotSnapshot && (
+                    <div className="rounded-md border border-carbon/30 bg-carbon/[0.06] p-2.5 text-[11px] font-mono space-y-1">
+                      <div className="text-carbon font-medium">
+                        {isZh ? "已保存窗口" : "Window saved"} · {iotSnapshot.window_minutes} min ·{" "}
+                        {iotSnapshot.sample_count} samples
+                      </div>
+                      <div>
+                        ΔkWh {iotSnapshot.delta_kwh.toFixed(8)} · avg{" "}
+                        {iotSnapshot.avg_power_w != null
+                          ? `${iotSnapshot.avg_power_w.toFixed(4)} W`
+                          : "—"}{" "}
+                        · tCO₂e {iotSnapshot.tco2e.toFixed(8)}
+                      </div>
+                      <div className="text-muted-foreground truncate">
+                        id {iotSnapshot.id} · EF {iotSnapshot.emission_factor_t_per_mwh}
+                      </div>
+                      <div className="text-muted-foreground">
+                        {isZh ? iotSnapshot.note_zh : iotSnapshot.note_en}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </motion.div>
@@ -495,7 +586,22 @@ function NewSubmission() {
                     k={t(newPage.tonnage.en, newPage.tonnage.zh)}
                     v={totalTonnage > 0 ? `${totalTonnage.toLocaleString()} t` : "—"}
                   />
-                  <Row k={t(newPage.sensor.en, newPage.sensor.zh)} v={t(newPage.sensorVal.en, newPage.sensorVal.zh)} />
+                  <Row
+                    k={t(newPage.sensor.en, newPage.sensor.zh)}
+                    v={
+                      !esp32Enabled
+                        ? isZh
+                          ? "关闭"
+                          : "Off"
+                        : iotSnapshot
+                          ? isZh
+                            ? `${iotSnapshot.window_minutes}分钟窗 · 已保存`
+                            : `${iotSnapshot.window_minutes}m window · saved`
+                          : isZh
+                            ? "实时 · 未保存窗"
+                            : "Live · no window saved"
+                    }
+                  />
                 </div>
 
                 <button

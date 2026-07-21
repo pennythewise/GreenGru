@@ -159,6 +159,8 @@ class PipelineRunRequest(BaseModel):
     ocr_source: str = "mock"
     mock_fields: list[str] = []
     year: int = 2026
+    # Optional ESP32 window snapshot — financing evidence only (never CBAM).
+    iot_snapshot_id: str | None = None
 
 
 class PipelineStageDetailOut(BaseModel):
@@ -313,6 +315,32 @@ class IotReadingOut(BaseModel):
     power_w: float | None = None
     kwh: float
     ingested_at: str
+
+
+class IotSnapshotCreate(BaseModel):
+    company_id: str = "demo-hengfeng"
+    window_minutes: Literal[10, 30, 60]
+    green_trading: Literal["yes", "no"] = "no"
+
+
+class IotSnapshotOut(BaseModel):
+    id: str
+    company_id: str
+    window_minutes: int
+    green_trading: str
+    emission_factor_t_per_mwh: float
+    window_start: str
+    window_end: str
+    sample_count: int
+    kwh_start: float
+    kwh_end: float
+    delta_kwh: float
+    avg_power_w: float | None
+    tco2e: float
+    submission_id: str | None = None
+    created_at: str
+    note_en: str
+    note_zh: str
 
 
 # --- Baowu dashboard (stretch) ------------------------------------------------------------
