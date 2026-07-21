@@ -9,12 +9,28 @@ import {
   Radio,
   Upload,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { ExtractedInvoiceCard } from "@/components/ExtractedInvoiceCard";
 import { PipelineTracker } from "@/components/PipelineTracker";
 import { UpstreamAuthorizationModal } from "@/components/UpstreamAuthorizationModal";
-import { previewOcr, runPipeline, type OcrPreviewResponse, type PipelineRunResponse } from "@/lib/api";
+import {
+  fetchLatestIotReading,
+  previewOcr,
+  runPipeline,
+  type IotReading,
+  type OcrPreviewResponse,
+  type PipelineRunResponse,
+} from "@/lib/api";
+import {
+  electricityEmissionsTco2e,
+  gridEmissionFactorTPerMWh,
+  loadGreenPowerTradingChoice,
+  saveGreenPowerTradingChoice,
+  type GreenPowerTradingChoice,
+  CISA_GRID_EF_CITATION_EN,
+  CISA_GRID_EF_CITATION_ZH,
+} from "@/lib/cisa-grid-ef";
 import { useDashboardSnapshot } from "@/hooks/useDashboardSnapshot";
 import { useLocale } from "@/lib/locale";
 import { crumbs, newPage } from "@/lib/ui-strings";
@@ -53,7 +69,42 @@ function NewSubmission() {
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const [pipelineResult, setPipelineResult] = useState<PipelineRunResponse | null>(null);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
+  const [esp32Enabled, setEsp32Enabled] = useState(true);
+  const [iotReading, setIotReading] = useState<IotReading | null>(null);
+  const [iotStatus, setIotStatus] = useState<"idle" | "live" | "waiting">("idle");
+  const [greenTrading, setGreenTrading] = useState<GreenPowerTradingChoice>(() =>
+    typeof window !== "undefined" ? loadGreenPowerTradingChoice() : "no",
+  );
   const { applyPipelineSnapshot } = useDashboardSnapshot();
+
+  const setGreenTradingChoice = useCallback((choice: GreenPowerTradingChoice) => {
+    setGreenTrading(choice);
+    saveGreenPowerTradingChoice(choice);
+  }, []);
+
+  useEffect(() => {
+    if (!esp32Enabled) {
+      setIotStatus("idle");
+      return;
+    }
+    let cancelled = false;
+    const tick = async () => {
+      const latest = await fetchLatestIotReading("demo-hengfeng");
+      if (cancelled) return;
+      if (latest) {
+        setIotReading(latest);
+        setIotStatus("live");
+      } else {
+        setIotStatus("waiting");
+      }
+    };
+    void tick();
+    const id = window.setInterval(() => void tick(), 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [esp32Enabled]);
 
   const processFiles = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
@@ -263,7 +314,12 @@ function NewSubmission() {
                 <Radio className="h-3.5 w-3.5 text-carbon" /> {t(newPage.sensorOptional.en, newPage.sensorOptional.zh)}
               </div>
               <label className="inline-flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" defaultChecked className="peer sr-only" />
+                <input
+                  type="checkbox"
+                  checked={esp32Enabled}
+                  onChange={(e) => setEsp32Enabled(e.target.checked)}
+                  className="peer sr-only"
+                />
                 <span className="w-9 h-5 rounded-full bg-muted peer-checked:bg-carbon transition relative">
                   <span className="absolute top-0.5 left-0.5 w-4 h-4 bg-background rounded-full transition peer-checked:translate-x-4" />
                 </span>
@@ -273,18 +329,125 @@ function NewSubmission() {
             <p className="mt-2 text-[12px] text-muted-foreground">
               {t(newPage.sensorNote.en, newPage.sensorNote.zh)}
             </p>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] font-mono">
-              {[
-                { k: "MQTT topic", v: "hf/shopfloor/mains" },
-                { k: "Last reading", v: "412.8 kW · 09:41" },
-                { k: "Uptime 30d", v: "98.4%" },
-              ].map((r) => (
-                <div key={r.k} className="rounded-md border border-border bg-surface p-2">
-                  <div className="text-muted-foreground uppercase text-[10px] tracking-wider">{r.k}</div>
-                  <div className="mt-0.5">{r.v}</div>
+            {esp32Enabled && (
+              <>
+                <div className="mt-3 rounded-md border border-border bg-surface/60 p-3 space-y-2">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                    {isZh ? "市场化绿电交易（CISA 附录 B.3）" : "Market green-power trading (CISA App. B.3)"}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGreenTradingChoice("no")}
+                      className={cn(
+                        "px-3 py-1.5 rounded-md border text-[12px] font-medium transition",
+                        greenTrading === "no"
+                          ? "border-carbon/40 bg-carbon/10 text-carbon"
+                          : "border-border bg-surface text-muted-foreground hover:bg-surface-2",
+                      )}
+                    >
+                      {isZh ? "不参与 · 0.5568 t/MWh" : "Not participating · 0.5568 t/MWh"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGreenTradingChoice("yes")}
+                      className={cn(
+                        "px-3 py-1.5 rounded-md border text-[12px] font-medium transition",
+                        greenTrading === "yes"
+                          ? "border-carbon/40 bg-carbon/10 text-carbon"
+                          : "border-border bg-surface text-muted-foreground hover:bg-surface-2",
+                      )}
+                    >
+                      {isZh ? "参与 · 0.5942 t/MWh" : "Participating · 0.5942 t/MWh"}
+                    </button>
+                  </div>
+                  <p className="text-[10.5px] text-muted-foreground leading-snug">
+                    {isZh ? CISA_GRID_EF_CITATION_ZH : CISA_GRID_EF_CITATION_EN}
+                  </p>
                 </div>
-              ))}
-            </div>
+
+                <div className="mt-2 flex items-center gap-2 text-[11px] font-mono">
+                  <span
+                    className={cn(
+                      "inline-block h-1.5 w-1.5 rounded-full",
+                      iotStatus === "live" ? "bg-carbon animate-pulse" : "bg-muted-foreground/50",
+                    )}
+                  />
+                  {iotStatus === "live"
+                    ? isZh
+                      ? "实时 · HTTP /api/iot/ingest"
+                      : "Live · HTTP /api/iot/ingest"
+                    : isZh
+                      ? "等待 ESP32…"
+                      : "Waiting for ESP32…"}
+                </div>
+                <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 text-[11px] font-mono">
+                  {[
+                    {
+                      k: "Vrms",
+                      v:
+                        iotReading?.voltage != null
+                          ? `${iotReading.voltage.toFixed(4)} V`
+                          : "—",
+                    },
+                    {
+                      k: "Irms",
+                      v:
+                        iotReading?.current != null
+                          ? `${iotReading.current.toFixed(6)} A`
+                          : "—",
+                    },
+                    {
+                      k: "Power",
+                      v:
+                        iotReading?.power_w != null
+                          ? `${iotReading.power_w.toFixed(4)} W`
+                          : iotReading?.voltage != null && iotReading?.current != null
+                            ? `${(iotReading.voltage * iotReading.current).toFixed(4)} W`
+                            : "—",
+                    },
+                    {
+                      k: "kWh",
+                      v:
+                        iotReading != null
+                          ? `${iotReading.kwh.toFixed(8)} kWh`
+                          : "—",
+                    },
+                    {
+                      k: isZh ? "电力排放" : "Grid tCO₂e",
+                      v:
+                        iotReading != null
+                          ? `${electricityEmissionsTco2e(iotReading.kwh, greenTrading).toFixed(8)} t`
+                          : "—",
+                      sub: `EF ${gridEmissionFactorTPerMWh(greenTrading)} t/MWh`,
+                    },
+                  ].map((r) => (
+                    <div
+                      key={r.k}
+                      className={cn(
+                        "rounded-md border bg-surface p-2",
+                        r.k === "kWh" || r.sub
+                          ? "border-carbon/30 bg-carbon/[0.04]"
+                          : "border-border",
+                      )}
+                    >
+                      <div className="text-muted-foreground uppercase text-[10px] tracking-wider">{r.k}</div>
+                      <div className="mt-0.5 text-[12.5px] tabular-nums">{r.v}</div>
+                      {"sub" in r && r.sub ? (
+                        <div className="mt-0.5 text-[9.5px] text-muted-foreground">{r.sub}</div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                {iotReading && (
+                  <div className="mt-2 text-[10px] font-mono text-muted-foreground">
+                    {isZh ? "最近采样" : "Last sample"} · {iotReading.ingested_at || iotReading.reading_timestamp}
+                    {" · "}
+                    {isZh ? "tCO₂e = kWh÷1000 × EF" : "tCO₂e = kWh/1000 × EF"}
+                  </div>
+                )}
+              </>
+            )}
           </motion.div>
         </div>
 

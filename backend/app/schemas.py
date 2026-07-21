@@ -298,7 +298,21 @@ class IotReadingIngest(BaseModel):
     reading_timestamp: str
     voltage: float | None = None
     current: float | None = None
+    # Apparent / active power in watts from ESP32 (optional; else V×I on read).
+    power_w: float | None = None
+    # High precision — bulb prototypes are often << 0.01 kWh.
     kwh: float = Field(ge=0)
+
+
+class IotReadingOut(BaseModel):
+    id: str
+    company_id: str
+    reading_timestamp: str
+    voltage: float | None = None
+    current: float | None = None
+    power_w: float | None = None
+    kwh: float
+    ingested_at: str
 
 
 # --- Baowu dashboard (stretch) ------------------------------------------------------------

@@ -487,6 +487,35 @@ export async function runCbamScore(payload: {
   return withIndustryIllustration(raw);
 }
 
+export async function fetchLatestIotReading(
+  companyId = "demo-hengfeng",
+): Promise<IotReading | null> {
+  let res: Response;
+  try {
+    res = await fetch(
+      `${API_BASE}/api/iot/latest?company_id=${encodeURIComponent(companyId)}`,
+    );
+  } catch {
+    return null;
+  }
+  if (res.status === 204 || res.status === 404) return null;
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data == null) return null;
+  return data as IotReading;
+}
+
+export type IotReading = {
+  id: string;
+  company_id: string;
+  reading_timestamp: string;
+  voltage: number | null;
+  current: number | null;
+  power_w: number | null;
+  kwh: number;
+  ingested_at: string;
+};
+
 export async function downloadApplicationFormPdf(payload: {
   route: "loan" | "grant";
   application_form: unknown;
