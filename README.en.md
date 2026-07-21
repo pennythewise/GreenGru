@@ -94,7 +94,7 @@ flowchart TB
   BE --> SQL
 ```
 
-> Product trust uses **HMAC authorization packs** (not ZK / not on-chain). Pitch art shows business value; code + PRD are source of truth.
+> **Stage 6 trust: HMAC authorization packs.** A shared-secret signature proves the aggregated payload wasn’t tampered with — anchors can verify integrity without SMEs handing over raw invoices. Lightweight, auditable, and practical for channel SaaS.
 
 ### MVP → China production
 
