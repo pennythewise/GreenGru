@@ -88,38 +88,6 @@ flowchart LR
 
 ---
 
-### 🏢 Anchor view · Channel DSS
-
-For Baowu / Ansteel **account managers**: one verified spine turns compliance paperwork into an **actionable supplier network**.
-
-<p align="center">
-  <img src="docs/assets/anchor-dss.png" alt="Core enterprise channel Decision Support System" width="900" />
-</p>
-
-```mermaid
-flowchart TB
-  SPINE["GreenGru verified spine<br/>HMAC · no raw invoices"] --> M1["① National one-map"]
-  SPINE --> M2["② Unlock Scope 3 · Cat.10"]
-  SPINE --> M3["③ Decision hub"]
-  M1 --> ACT["Account-manager action"]
-  M2 --> ACT
-  M3 --> ACT
-  ACT --> FIX["Green-finance correction"]
-  ACT --> RISK["Supply-chain risk review"]
-```
-
-| Module | What it does | Why it matters |
-|--------|--------------|----------------|
-| **① National one-map** | Live SME map · province clusters · **CISA color tiers** | Kill the spreadsheet roll-up |
-| **② Unlock Scope 3 · Cat.10** | Verified SME Scope 1+2 → auto-feed anchor Cat.10 inventory | **Raw invoices never leave GreenGru** |
-| **③ Decision hub** | Grades · trends · last verified only (no sensitive originals) | Auto-flag underperformers |
-
-- **One map, whole network** — province × CISA grade in seconds  
-- **Cat.10 inventory-ready** — as supplier grades rise, annualized verified Cat.10 trends down (disclose-able narrative)  
-- **Action loop** — push laggards into green-finance correction or supply-chain risk review  
-
----
-
 ### 💡 Idea
 
 Not another carbon calculator.
