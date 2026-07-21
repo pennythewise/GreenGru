@@ -215,6 +215,10 @@ sequenceDiagram
 
 Non-invasive shopfloor metering — demo-ready clamp on live:
 
+<p align="center">
+  <img src="docs/assets/hardware-wiring.png" alt="ESP32 + ZMPT101B + SCT-013 smart meter wiring" width="820" />
+</p>
+
 ```mermaid
 flowchart LR
   AC["220V"] --> VT["ZMPT101B<br/>voltage"]
@@ -228,7 +232,7 @@ flowchart LR
 
 - **ESP32** — edge Vrms / Irms / W / kWh  
 - **ZMPT101B** — isolated AC voltage  
-- **SCT-013** — clamp CT  
+- **SCT-013** — clamp CT (10kΩ bias + 100Ω burden + 10µF)  
 - Grid EF (CISA B.3): `0.5568` or `0.5942` t/MWh → `tCO₂e = ΔkWh/1000 × EF`
 
 #### 5. Stage 6 · HMAC pack → Anchor API

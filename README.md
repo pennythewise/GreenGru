@@ -215,6 +215,10 @@ sequenceDiagram
 
 非侵入式车间计量，可演示夹火线：
 
+<p align="center">
+  <img src="docs/assets/hardware-wiring.png" alt="ESP32 + ZMPT101B + SCT-013 智能电表接线" width="820" />
+</p>
+
 ```mermaid
 flowchart LR
   AC["220V"] --> VT["ZMPT101B<br/>电压"]
@@ -228,7 +232,7 @@ flowchart LR
 
 - **ESP32** — 边缘算 Vrms / Irms / W / kWh  
 - **ZMPT101B** — 交流电压隔离采样  
-- **SCT-013** — 钳式电流互感器  
+- **SCT-013** — 钳式电流互感器（含 10kΩ 偏置 + 100Ω burden + 10µF）  
 - 电网 EF（CISA B.3）：`0.5568` 或 `0.5942` t/MWh → `tCO₂e = ΔkWh/1000 × EF`
 
 #### 5. Stage 6 · HMAC 授权包 → 链主 API
