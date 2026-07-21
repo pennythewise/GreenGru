@@ -53,6 +53,41 @@ flowchart TB
 
 ---
 
+### 📈 Why anchors collect Scope 3 (esp. Cat.10)
+
+For Baowu / Ansteel-class listed companies, **Scope 3 is not a footnote — it moves markets, regulators, and customers.**  
+Most Chinese steel peers still stop at Scope 1+2; leaders that can complete Scope 3 (e.g. Baosteel-class disclosure) signal stronger governance. GreenGru aggregates verified SME outputs into **Category 10 (processing of sold products)** — inventory-ready.
+
+```mermaid
+flowchart LR
+  DATA["Verified downstream<br/>HMAC API"] --> S3["Scope 3 · Cat.10"]
+  S3 --> INV["Investors / ESG"]
+  S3 --> EX["SSE · SZSE · BSE<br/>carbon & disclosure"]
+  S3 --> DEC["Hotspots · SBTi · joint abatement"]
+```
+
+**1. Strategy & capital markets**
+
+- **Meet investors & regulators** — ESG disclosure is tightening globally; for Baowu-scale footprints, Scope 3 is the credibility test and aligns with national carbon-market goals  
+- **Three Chinese exchanges** — **Shanghai (SSE), Shenzhen (SZSE), Beijing (BSE)** keep raising carbon / climate disclosure expectations; Cat.10 actuals are what stands up to scrutiny  
+- **Brand & stakeholder trust** — Cat.10 can dominate mining/steel Scope 3 (e.g. Rio Tinto ~396 Mt, BHP >300 Mt CO₂e order-of-magnitude); data proves you manage the biggest climate impact  
+
+**2. Risk map → decarbonization path**
+
+- **Find the hotspot** — Without downstream processing data, you’re blind to the largest climate risk; Cat.10 often sits in customer ironmaking (BF can be ~2/3 of downstream)  
+- **Steer R&D & product** — Knowing BF-BOF vs EAF lets you push higher-grade inputs, lower-energy routes, and co-invested tech  
+- **Unlock SBTi** — Steel SBTi guidance covers processing of sold intermediates; **no Cat.10 data → no credible Scope 3 target**  
+
+**3. Customers: commodity → partner**
+
+- **Averages → customer-specific** — Co-create routes & factors with key buyers; better books, better cuts  
+- **Collaborative governance wins** — Supply-chain joint decarbonization often beats go-it-alone payoffs; anchors become low-carbon partners, not just steel sellers  
+- **Lock green offtake** — Shared data → shared tech bets → long-term greener supply deals  
+
+> **GreenGru in one line:** SMEs finish compliance; anchors ingest **HMAC-verifiable Scope 3** — satisfy exchanges & investors while turning buyers into abatement allies.
+
+---
+
 ### 💡 Idea
 
 Not another carbon calculator.
