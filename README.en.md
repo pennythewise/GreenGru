@@ -101,6 +101,7 @@ flowchart LR
 #### 1. Multimodal intake
 
 - Invoice PDF/JPEG → OCR  
+- **Authenticity:** **Nuonuo (诺诺)** third-party API validates invoices against the **State Taxation Administration (国家税务总局)** invoice ledger — not a private homemade DB  
 - ESP32 meter → `POST /api/iot/ingest`  
 - Natural-language goals → **Copilot (Agent 0)** routes channels  
 
@@ -197,7 +198,7 @@ sequenceDiagram
   H->>A: Export / HMAC authorize
 ```
 
-1 Intake → 2 Validate → 3 Classify (Qwen · CN codes) → 4 **Engine calculate** → 5 Dashboard snapshot → 6 **HMAC authorize**
+1 Intake → 2 **Validate (Nuonuo → STA tax ledger)** → 3 Classify (Qwen · CN codes) → 4 **Engine calculate** → 5 Dashboard snapshot → 6 **HMAC authorize**
 
 #### 4. Edge hardware (highlight)
 
@@ -323,6 +324,7 @@ DDL: `supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 |-------|------|
 | Frontend | TanStack Start · React 19 · Tailwind · Recharts |
 | Backend | FastAPI · calc engine · scorers · OCR · IoT · pipeline |
+| Invoice verify | **Nuonuo** third-party API → **State Taxation Administration (国家税务总局)** invoice DB |
 | Agents | Copilot · CBAM / Loan / Grant pre-screeners · Advisory (Qwen) |
 | RAG | MinerU · LangChain · Qwen3-Embedding · Supabase pgvector / hybrid search |
 | LLM | OpenRouter (MVP) → Bailian / ModelScope (prod) |

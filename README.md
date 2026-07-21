@@ -101,6 +101,7 @@ flowchart LR
 #### 1. 多模态接入
 
 - 发票 PDF/JPEG → OCR
+- **验真：** **诺诺（Nuonuo）第三方 API** 查验发票真伪 —— 对接 **国家税务总局** 发票底账数据（非自建库）
 - ESP32 电表 → `POST /api/iot/ingest`
 - 自然语言目标 → **Copilot（Agent 0）** 分流
 
@@ -197,7 +198,7 @@ sequenceDiagram
   H->>A: 批准导出 / HMAC 授权
 ```
 
-1. 接入 → 2. 校验 → 3. 分类（Qwen · CN 码）→ 4. **引擎核算** → 5. 仪表盘快照 → 6. **HMAC 授权上传**
+1. 接入 → 2. **校验（诺诺 → 税务总局底账）** → 3. 分类（Qwen · CN 码）→ 4. **引擎核算** → 5. 仪表盘快照 → 6. **HMAC 授权上传**
 
 #### 4. 边缘硬件（杀手锏）
 
@@ -323,6 +324,7 @@ DDL：`supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 |----|------|
 | Frontend | TanStack Start · React 19 · Tailwind · Recharts |
 | Backend | FastAPI · 确定性引擎 · 评分器 · OCR · IoT · 流水线 |
+| 发票验真 | **诺诺 Nuonuo** 第三方 API → **国家税务总局** 发票数据库 |
 | Agents | Copilot · CBAM / Loan / Grant 预筛 · Advisory（Qwen） |
 | RAG | MinerU · LangChain · Qwen3-Embedding · Supabase pgvector / Hybrid Search |
 | LLM | OpenRouter（MVP）→ 百炼 / ModelScope（生产） |
