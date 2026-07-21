@@ -349,9 +349,81 @@ export async function runGrantScore(payload: {
   return res.json() as Promise<GrantScoreResult>;
 }
 
-/** Same response shape as grant Stage-3 — CBAM operator readiness / loan dual-source. */
-export type CbamScoreResult = GrantScoreResult;
 export type LoanScoreResult = GrantScoreResult;
+
+export type CbamTariffEstimate = {
+  certificate_price_eur_per_tco2e: number;
+  certificate_price_quarter: string;
+  intensity_tco2e_per_tonne: number;
+  benchmark_tco2e_per_tonne: number;
+  taxable_emissions_tco2e_per_tonne: number;
+  phase_in_factor: number;
+  markup_applied: number;
+  data_source: string;
+  path_label: string;
+  path_label_zh: string;
+  tariff_eur_per_tonne: number;
+  gross_tariff_eur_per_tonne: number;
+  annual_exposure_eur: number;
+  export_tonnes: number;
+  formula_en: string;
+  formula_zh: string;
+};
+
+export type CbamExportMargin = {
+  fob_eur_per_tonne: number;
+  margin_pct_before_cbam: number;
+  margin_eur_per_tonne_before: number;
+  tariff_if_approved_eur_per_tonne: number;
+  margin_eur_after_approved: number;
+  margin_pct_after_approved: number;
+  tariff_if_denied_eur_per_tonne: number;
+  margin_eur_after_denied: number;
+  margin_pct_after_denied: number;
+  margin_saved_by_approval_eur_per_tonne: number;
+  cost_pct_of_fob_if_approved: number;
+  cost_pct_of_fob_if_denied: number;
+  note_en: string;
+  note_zh: string;
+};
+
+/** Literature-baseline industry €/t for Stage-3 UX (not φ-regulated passport invoice). */
+export type CbamIndustryIllustration = {
+  baseline_key: string;
+  baseline_label_en: string;
+  baseline_label_zh: string;
+  cn_code: string;
+  has_lifecycle_transparency: boolean;
+  default_see_tco2e_per_t: number;
+  approved_see_tco2e_per_t: number;
+  see_source: string;
+  benchmark_tco2e_per_t: number;
+  free_allocation_pct: number;
+  carbon_price_eur: number;
+  default_path_eur_per_tonne: number;
+  approved_path_eur_per_tonne: number;
+  discount_eur_per_tonne: number;
+  discount_pct: number;
+  cost_pct_of_fob_default: number;
+  cost_pct_of_fob_approved: number;
+  regulated_approved_eur_per_tonne: number;
+  regulated_denied_eur_per_tonne: number;
+  note_en: string;
+  note_zh: string;
+};
+
+/** Passport Stage-3 — readiness + approve/deny likelihood + € tariff scenarios. */
+export type CbamScoreResult = GrantScoreResult & {
+  approval_likelihood_pct: number;
+  deny_likelihood_pct: number;
+  outcome_label: string;
+  outcome_label_zh: string;
+  tariff: CbamTariffEstimate;
+  tariff_if_approved: CbamTariffEstimate;
+  tariff_if_denied: CbamTariffEstimate;
+  export_margin: CbamExportMargin;
+  industry_illustration: CbamIndustryIllustration;
+};
 
 export async function runLoanScore(payload: {
   scrap_ratio_pct: number;
@@ -410,7 +482,9 @@ export async function runCbamScore(payload: {
     const detail = await res.text();
     throw new Error(detail || `CBAM score failed (${res.status})`);
   }
-  return res.json() as Promise<CbamScoreResult>;
+  const raw = (await res.json()) as CbamScoreResult;
+  const { withIndustryIllustration } = await import("@/lib/cbam-industry-mock");
+  return withIndustryIllustration(raw);
 }
 
 export async function downloadApplicationFormPdf(payload: {
@@ -446,6 +520,41 @@ export async function downloadApplicationFormPdf(payload: {
     (payload.route === "grant"
       ? "GreenGru_Green_Factory_Grant_Application_Form.pdf"
       : "GreenGru_Green_Loan_Intake_Form.pdf");
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function downloadCbamCommunicationXlsx(
+  workbookValues: Record<string, string>,
+): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/routes/cbam-communication-xlsx/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workbook_values: workbookValues }),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      throw new Error(
+        "Cannot reach backend. Start it: cd backend && python -m uvicorn app.main:app --reload --port 8000",
+      );
+    }
+    throw err;
+  }
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `CBAM Excel download failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition");
+  const match = disposition?.match(/filename="?([^"]+)"?/);
+  const filename = match?.[1] ?? "CBAM_Communication_template_filled.xlsx";
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

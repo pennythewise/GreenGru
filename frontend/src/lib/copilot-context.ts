@@ -195,7 +195,7 @@ const RESPONSES: Record<string, string> = {
   "new-guardrails":
     "No — Stage 0 (StructBERT + DAMO OCR, local) rejects selfies, blank pages, and wrong document types before any DashScope call. You also must tick the authorization checkbox before submit runs.",
   "entry-router":
-    "The router (qwen3.7-plus) classifies your intent into Loan, Grant, and/or CBAM with a confidence score. Routes above 0.70 pre-select; below that they stay off. You always confirm the ticked routes before anything runs — never a silent override.",
+    "Chat first, then tap Finish asking questions. The router (qwen3.7-plus) scores Loan, Grant, and/or CBAM from that conversation — not after every message. Routes above 0.70 pre-select; you always confirm before anything runs.",
   "entry-floor":
     "CBAM is below 0.70 because you declared no EU-bound tonnage this period (mostly domestic, EU maybe Q3). Without declared export volume, CBAM isn't in scope — you can re-enable it anytime before confirming.",
   "entry-combine":

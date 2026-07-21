@@ -1,10 +1,20 @@
-/** Collect CBAM Stage-3 score inputs from localStorage (dashboard + passport checklist). */
+/** Collect CBAM Stage-3 score inputs — defaults to demo mock data when dashboard is empty. */
 
 import { docChecklists } from "@/lib/dashboard-data";
 import type { DashboardSnapshot } from "@/hooks/useDashboardSnapshot";
 
 const SNAPSHOT_KEY = "greengru-dashboard-snapshot";
 const CHECKLIST_KEY = "greengru-checklist-passport";
+
+/** Demo SME fastener shipment — enough for tariff + industry discount without user setup. */
+const MOCK_DEFAULTS = {
+  cn_code: "7318 15 88",
+  production_route: "BF-BOF",
+  intensity_tco2e_per_t: 3.506,
+  metering_pct: 78,
+  scrap_ratio_pct: 24.5,
+  production_tonnes: 1000,
+} as const;
 
 function readJson<T>(key: string): T | null {
   try {
@@ -39,6 +49,8 @@ export function collectCbamScoreInputs(): CbamScorePayload {
   const baseItems = docChecklists.passport.items;
   const checklist = baseItems.map((it) => {
     const up = uploads?.[it.name];
+    // Prefer saved uploads; otherwise keep checklist demo `done` flags so Stage 3
+    // can score + unlock industry discount without manual setup.
     return {
       name: it.name,
       done: up?.done ?? it.done,
@@ -54,18 +66,22 @@ export function collectCbamScoreInputs(): CbamScorePayload {
     meteringN += 1;
   }
 
-  // Infer CN / route from checklist completion (explicit fields live on submission, not snapshot)
-  const hasCnDoc = checklist.some((c) => c.done && /CN-code|税则号/i.test(c.name));
-  const hasRouteDoc = checklist.some((c) => c.done && /Route-of-production|生产工艺/i.test(c.name));
-
   return {
-    cn_code: hasCnDoc ? "7213 / 7214" : null,
-    production_route: hasRouteDoc ? "BF-BOF" : "BF-BOF",
-    intensity_tco2e_per_t: snapshot?.intensity ?? 3.506,
-    metering_pct: meteringN > 0 ? Math.round((meteringSum / meteringN) * 10) / 10 : null,
-    scrap_ratio_pct: sliderValue(snapshot, "scrap", 24.5),
-    production_tonnes: null,
+    // Demo defaults — no dashboard setup required for Stage-3 tariff UX.
+    cn_code: MOCK_DEFAULTS.cn_code,
+    production_route: MOCK_DEFAULTS.production_route,
+    intensity_tco2e_per_t: snapshot?.intensity ?? MOCK_DEFAULTS.intensity_tco2e_per_t,
+    metering_pct:
+      meteringN > 0
+        ? Math.round((meteringSum / meteringN) * 10) / 10
+        : MOCK_DEFAULTS.metering_pct,
+    scrap_ratio_pct: sliderValue(snapshot, "scrap", MOCK_DEFAULTS.scrap_ratio_pct),
+    production_tonnes: MOCK_DEFAULTS.production_tonnes,
     checklist,
-    process_matrix: snapshot?.processMatrix ?? [],
+    process_matrix: snapshot?.processMatrix ?? [
+      { stage: "Forming", metering: "warn" },
+      { stage: "Heat treatment", metering: "ok" },
+      { stage: "Finishing", metering: "warn" },
+    ],
   };
 }

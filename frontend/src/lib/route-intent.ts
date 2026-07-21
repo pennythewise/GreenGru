@@ -9,10 +9,11 @@ export type RouterRoute = {
   reason: string;
 };
 
-const DEFAULT_ROUTES: RouterRoute[] = [
-  { key: "grant", label: "Grant 补贴", conf: 0.12, preSelected: false, reason: "Describe your goal — router updates as you chat." },
-  { key: "loan", label: "Loan 贷款", conf: 0.12, preSelected: false, reason: "Describe your goal — router updates as you chat." },
-  { key: "passport", label: "EU license CBAM", conf: 0.10, preSelected: false, reason: "Describe your goal — router updates as you chat." },
+/** Placeholder rows before the user finishes asking (no confidence shown). */
+export const PENDING_ROUTES: RouterRoute[] = [
+  { key: "grant", label: "Grant 补贴", conf: 0, preSelected: false, reason: "" },
+  { key: "loan", label: "Loan 贷款", conf: 0, preSelected: false, reason: "" },
+  { key: "passport", label: "EU license CBAM", conf: 0, preSelected: false, reason: "" },
 ];
 
 function inferLocal(history: CopilotHistoryMessage[]): RouteIntentResponse {
@@ -58,7 +59,7 @@ export function intentToRoutes(intent: RouteIntentResponse): RouterRoute[] {
 }
 
 export async function resolveRouteIntent(history: CopilotHistoryMessage[]): Promise<RouterRoute[]> {
-  if (history.filter((m) => m.role === "user").length === 0) return DEFAULT_ROUTES;
+  if (history.filter((m) => m.role === "user").length === 0) return PENDING_ROUTES;
   try {
     const intent = await sendRouteIntent(history);
     return intentToRoutes(intent);

@@ -1,10 +1,14 @@
 """Route preview PDF generation — themed report from frontend-assembled state."""
 
+from pathlib import Path
+
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 
 from app.schemas import (
     ApplicationFormPdfRequest,
+    CbamCommunicationXlsxRequest,
     CbamScoreRequest,
     CbamScoreResponse,
     GrantScoreRequest,
@@ -13,6 +17,10 @@ from app.schemas import (
     LoanScoreResponse,
     RoutePreviewPdfRequest,
     RoutePreviewPdfResponse,
+)
+from app.services.cbam_communication_xlsx import (
+    OUTPUT_FILENAME,
+    fill_cbam_communication_xlsx,
 )
 from app.services.cbam_operator_scorer import (
     compute_cbam_operator_score,
@@ -52,19 +60,24 @@ async def grant_green_factory_score(payload: GrantScoreRequest):
 @router.post("/cbam-score", response_model=CbamScoreResponse)
 async def cbam_operator_readiness_score(payload: CbamScoreRequest):
     """Passport Stage 3 — EU CBAM installation-operator readiness (DG TAXUD guidance)."""
-    result = compute_cbam_operator_score(
-        cn_code=payload.cn_code,
-        production_route=payload.production_route,
-        intensity_tco2e_per_t=payload.intensity_tco2e_per_t,
-        metering_pct=payload.metering_pct,
-        scrap_ratio_pct=payload.scrap_ratio_pct,
-        production_tonnes=payload.production_tonnes,
-        checklist=[c.model_dump() for c in payload.checklist],
-        process_matrix=payload.process_matrix,
-        has_verifier=payload.has_verifier,
-        has_certificates_ledger=payload.has_certificates_ledger,
-    )
-    return CbamScoreResponse(**cbam_result_to_dict(result))
+    try:
+        result = compute_cbam_operator_score(
+            cn_code=payload.cn_code,
+            production_route=payload.production_route or "BF-BOF",
+            intensity_tco2e_per_t=float(payload.intensity_tco2e_per_t or 3.506),
+            metering_pct=payload.metering_pct,
+            scrap_ratio_pct=float(payload.scrap_ratio_pct or 0.0),
+            production_tonnes=payload.production_tonnes,
+            checklist=[c.model_dump() for c in payload.checklist],
+            process_matrix=payload.process_matrix or [],
+            has_verifier=payload.has_verifier,
+            has_certificates_ledger=payload.has_certificates_ledger,
+        )
+        return CbamScoreResponse(**cbam_result_to_dict(result))
+    except Exception as exc:  # noqa: BLE001
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=500, detail=f"CBAM Stage 3 score failed: {exc}") from exc
 
 
 @router.post("/loan-score", response_model=LoanScoreResponse)
@@ -152,4 +165,23 @@ async def download_filled_application_form_pdf(payload: ApplicationFormPdfReques
             "X-Content-Hash": generated.content_hash,
             "X-Signature": generated.signature,
         },
+    )
+
+
+@router.post("/cbam-communication-xlsx/download")
+async def download_filled_cbam_communication_xlsx(payload: CbamCommunicationXlsxRequest):
+    """Download official EU CBAM Communication template filled from passport workbook values."""
+    path = fill_cbam_communication_xlsx(payload.workbook_values)
+
+    def _cleanup(p: Path) -> None:
+        try:
+            p.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    return FileResponse(
+        path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=OUTPUT_FILENAME,
+        background=BackgroundTask(_cleanup, path),
     )

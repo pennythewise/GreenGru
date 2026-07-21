@@ -413,6 +413,12 @@ class ApplicationFormPdfRequest(BaseModel):
     score_summary: str | None = None
 
 
+class CbamCommunicationXlsxRequest(BaseModel):
+    """Fill official EU CBAM Communication template (.xlsx) from workbook field values."""
+
+    workbook_values: dict[str, str | int | float | None] = {}
+
+
 class LoanChecklistItemIn(BaseModel):
     name: str
     done: bool = False
@@ -499,6 +505,66 @@ class CbamScoreRequest(BaseModel):
     has_certificates_ledger: bool | None = None
 
 
+class CbamTariffEstimateOut(BaseModel):
+    certificate_price_eur_per_tco2e: float
+    certificate_price_quarter: str
+    intensity_tco2e_per_tonne: float
+    benchmark_tco2e_per_tonne: float
+    taxable_emissions_tco2e_per_tonne: float
+    phase_in_factor: float
+    markup_applied: float
+    data_source: str
+    path_label: str
+    path_label_zh: str
+    tariff_eur_per_tonne: float
+    gross_tariff_eur_per_tonne: float
+    annual_exposure_eur: float
+    export_tonnes: float
+    formula_en: str
+    formula_zh: str
+
+
+class CbamExportMarginOut(BaseModel):
+    fob_eur_per_tonne: float
+    margin_pct_before_cbam: float
+    margin_eur_per_tonne_before: float
+    tariff_if_approved_eur_per_tonne: float
+    margin_eur_after_approved: float
+    margin_pct_after_approved: float
+    tariff_if_denied_eur_per_tonne: float
+    margin_eur_after_denied: float
+    margin_pct_after_denied: float
+    margin_saved_by_approval_eur_per_tonne: float
+    cost_pct_of_fob_if_approved: float
+    cost_pct_of_fob_if_denied: float
+    note_en: str
+    note_zh: str
+
+
+class CbamIndustryIllustrationOut(BaseModel):
+    baseline_key: str
+    baseline_label_en: str
+    baseline_label_zh: str
+    cn_code: str
+    has_lifecycle_transparency: bool
+    default_see_tco2e_per_t: float
+    approved_see_tco2e_per_t: float
+    see_source: str
+    benchmark_tco2e_per_t: float
+    free_allocation_pct: float
+    carbon_price_eur: float
+    default_path_eur_per_tonne: float
+    approved_path_eur_per_tonne: float
+    discount_eur_per_tonne: float
+    discount_pct: float
+    cost_pct_of_fob_default: float
+    cost_pct_of_fob_approved: float
+    regulated_approved_eur_per_tonne: float
+    regulated_denied_eur_per_tonne: float
+    note_en: str
+    note_zh: str
+
+
 class CbamScoreResponse(BaseModel):
     standard: str
     standard_zh: str
@@ -514,3 +580,12 @@ class CbamScoreResponse(BaseModel):
     formulas: list[dict]
     summary_en: str
     summary_zh: str
+    approval_likelihood_pct: float
+    deny_likelihood_pct: float
+    outcome_label: str
+    outcome_label_zh: str
+    tariff: CbamTariffEstimateOut
+    tariff_if_approved: CbamTariffEstimateOut
+    tariff_if_denied: CbamTariffEstimateOut
+    export_margin: CbamExportMarginOut
+    industry_illustration: CbamIndustryIllustrationOut

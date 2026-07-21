@@ -350,6 +350,156 @@ export const CBAM_WORKBOOK_DOCS: CbamWorkbookDoc[] = [
   },
 ];
 
+/** Flat evaluation-form sections — same UX shell as Grant / Loan applications. */
+export type CbamFormSection = {
+  id: string;
+  label: string;
+  labelZh: string;
+  titleEn: string;
+  titleZh: string;
+  noteEn?: string;
+  noteZh?: string;
+  /** Omit for special panels (e.g. code lists browser). */
+  fields?: CbamField[];
+  kind?: "fields" | "code_lists";
+};
+
+export const CBAM_FORM_SECTIONS: CbamFormSection[] = [
+  {
+    id: "installation",
+    label: "Installation",
+    labelZh: "装置信息",
+    titleEn: "Installation & reporting period",
+    titleZh: "装置与报告期",
+    noteEn: "All emissions and activity data in the workbook must relate to this period.",
+    noteZh: "工作簿中所有排放与活动数据均须对应此期间。",
+    fields: [
+      { key: "period_start", labelEn: "Reporting period start", labelZh: "报告期起始", type: "date", required: true },
+      { key: "period_end", labelEn: "Reporting period end", labelZh: "报告期截止", type: "date", required: true },
+      { key: "installation_name_optional", labelEn: "Name of the installation (optional)", labelZh: "装置名称（可选）", type: "text" },
+      { key: "installation_name_en", labelEn: "Name of the installation (English name)", labelZh: "装置名称（英文）", type: "text", required: true },
+      { key: "street_number", labelEn: "Street, Number", labelZh: "街道、门牌号", type: "text", required: true },
+      { key: "economic_activity", labelEn: "Economic activity", labelZh: "经济活动", type: "text", required: true },
+      { key: "post_code", labelEn: "Post code", labelZh: "邮编", type: "text" },
+      { key: "po_box", labelEn: "P.O. Box", labelZh: "邮政信箱", type: "text" },
+      { key: "city", labelEn: "City", labelZh: "城市", type: "text", required: true },
+      { key: "country", labelEn: "Country", labelZh: "国家", type: "code", required: true },
+      { key: "unlocode", labelEn: "UNLOCODE", labelZh: "联合国贸易地点代码", type: "code" },
+      { key: "latitude", labelEn: "Coordinates — latitude", labelZh: "坐标 — 纬度", type: "number" },
+      { key: "longitude", labelEn: "Coordinates — longitude", labelZh: "坐标 — 经度", type: "number" },
+      { key: "authorized_rep_name", labelEn: "Name of authorized representative", labelZh: "授权代表姓名", type: "text" },
+      { key: "authorized_rep_email", labelEn: "Email", labelZh: "邮箱", type: "text" },
+      { key: "authorized_rep_telephone", labelEn: "Telephone", labelZh: "电话", type: "text" },
+    ],
+  },
+  {
+    id: "products",
+    label: "Products & SEE",
+    labelZh: "产品与 SEE",
+    titleEn: "Products & specific embedded emissions",
+    titleZh: "产品与特定隐含排放",
+    fields: PRODUCT_SEE_FIELDS,
+  },
+  {
+    id: "steel",
+    label: "Steel parameters",
+    labelZh: "钢铁参数",
+    titleEn: "Steel-specific parameters",
+    titleZh: "钢铁专用参数",
+    noteEn: "Required for iron and steel goods under the Commission communication template.",
+    noteZh: "钢铁类货物须按欧盟沟通模板填写。",
+    fields: STEEL_PRODUCT_FIELDS,
+  },
+  {
+    id: "processes",
+    label: "Processes & goods",
+    labelZh: "工序与货物",
+    titleEn: "Production processes & aggregated goods",
+    titleZh: "生产工序与汇总货物",
+    fields: [
+      { key: "goods_id", labelEn: "ID (G1–G10)", labelZh: "编号（G1–G10）", type: "code", required: true },
+      { key: "aggregated_goods_category", labelEn: "Aggregated goods category", labelZh: "汇总货物类别", type: "text", required: true },
+      { key: "route_1", labelEn: "Route 1", labelZh: "路线 1", type: "text", required: true },
+      { key: "routes_2_6", labelEn: "Routes 2–6 (if applicable)", labelZh: "路线 2–6（如适用）", type: "textarea" },
+      { key: "process_id", labelEn: "Process ID (P1–P10)", labelZh: "工序编号（P1–P10）", type: "code", required: true },
+      { key: "process_name", labelEn: "Process name", labelZh: "工序名称", type: "text", required: true },
+      { key: "process_aggregated_category", labelEn: "Process aggregated goods category", labelZh: "工序汇总货物类别", type: "text", required: true },
+      { key: "included_goods_slots", labelEn: "Included goods categories (slots 1–6)", labelZh: "所含货物类别（1–6 位）", type: "textarea", required: true },
+      { key: "goods_routes_matrix", labelEn: "Aggregated goods × routes matrix", labelZh: "汇总货物 × 路线矩阵", type: "textarea" },
+      { key: "process_goods_matrix", labelEn: "Production process × goods categories", labelZh: "生产工序 × 货物类别", type: "textarea" },
+      { key: "completeness_status", labelEn: "Completeness check result", labelZh: "完整性检查结果", type: "text" },
+    ],
+  },
+  {
+    id: "emissions",
+    label: "Emissions",
+    labelZh: "排放汇总",
+    titleEn: "Emissions by monitoring methodology",
+    titleZh: "按监测方法的排放汇总",
+    fields: EMISSIONS_METHODOLOGY_FIELDS,
+  },
+  {
+    id: "further",
+    label: "Carbon price",
+    labelZh: "碳价与补充",
+    titleEn: "Carbon price, rebate & further information",
+    titleZh: "碳价、补贴与补充信息",
+    fields: [...FURTHER_INFO_FIELDS, ...CARBON_PRICE_REBATE_FIELDS],
+  },
+  {
+    id: "verifier",
+    label: "Verifier",
+    labelZh: "核查机构",
+    titleEn: "Verifier of the report (if available)",
+    titleZh: "报告核查机构（如有）",
+    noteEn: "Not required during the transitional period.",
+    noteZh: "过渡期内非必填。",
+    fields: [
+      { key: "verifier_company", labelEn: "Company name", labelZh: "公司名称", type: "text" },
+      { key: "verifier_street", labelEn: "Street, Number", labelZh: "街道、门牌号", type: "text" },
+      { key: "verifier_city", labelEn: "City", labelZh: "城市", type: "text" },
+      { key: "verifier_postcode", labelEn: "Postcode / ZIP", labelZh: "邮编", type: "text" },
+      { key: "verifier_country", labelEn: "Country", labelZh: "国家", type: "code" },
+      { key: "verifier_rep_name", labelEn: "Authorised representative — name", labelZh: "授权代表 — 姓名", type: "text" },
+      { key: "verifier_rep_email", labelEn: "Email address", labelZh: "邮箱", type: "text" },
+      { key: "verifier_rep_telephone", labelEn: "Telephone number", labelZh: "电话", type: "text" },
+      { key: "verifier_accreditation_state", labelEn: "Accreditation member state", labelZh: "认可成员国", type: "code" },
+      { key: "verifier_accreditation_body", labelEn: "National accreditation body", labelZh: "国家认可机构", type: "text" },
+      { key: "verifier_registration_number", labelEn: "Registration number", labelZh: "注册号", type: "text" },
+    ],
+  },
+  {
+    id: "code_lists",
+    label: "Code lists",
+    labelZh: "代码表",
+    titleEn: "c_CodeLists reference",
+    titleZh: "c_CodeLists 参考表",
+    noteEn: "Pick country, CN code, goods category, or route codes into the active field.",
+    noteZh: "将国家、CN 税则号、货物类别或路线代码填入当前字段。",
+    kind: "code_lists",
+  },
+];
+
+export function cbamFormFieldKeys(): string[] {
+  const keys: string[] = [];
+  const seen = new Set<string>();
+  for (const sec of CBAM_FORM_SECTIONS) {
+    for (const f of sec.fields ?? []) {
+      if (seen.has(f.key)) continue;
+      seen.add(f.key);
+      keys.push(f.key);
+    }
+  }
+  return keys;
+}
+
+export function cbamFormCompletionPct(values: Record<string, string>): number {
+  const keys = cbamFormFieldKeys();
+  if (keys.length === 0) return 0;
+  const filled = keys.filter((k) => (values[k] ?? "").trim().length > 0).length;
+  return Math.round((filled / keys.length) * 100);
+}
+
 /** Demo values — illustrative; SEE totals should match calculation engine when wired */
 export const CBAM_WORKBOOK_DEMO: Record<string, string> = {
   installation_name_en: "Ningbo Hengfeng Precision Fasteners Co., Ltd.",

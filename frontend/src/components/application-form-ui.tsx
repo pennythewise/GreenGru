@@ -12,6 +12,8 @@ export function FormShell({
   onSelect,
   isZh,
   children,
+  eyebrow,
+  eyebrowZh,
 }: {
   title: string;
   titleZh: string;
@@ -22,13 +24,16 @@ export function FormShell({
   onSelect: (id: string) => void;
   isZh: boolean;
   children: ReactNode;
+  /** Defaults to "Application form" / "申请表" */
+  eyebrow?: string;
+  eyebrowZh?: string;
 }) {
   return (
     <div className="panel p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-            {isZh ? "申请表" : "Application form"}
+            {isZh ? (eyebrowZh ?? "申请表") : (eyebrow ?? "Application form")}
           </div>
           <h3 className="mt-1 text-[17px] font-semibold tracking-tight">{isZh ? titleZh : title}</h3>
           <p className="mt-1 text-[12px] text-muted-foreground">{subtitle}</p>

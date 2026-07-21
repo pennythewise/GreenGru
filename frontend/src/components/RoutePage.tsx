@@ -26,21 +26,20 @@ import { useRouteChecklist } from "@/hooks/useRouteChecklist";
 import { useRoutePipeline } from "@/hooks/useRoutePipeline";
 import {
   advisoryCards,
-  company,
   docChecklists,
   gaps,
-  kpis,
   routePages,
 } from "@/lib/dashboard-data";
 import {
   downloadApplicationFormPdf,
-  downloadRoutePreviewPdf,
+  downloadCbamCommunicationXlsx,
   type CbamScoreResult,
   type GrantScoreResult,
   type LoanScoreResult,
 } from "@/lib/api";
 import { defaultGrantApplication } from "@/lib/application-forms/grant-template";
 import { defaultLoanApplication } from "@/lib/application-forms/loan-template";
+import { CBAM_WORKBOOK_DEMO } from "@/lib/cbam-workbook";
 import { advanceRouteFlow, getFlowProgress, getRouteLabel } from "@/lib/route-flow";
 import { useLocale } from "@/lib/locale";
 import { pipeline, routeFlow, routePage } from "@/lib/ui-strings";
@@ -407,62 +406,25 @@ export function RoutePage({ slug }: { slug: Slug }) {
         return;
       }
 
-      // Passport (CBAM): themed route preview PDF
-      const stagesForPdf = complete ? stages : await runPipeline();
-      const kpiRows = [
-        { label: "Intensity tCO2e/t", value: String(kpis.intensity) },
-        { label: "Benchmark gap %", value: `${kpis.benchmarkGap}%` },
-        { label: "CBAM 2026 €", value: kpis.cbam2026.toLocaleString() },
-        { label: "Net tariff €/t", value: String(kpis.netTariff) },
-      ];
-
-      await downloadRoutePreviewPdf({
-        route: slug,
-        title: cfg.title,
-        title_zh: cfg.titleZh ?? null,
-        subtitle: cfg.subtitle,
-        subtitle_zh: cfg.subtitleZh ?? null,
-        kb: cfg.kb,
-        citations: cfg.citations,
-        company_name: company.nameEn,
-        company_id: company.id,
-        production_route: company.route,
-        score_label: cfg.scoreLabel,
-        score_value:
-          cbamScore && slug === "passport"
-            ? `${Math.round(cbamScore.total_score)}/100`
-            : cfg.scoreValue,
-        score_grade:
-          cbamScore && slug === "passport" ? (cbamScore.qualified ? "B" : "C") : cfg.scoreGrade,
-        gauge:
-          cbamScore && slug === "passport" ? Math.round(cbamScore.total_score) : cfg.gauge,
-        checklist: checklist.items.map((it) => ({
-          name: it.name,
-          name_zh: "nameZh" in it ? (it.nameZh as string | undefined) : null,
-          done: it.done,
-          file_name: it.fileName ?? null,
-        })),
-        pipeline_stages: stagesForPdf.map((s) => ({
-          n: s.n,
-          key: s.key,
-          zh: s.zh,
-          method: s.method,
-          status: s.status === "loading" ? "loading" : s.status === "done" ? "done" : "pending",
-          elapsed: s.elapsed,
-        })),
-        gaps: gapList,
-        advisory: advice.map((a) => ({
-          title: a.title,
-          impact: a.impact,
-          why: a.why,
-          status: a.status,
-        })),
-        kpis: kpiRows,
-        lang: isZh ? "zh" : "en",
-      });
-      setPdfMsg(t(routePage.pdfReady.en, routePage.pdfReady.zh));
+      // Passport (CBAM): official EU Communication template (.xlsx), filled
+      let workbookValues: Record<string, string> = { ...CBAM_WORKBOOK_DEMO };
+      try {
+        const raw = localStorage.getItem("greengru-cbam-workbook-values");
+        if (raw) {
+          const parsed = JSON.parse(raw) as Record<string, string>;
+          workbookValues = { ...CBAM_WORKBOOK_DEMO, ...parsed };
+        }
+      } catch {
+        /* keep demo defaults */
+      }
+      await downloadCbamCommunicationXlsx(workbookValues);
+      setPdfMsg(t(routePage.excelReady.en, routePage.excelReady.zh));
     } catch (e) {
-      setPdfMsg(e instanceof Error ? e.message : t(routePage.pdfError.en, routePage.pdfError.zh));
+      const fallback =
+        slug === "passport"
+          ? t(routePage.excelError.en, routePage.excelError.zh)
+          : t(routePage.pdfError.en, routePage.pdfError.zh);
+      setPdfMsg(e instanceof Error ? e.message : fallback);
     } finally {
       setPdfBusy(false);
     }
@@ -617,9 +579,19 @@ export function RoutePage({ slug }: { slug: Slug }) {
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-primary text-primary-foreground text-[12.5px] font-medium teal-glow hover:brightness-110 transition disabled:opacity-50"
               >
                 {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                {pdfBusy ? t(routePage.generatingPdf.en, routePage.generatingPdf.zh) : t(routePage.downloadPdf.en, routePage.downloadPdf.zh)}
+                {pdfBusy
+                  ? slug === "passport"
+                    ? t(routePage.generatingExcel.en, routePage.generatingExcel.zh)
+                    : t(routePage.generatingPdf.en, routePage.generatingPdf.zh)
+                  : slug === "passport"
+                    ? t(routePage.downloadExcel.en, routePage.downloadExcel.zh)
+                    : t(routePage.downloadPdf.en, routePage.downloadPdf.zh)}
               </button>
-              <span className="text-[10.5px] font-mono text-muted-foreground">{t(routePage.pdfNote.en, routePage.pdfNote.zh)}</span>
+              <span className="text-[10.5px] font-mono text-muted-foreground">
+                {slug === "passport"
+                  ? t(routePage.excelNote.en, routePage.excelNote.zh)
+                  : t(routePage.pdfNote.en, routePage.pdfNote.zh)}
+              </span>
             </div>
             {pdfMsg && <p className="mt-2 text-[11px] font-mono text-carbon">{pdfMsg}</p>}
           </motion.div>

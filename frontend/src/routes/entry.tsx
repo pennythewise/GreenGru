@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import {
   ArrowRight,
   BadgeCheck,
+  Loader2,
   MessagesSquare,
   Send,
   Sparkles,
@@ -18,7 +19,12 @@ import {
   CONFIDENCE_FLOOR,
   startRouteFlow,
 } from "@/lib/route-flow";
-import { resolveRouteIntent, selectionFromRoutes, type RouterRoute } from "@/lib/route-intent";
+import {
+  PENDING_ROUTES,
+  resolveRouteIntent,
+  selectionFromRoutes,
+  type RouterRoute,
+} from "@/lib/route-intent";
 import { useLocale } from "@/lib/locale";
 import { crumbs, entryPage } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
@@ -39,6 +45,7 @@ function Entry() {
   const navigate = useNavigate();
   const [routes, setRoutes] = useState<RouterRoute[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [intentScored, setIntentScored] = useState(false);
   const [intentLoading, setIntentLoading] = useState(false);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -49,36 +56,37 @@ function Entry() {
 
   useEffect(() => {
     reset();
+    setRoutes([]);
+    setSelected({});
+    setIntentScored(false);
   }, [reset, isZh]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, pending]);
 
-  useEffect(() => {
-    if (userTurns === 0) return;
-    if (pending) return;
-
-    let cancelled = false;
-    setIntentLoading(true);
-    const history = messages.map((m) => ({ role: m.role, content: m.text }));
-    void resolveRouteIntent(history).then((next) => {
-      if (cancelled) return;
-      setRoutes(next);
-      setSelected(selectionFromRoutes(next));
-      setIntentLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [messages, pending, userTurns]);
-
   const confirmedCount = Object.values(selected).filter(Boolean).length;
+  const displayRoutes = intentScored && routes.length > 0 ? routes : PENDING_ROUTES;
+  const floorPct = Math.round(CONFIDENCE_FLOOR * 100);
+  const canScore = userTurns > 0 && !pending && !intentLoading;
 
   function handleSend(text: string, promptId: string | null = null) {
     void sendMessage(text, promptId);
     setInput("");
+  }
+
+  async function handleFinishAsking() {
+    if (!canScore) return;
+    setIntentLoading(true);
+    try {
+      const history = messages.map((m) => ({ role: m.role, content: m.text }));
+      const next = await resolveRouteIntent(history);
+      setRoutes(next);
+      setSelected(selectionFromRoutes(next));
+      setIntentScored(true);
+    } finally {
+      setIntentLoading(false);
+    }
   }
 
   function handleConfirmRoutes() {
@@ -88,13 +96,12 @@ function Entry() {
     void navigate({ to: `/${confirmed[0]}` });
   }
 
-  const displayRoutes = routes.length > 0 ? routes : [
-    { key: "grant" as const, label: "Grant 补贴", conf: 0.12, preSelected: false, reason: t(entryPage.chatPlaceholder.en, entryPage.chatPlaceholder.zh) },
-    { key: "loan" as const, label: "Loan 贷款", conf: 0.12, preSelected: false, reason: t(entryPage.chatPlaceholder.en, entryPage.chatPlaceholder.zh) },
-    { key: "passport" as const, label: "EU license CBAM", conf: 0.34, preSelected: false, reason: t(entryPage.chatPlaceholder.en, entryPage.chatPlaceholder.zh) },
-  ];
-
-  const floorPct = Math.round(CONFIDENCE_FLOOR * 100);
+  function routeReason(r: RouterRoute): string {
+    if (intentScored && r.reason) return r.reason;
+    if (userTurns === 0) return t(entryPage.waitingForQuestions.en, entryPage.waitingForQuestions.zh);
+    if (intentLoading) return t(entryPage.scoringIntent.en, entryPage.scoringIntent.zh);
+    return t(entryPage.readyToScore.en, entryPage.readyToScore.zh);
+  }
 
   return (
     <AppShell crumb={t(crumbs.entry.en, crumbs.entry.zh)}>
@@ -182,6 +189,32 @@ function Entry() {
               <Send className="h-3.5 w-3.5" /> {t(entryPage.send.en, entryPage.send.zh)}
             </button>
           </div>
+
+          <button
+            type="button"
+            disabled={!canScore}
+            onClick={() => void handleFinishAsking()}
+            className={cn(
+              "mt-3 w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-[12.5px] font-medium transition shrink-0",
+              canScore
+                ? "border border-gold/40 bg-gold/10 text-foreground hover:bg-gold/15"
+                : "border border-border bg-muted/40 text-muted-foreground cursor-not-allowed",
+            )}
+          >
+            {intentLoading ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {t(entryPage.scoringIntent.en, entryPage.scoringIntent.zh)}
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3.5 w-3.5 text-gold" />
+                {intentScored
+                  ? t(entryPage.recalculateIntent.en, entryPage.recalculateIntent.zh)
+                  : t(entryPage.finishAsking.en, entryPage.finishAsking.zh)}
+              </>
+            )}
+          </button>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="panel p-5 flex flex-col lg:min-h-[620px]">
@@ -197,8 +230,8 @@ function Entry() {
 
           <ul className="mt-3 space-y-2 shrink-0">
             {displayRoutes.map((r) => {
-              const on = selected[r.key] ?? r.preSelected;
-              const above = r.conf >= CONFIDENCE_FLOOR;
+              const on = selected[r.key] ?? false;
+              const above = intentScored && r.conf >= CONFIDENCE_FLOOR;
               return (
                 <li
                   key={r.key}
@@ -220,14 +253,20 @@ function Entry() {
                       </span>
                       <span className="text-[13px] font-medium">{r.label}</span>
                     </div>
-                    <span className={cn(
-                      "text-[10.5px] font-mono px-1.5 py-0.5 rounded border tabular-nums",
-                      above ? "bg-carbon/10 text-carbon border-carbon/30" : "bg-warning/10 text-warning border-warning/30",
-                    )}>
-                      {Math.round(r.conf * 100)}%
-                    </span>
+                    {intentScored ? (
+                      <span className={cn(
+                        "text-[10.5px] font-mono px-1.5 py-0.5 rounded border tabular-nums",
+                        above ? "bg-carbon/10 text-carbon border-carbon/30" : "bg-warning/10 text-warning border-warning/30",
+                      )}>
+                        {Math.round(r.conf * 100)}%
+                      </span>
+                    ) : (
+                      <span className="text-[10.5px] font-mono px-1.5 py-0.5 rounded border border-border text-muted-foreground tabular-nums">
+                        —
+                      </span>
+                    )}
                   </div>
-                  <p className="mt-1.5 text-[11.5px] text-muted-foreground pl-6">{r.reason}</p>
+                  <p className="mt-1.5 text-[11.5px] text-muted-foreground pl-6">{routeReason(r)}</p>
                 </li>
               );
             })}
@@ -239,10 +278,11 @@ function Entry() {
           </div>
 
           <div className="mt-auto pt-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <button
                 type="button"
-                className="text-[12px] font-mono text-muted-foreground hover:text-foreground"
+                className="text-[12px] font-mono text-muted-foreground hover:text-foreground disabled:opacity-40"
+                disabled={!intentScored}
                 onClick={() => setSelected(selectionFromRoutes(displayRoutes))}
               >
                 {t(entryPage.resetRouter.en, entryPage.resetRouter.zh)}

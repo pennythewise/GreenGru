@@ -68,27 +68,41 @@ export const newPage = {
 export const entryPage = {
   title: { en: "Ask your GreenGru Copilot what you need", zh: "告诉 GreenGru 副驾您需要什么" },
   subtitle: {
-    en: "Type it, tap a chip, or pick a prompt — the router updates intent % after each answer. Confirm routes to fill in forms in order.",
-    zh: "输入、点选标签或提示 — 每次回答后路由意图百分比自动更新。确认路线后按序填写表单。",
+    en: "Chat with Copilot about your goal, then finish asking — qwen3.7-plus scores Loan / Grant / CBAM from the conversation. Confirm routes to fill forms in order.",
+    zh: "先与副驾对话说明目标，再结束提问 — qwen3.7-plus 根据对话历史为贷款 / 补贴 / CBAM 打分。确认路线后按序填写表单。",
   },
   routerTitle: { en: "Router output · confirm the route", zh: "路由输出 · 确认路线" },
-  chatPlaceholder: { en: "Chat with Copilot — percentages update after each question.", zh: "与副驾对话 — 每次提问后百分比更新。" },
+  chatPlaceholder: {
+    en: "Ask Copilot about your goal first — percentages appear after you finish asking.",
+    zh: "请先向副驾说明目标 — 结束提问后才会显示百分比。",
+  },
+  waitingForQuestions: {
+    en: "No questions yet — chat with Copilot, then finish asking to score routes.",
+    zh: "尚未提问 — 请先与副驾对话，再结束提问以计算路线得分。",
+  },
+  readyToScore: {
+    en: "When you’re done asking, score routes from this conversation.",
+    zh: "提问结束后，可根据本次对话计算路线得分。",
+  },
+  finishAsking: { en: "Finish asking questions", zh: "结束提问并计算" },
+  recalculateIntent: { en: "Recalculate intent %", zh: "重新计算意图 %" },
+  scoringIntent: { en: "Scoring with qwen3.7-plus…", zh: "正在用 qwen3.7-plus 计分…" },
   whyConfirm: { en: "Why confirm, not auto-run?", zh: "为何需确认，而非自动运行？" },
   resetRouter: { en: "Reset to router", zh: "恢复路由建议" },
   send: { en: "Send", zh: "发送" },
   describeGoal: { en: "Describe your goal · 描述目标…", zh: "描述您的目标…" },
   thinking: { en: "Thinking…", zh: "思考中…" },
-  updating: { en: "updating…", zh: "更新中…" },
+  updating: { en: "scoring…", zh: "计分中…" },
   whyConfirmBody: {
     en: (floor: number) =>
-      `Intent % updates from your chat — routes at or above ${floor}% pre-select, but you always confirm. Multiple routes fill in order: EU license → Loan → Grant.`,
+      `Intent % is calculated only when you finish asking — from the full chat via qwen3.7-plus. Routes at or above ${floor}% pre-select, but you always confirm. Multiple routes fill in order: EU license → Loan → Grant.`,
     zh: (floor: number) =>
-      `意图百分比随对话更新 — 达到 ${floor}% 的路线会预选，但您须手动确认。多路线按序填写：欧盟许可 → 贷款 → 补贴。`,
+      `意图百分比仅在您结束提问后，由 qwen3.7-plus 根据完整对话计算。达到 ${floor}% 的路线会预选，但您须手动确认。多路线按序填写：欧盟许可 → 贷款 → 补贴。`,
   },
   confirmRoutes: { en: (n: number) => `Confirm ${n} route${n === 1 ? "" : "s"}`, zh: (n: number) => `确认 ${n} 条路线` },
   greeting: {
-    en: "You're in GreenGru Copilot routing. I can explain how Loan, Grant, and CBAM get selected — and why you confirm before anything runs.",
-    zh: "您已进入 GreenGru 副驾路由。我可说明贷款、补贴与 CBAM 如何被选择 — 以及为何须先确认再运行。",
+    en: "You're in GreenGru Copilot routing. Ask about Loan, Grant, or CBAM — when you're done, tap Finish asking questions so the router can score your intent.",
+    zh: "您已进入 GreenGru 副驾路由。可先询问贷款、补贴或 CBAM — 提问结束后点「结束提问并计算」，路由再根据对话计分。",
   },
 } as const;
 
@@ -188,7 +202,12 @@ export const routePage = {
   deterministic: { en: "deterministic", zh: "确定性" },
   gapList: { en: "Gap list", zh: "差距清单" },
   downloadPdf: { en: "Download PDF", zh: "下载 PDF" },
+  downloadExcel: { en: "Download Excel", zh: "下载 Excel" },
   pdfNote: { en: "Available before Advisory finishes.", zh: "建议阶段完成前即可下载。" },
+  excelNote: {
+    en: "Official EU CBAM Communication template (.xlsx), filled from your workbook.",
+    zh: "欧盟官方 CBAM 沟通模板（.xlsx），已按工作簿填写。",
+  },
   sectionCAdvisory: { en: "Section C · Advisory", zh: "C 节 · 建议" },
   advisoryNote: { en: "non-blocking · optional follow-up", zh: "非阻塞 · 可选跟进" },
   why: { en: "Why?", zh: "为何？" },
@@ -199,8 +218,11 @@ export const routePage = {
   pipelineComplete: { en: "Pipeline complete", zh: "流水线完成" },
   pipelineLocked: { en: "Upload all Section A documents to unlock", zh: "上传全部 A 节文件后解锁" },
   generatingPdf: { en: "Generating PDF…", zh: "生成 PDF 中…" },
+  generatingExcel: { en: "Generating Excel…", zh: "生成 Excel 中…" },
   pdfReady: { en: "PDF ready", zh: "PDF 已就绪" },
+  excelReady: { en: "Excel ready", zh: "Excel 已就绪" },
   pdfError: { en: "PDF generation failed", zh: "PDF 生成失败" },
+  excelError: { en: "Excel generation failed", zh: "Excel 生成失败" },
   replaceFile: { en: "Replace", zh: "替换" },
 } as const;
 
