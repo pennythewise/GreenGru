@@ -26,6 +26,33 @@
 
 ---
 
+### 🔥 Problem
+
+From **2026**, EU **CBAM** bills for real. Exporters without **verified actuals** fall onto costly **default-value paths** — industry walkthroughs put slab near **~€172/t** and downstream fasteners near **~€526/t**, enough to wipe thin SME margins.
+
+Domestically, **green loans, CERF-style facilities, and zero-carbon factory subsidies** are expanding — but SMEs lack **meters, evidence packs, and bilingual filings**. Anchors like **Baowu / Ansteel** need auditable **Scope 3 Category 10** across thousands of suppliers — today it’s still Excel and chase emails.
+
+```mermaid
+flowchart TB
+  subgraph PAIN["Today's fracture"]
+    CBAM["CBAM default path<br/>~€172–€526/t"]
+    LOAN["Green loan / grant<br/>scattered · hard to verify"]
+    S3["Anchor Scope 3<br/>spreadsheet black hole"]
+  end
+  CBAM --> SME["Steel-downstream SME<br/>margins erased"]
+  LOAN --> SME
+  SME --> ANCHOR["Baowu / Ansteel<br/>supply-chain + ESG gap"]
+  S3 --> ANCHOR
+```
+
+| Who | Pain today | GreenGru |
+|-----|------------|----------|
+| **Downstream SME** | Can't file CBAM / unlock green credit | Three-channel pre-screen + reports |
+| **Baowu / Ansteel** | Scope 3 in spreadsheets; no CISA tiers | HMAC-verified API · portfolio DSS |
+| **Banks / reviewers** | No verifiable kWh evidence | ESP32 windows + CISA grid EF |
+
+---
+
 ### 💡 Idea
 
 Not another carbon calculator.
@@ -41,12 +68,6 @@ flowchart LR
   SME["Downstream SME<br/>compliance · green finance"] --- SPINE["GreenGru<br/>one verified spine"]
   SPINE --- ANCHOR["Anchor · Baowu / Ansteel<br/>Scope 3 DSS"]
 ```
-
-| Who | Pain | GreenGru |
-|-----|------|----------|
-| SME | Can't file CBAM / unlock green credit | Three-channel pre-screen + reports |
-| Anchor | Scope 3 in spreadsheets | Supplier map · CISA tiers |
-| Bank | No verifiable kWh evidence | ESP32 windows + CISA grid EF |
 
 > **Trust rule:** tCO₂e · CBAM €/t · CISA grade · subsidy amounts → **deterministic engines**. Qwen **only reads numbers** to write/classify — never invents a tariff.
 
@@ -126,12 +147,30 @@ flowchart LR
 - **SCT-013** — clamp CT  
 - Grid EF (CISA B.3): `0.5568` or `0.5942` t/MWh → `tCO₂e = ΔkWh/1000 × EF`
 
-#### 5. Stage 6 · HMAC authorization pack
+#### 5. Stage 6 · HMAC pack → Anchor API
 
-- Shared-secret signature on aggregated results  
-- **Anchors verify integrity** (no silent edits)  
-- **SMEs keep raw invoices private**  
-- Lightweight, auditable, channel-SaaS ready  
+After SME authorize, an aggregated package is signed with **SHA-256 + HMAC-SHA256** and exposed to Baowu / Ansteel. Anchors read **aggregates only** (intensity, grade, Scope 1+2, passport summary) — **raw invoices never leave GreenGru via this API**.
+
+```mermaid
+flowchart LR
+  SME["SME authorize"] --> PKG["HMAC-signed pack<br/>hash + signature"]
+  PKG --> API["Integration API · /api/v1/*"]
+  API --> BW["Baowu / Ansteel DSS<br/>verify · Scope 3 ingest"]
+```
+
+**Key Baowu / Ansteel endpoints (selected)**
+
+| Method | Endpoint | Purpose | HMAC |
+|--------|----------|---------|------|
+| `GET` | `/api/v1/portfolio/summary` | Portfolio Scope 3 Cat.10 totals | Verifiable payload |
+| `GET` | `/api/v1/suppliers` | Supplier list · CISA / verification | Same |
+| `GET` | `/api/v1/suppliers/{id}/emissions` | Scope 1+2 aggregate tCO₂e (read-only) | Same |
+| `GET` | `/api/v1/suppliers/{id}/passport` | CBAM passport summary · tariff exposure | Same |
+| `GET` | `/api/v1/scope3/trend` | Scope 3 trend for decision hub | Same |
+| `GET` | `/api/baowu/dashboard` | Account-manager dashboard rows | Same |
+| `POST` | `/api/v1/webhooks` | Passport verified / grade-change events | HMAC on callback |
+
+> Auth: `api_key` + payload **HMAC**. Integrity without exposing SME trade secrets.
 
 ---
 

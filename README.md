@@ -26,6 +26,33 @@
 
 ---
 
+### 🔥 Problem · 现状痛点
+
+2026 年起，欧盟 **CBAM** 进入实质计费。不会报**实际排放**的出口商，只能吃高额 **默认值路径**——行业测算中板坯默认路径约 **€172/t**、下游紧固件可达 **€526/t**，足以吞噬中小企业薄利。
+
+国内 **绿贷 / 碳减排支持工具 / 零碳工厂补贴** 正在扩围，但 SME **缺计量、缺证据、缺双语文书**；宝武·鞍钢等链主则急需把下游 **Scope 3 · 类别 10** 做成可审计的一张网——今天仍靠 Excel 与口头催报。
+
+```mermaid
+flowchart TB
+  subgraph PAIN["今天的断裂"]
+    CBAM["CBAM 默认路径<br/>€172–€526/t 量级"]
+    LOAN["绿贷 / 补贴<br/>材料散 · 难核验"]
+    S3["链主 Scope 3<br/>表格黑洞 · 看不见分档"]
+  end
+  CBAM --> SME["钢铁下游 SME<br/>出口薄利被吃光"]
+  LOAN --> SME
+  SME --> ANCHOR["宝武 / 鞍钢<br/>供应链风险 · ESG 缺口"]
+  S3 --> ANCHOR
+```
+
+| 谁 | 现在怎么痛 | 绿毂给什么 |
+|----|------------|------------|
+| **下游 SME** | 不会做 CBAM、贷不到绿贷、补贴材料散 | 三通道预筛 + 护照 / 融资报告 |
+| **宝武 · 鞍钢** | Scope 3 靠表格、看不见供应商碳等级 | HMAC 验真 API · CISA 分档 · 决策中枢 |
+| **银行 / 评审** | 缺可核验用电与排放证据 | ESP32 时间窗 + CISA 电网因子 |
+
+---
+
 ### 💡 Idea
 
 不是又一个碳计算器。
@@ -41,12 +68,6 @@ flowchart LR
   SME["下游 SME<br/>合规 · 绿融"] --- SPINE["绿毂<br/>一条核验数据脊"]
   SPINE --- ANCHOR["链主 / 宝武·鞍钢<br/>Scope 3 DSS"]
 ```
-
-| 谁 | 痛点 | 绿毂 |
-|----|------|------|
-| SME | 不会 CBAM、贷不到绿贷、补贴材料散 | 三通道一键预筛 + 报告 |
-| 链主 | Scope 3 靠表格 | 供应商一张图 · CISA 分档 |
-| 银行 | 缺可核验用电证据 | ESP32 时间窗 + CISA 电网因子 |
 
 > **信任铁律：** tCO₂e · CBAM €/t · CISA 档 · 补贴额 → **确定性引擎**。Qwen **只读数字**，写散文 / 分类。从不“编”关税。
 
@@ -126,12 +147,30 @@ flowchart LR
 - **SCT-013** — 钳式电流互感器  
 - 电网 EF（CISA B.3）：`0.5568` 或 `0.5942` t/MWh → `tCO₂e = ΔkWh/1000 × EF`
 
-#### 5. Stage 6 · HMAC 授权包
+#### 5. Stage 6 · HMAC 授权包 → 链主 API
 
-- 共享密钥签名汇总结果  
-- **链主可验真**（未被篡改）  
-- **SME 不必交出**发票等原始商业机密  
-- 轻量、可审计、适合渠道型 SaaS
+SME 授权后，汇总包经 **SHA-256 + HMAC-SHA256** 签名推给宝武 / 鞍钢。链主只读**聚合结果**（强度、档位、Scope 1+2、护照摘要），**原始发票永不经此 API 露出**。
+
+```mermaid
+flowchart LR
+  SME["SME 授权"] --> PKG["HMAC 签名包<br/>hash + signature"]
+  PKG --> API["Integration API · /api/v1/*"]
+  API --> BW["宝武 / 鞍钢 DSS<br/>验签 · Scope 3 入库"]
+```
+
+**宝武 / 鞍钢可调用的关键接口（节选）**
+
+| Method | Endpoint | 作用 | HMAC |
+|--------|----------|------|------|
+| `GET` | `/api/v1/portfolio/summary` | 下游组合 Scope 3 Cat.10 汇总 | 响应体可验签 |
+| `GET` | `/api/v1/suppliers` | 供应商列表 · CISA / 核验状态 | 同上 |
+| `GET` | `/api/v1/suppliers/{id}/emissions` | Scope 1+2 聚合 tCO₂e（只读） | 同上 |
+| `GET` | `/api/v1/suppliers/{id}/passport` | CBAM 护照摘要 · 关税敞口 | 同上 |
+| `GET` | `/api/v1/scope3/trend` | Scope 3 趋势（决策中枢曲线） | 同上 |
+| `GET` | `/api/baowu/dashboard` | 客户经理仪表盘行 | 同上 |
+| `POST` | `/api/v1/webhooks` | 护照核验 / 档位变更事件回调 | 回调带 HMAC |
+
+> 鉴权：`api_key` + 载荷 **HMAC**。防篡改、可追责；SME 商业秘密留在绿毂侧。
 
 ---
 
