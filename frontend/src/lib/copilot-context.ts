@@ -193,7 +193,7 @@ const RESPONSES: Record<string, string> = {
   "new-pipeline":
     "After submit: Stage 0 pre-screen → intake extraction → validation → deterministic calculation → parallel passport + financing agents → advisory. Each regulated number is computed in code before any LLM writes prose.",
   "new-guardrails":
-    "No — Stage 0 (StructBERT + DAMO OCR, local) rejects selfies, blank pages, and wrong document types before any DashScope call. You also must tick the authorization checkbox before submit runs.",
+    "No — local OCR rejects blank/unreadable pages before any Qwen call. You also must tick the authorization checkbox before submit runs.",
   "entry-router":
     "Chat first, then tap Finish asking questions. The router (qwen3.7-plus) scores Loan, Grant, and/or CBAM from that conversation — not after every message. Routes above 0.70 pre-select; you always confirm before anything runs.",
   "entry-floor":
@@ -205,7 +205,7 @@ const RESPONSES: Record<string, string> = {
   "dash-start":
     "Start with GreenGru Copilot (/entry) if unsure — describe your goal and the router suggests routes. EU license if you export to the EU; Loan for PBOC green credit; Grant for 零碳工厂 subsidies. You can combine routes.",
   "dash-data":
-    "Processing stays on Beijing-region DashScope infrastructure (pinned explicitly for data sovereignty). Stage-0 pre-screen runs locally; paid model calls only fire after you confirm routes and pass guardrails.",
+    "Chat and classification use Qwen3.7-Plus; knowledge retrieval uses Qwen3-Embedding-8B. Stage-0 pre-screen runs locally; paid model calls only fire after you confirm routes and pass guardrails.",
 };
 
 const FALLBACKS: Record<CopilotPage, string> = {

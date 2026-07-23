@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api", tags=["intake"])
 @router.post("/intake/ocr-preview", response_model=OcrPreviewOut)
 async def ocr_preview(file: UploadFile):
     """Stage-1 preview for New Submission: PaddleOCR on images, PDF text
-    extraction + text-embedding-v4 vectors to Supabase, mock fill for gaps."""
+    extraction + Qwen3-Embedding-8B vectors to Supabase, mock fill for gaps."""
     if not file.filename:
         raise HTTPException(status_code=422, detail="Filename is required.")
 

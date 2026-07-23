@@ -178,9 +178,9 @@ export const submissions = [
 
 // Six-stage pipeline per section 4 of brief.
 export const pipelineStages = [
-  { n: 1, key: "Intake",                zh: "接入",     model: "deterministic · OCR + StructBERT",       status: "done",    elapsed: "812 ms" },
+  { n: 1, key: "Intake",                zh: "接入",     model: "deterministic · OCR",       status: "done",    elapsed: "812 ms" },
   { n: 2, key: "Validate",              zh: "校验",     model: "诺诺 Nuonuo · invoiceInspection → 税务局", status: "done",    elapsed: "428 ms" },
-  { n: 3, key: "Classify",              zh: "分类",     model: "qwen3.7-plus · CN code classifier → picks calc. method", status: "active", elapsed: "1.2 s" },
+  { n: 3, key: "Classify",              zh: "分类",     model: "qwen3.6-flash · CN code classifier → picks calc. method", status: "active", elapsed: "1.2 s" },
   { n: 4, key: "Calculate",             zh: "计算",     model: "python · rule-based",                      status: "pending", elapsed: null },
   { n: 5, key: "Update dashboard",      zh: "更新总览", model: "deterministic · data commit (no model)",  status: "pending", elapsed: null },
   { n: 6, key: "Authorize → Upstream",  zh: "授权上传", model: "operator confirm → Baowu API",    status: "pending", elapsed: null, requiresAuth: true },
@@ -196,8 +196,16 @@ export function routeStrip(kb: string, slug?: "loan" | "grant" | "passport") {
         : slug === "passport"
           ? "EU CBAM Operator Guidance (DG TAXUD) · deterministic"
           : `rule-based · ${kb}`;
+  const stage1Method =
+    slug === "passport"
+      ? "RAG · Qwen3-Embedding-8B · cbam KB"
+      : slug === "grant"
+        ? "RAG · Qwen3-Embedding-8B · GB/T 36132"
+        : slug === "loan"
+          ? "RAG · Qwen3-Embedding-8B · 绿金目录 + GB/T 36132"
+          : "deterministic · doc checklist";
   return [
-    { n: 1, key: "Pre-screener",     zh: "预筛",       method: "deterministic · doc checklist",   status: "done",    elapsed: "310 ms" },
+    { n: 1, key: "Pre-screener",     zh: "预筛",       method: stage1Method,                     status: "done",    elapsed: "310 ms" },
     { n: 2, key: "Report",           zh: "报告",       method: "python · rule-based",              status: "done",    elapsed: "1.4 s" },
     { n: 3, key: "Score",            zh: "评分",       method: scoreMethod,                      status: "active",  elapsed: "0.6 s" },
     { n: 4, key: "Pull factory data",zh: "工厂数据",   method: "deterministic · dashboard bus",    status: "pending", elapsed: null },
@@ -211,10 +219,10 @@ export const docChecklists = {
     title: "Green loan — required documents",
     kb: "绿色金融支持项目目录（2025）· GB/T 36132—2025",
     items: [
-      { name: "Business licence · 营业执照", done: true },
-      { name: "Latest 12-mo utility invoices", done: true },
-      { name: "Emissions ledger · Q1–Q4 2025", done: true },
-      { name: "Bank statement · last 6 mo", done: true },
+      { name: "Business licence · 营业执照", done: false },
+      { name: "Latest 12-mo utility invoices", done: false },
+      { name: "Emissions ledger · Q1–Q4 2025", done: false },
+      { name: "Bank statement · last 6 mo", done: false },
       { name: "Green-project use-of-proceeds", done: false },
       { name: "Auditor attestation (optional)", done: false },
     ],
@@ -223,10 +231,10 @@ export const docChecklists = {
     title: "Zero-carbon factory grant — required documents",
     kb: "GB/T 36132",
     items: [
-      { name: "Factory registration · 工厂登记", done: true },
-      { name: "Metering coverage report", done: true },
-      { name: "Scrap-steel ratio evidence", done: true },
-      { name: "Green-electricity PPA / green cert", done: true },
+      { name: "Factory registration · 工厂登记", done: false },
+      { name: "Metering coverage report", done: false },
+      { name: "Scrap-steel ratio evidence", done: false },
+      { name: "Green-electricity PPA / green cert", done: false },
       { name: "Third-party emissions report (12 mo)", done: false },
       { name: "Provincial 零碳工厂 pre-cert", done: false },
     ],
@@ -236,13 +244,10 @@ export const docChecklists = {
     titleZh: "欧盟许可（CBAM）— 必填文件",
     kb: "CBAM Operator Guidance (DG TAXUD) · Reg (EU) 2023/956",
     items: [
-      { name: "Summary_Process · Summary_Communication / Processes / Products", nameZh: "Summary_Process · 汇总沟通/工序/产品", done: false },
-      { name: "A_InstData — installation, processes, purchased precursors", nameZh: "A_InstData — 装置、工序、购入前体", done: false },
-      { name: "c_CodeLists — country codes, routes, goods categories", nameZh: "c_CodeLists — 国家代码、路线、货物类别", done: false },
-      { name: "CN-code product list · 税则号", done: true },
-      { name: "Route-of-production statement", nameZh: "生产工艺路线说明", done: true },
-      { name: "Direct + indirect embedded emissions", nameZh: "直接+间接隐含排放", done: true },
-      { name: "Verifier accreditation", nameZh: "核查机构认证", done: true },
+      { name: "CN-code product list · 税则号", nameZh: "税则号产品清单", done: false },
+      { name: "Route-of-production statement", nameZh: "生产工艺路线说明", done: false },
+      { name: "Direct + indirect embedded emissions", nameZh: "直接+间接隐含排放", done: false },
+      { name: "Verifier accreditation", nameZh: "核查机构认证", done: false },
       { name: "Purchased CBAM certificates (Q ledger)", nameZh: "已购 CBAM 证书（季度台账）", done: false },
       { name: "Installation-level emissions data", nameZh: "装置级排放数据", done: false },
     ],
@@ -259,8 +264,8 @@ export const routePages = {
     subtitleZh: "依据 GB/T 36132—2025 与《绿色金融支持项目目录（2025 年版）》评分。",
     kb: "绿色金融支持项目目录（2025）· GB/T 36132—2025",
     scoreLabel: "Loan readiness",
-    scoreValue: "Score /100",
-    scoreGrade: "B",
+    scoreValue: "Score % · thr 70%",
+    scoreGrade: "78%",
     gauge: 78,
     gapUnit: "risk pts",
     advisoryImpactUnit: "loan score",
@@ -274,9 +279,9 @@ export const routePages = {
     subtitle: "GB/T 36132 rubric — every point cites the specific clause.",
     subtitleZh: "GB/T 36132 评分 — 每项均引用具体条款。",
     kb: "GB/T 36132",
-    scoreLabel: "Grant tier",
-    scoreValue: "Tier 2 · 深绿",
-    scoreGrade: "C",
+    scoreLabel: "Grant readiness",
+    scoreValue: "Score % · thr 70%",
+    scoreGrade: "68%",
     gauge: 68,
     gapUnit: "grant pts",
     advisoryImpactUnit: "grant score",
@@ -291,8 +296,8 @@ export const routePages = {
     subtitleZh: "依据欧委会非欧盟装置运营方 CBAM 实施指南的就绪评分。",
     kb: "CBAM Operator Guidance · DG TAXUD 21 Nov 2023",
     scoreLabel: "CBAM readiness",
-    scoreValue: "Operator score /100",
-    scoreGrade: "C",
+    scoreValue: "Score % · thr 70%",
+    scoreGrade: "41%",
     gauge: 41,
     gapUnit: "€ / t exposure",
     advisoryImpactUnit: "€/t saved",

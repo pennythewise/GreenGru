@@ -47,11 +47,15 @@ export function useApplicationForm<T extends object>(slug: string, factory: () =
     setData((prev) => updater(prev));
   }, []);
 
+  const replace = useCallback((next: T) => {
+    setData(next);
+  }, []);
+
   const reset = useCallback(() => {
     setData(factory());
   }, [factory]);
 
   const pct = useMemo(() => completionPct(data), [data]);
 
-  return { data, set, reset, completionPct: pct };
+  return { data, set, replace, reset, completionPct: pct };
 }

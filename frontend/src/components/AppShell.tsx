@@ -132,7 +132,7 @@ export function Sidebar() {
         <div className="panel p-3">
           <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-carbon pulse-dot" />
-            BEIJING · DASHSCOPE
+            QWEN3 · EMBED 8B
           </div>
           <div className="mt-1.5 text-[11.5px] text-muted-foreground leading-snug">
             {t(shell.dataResidency.en, shell.dataResidency.zh)}

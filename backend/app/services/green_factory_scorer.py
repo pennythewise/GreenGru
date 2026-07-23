@@ -490,16 +490,12 @@ def compute_green_factory_score(
             dim.score = round(computed, 2)
 
     total = round(sum(d.score for d in dimensions), 1)
-    qualified = veto_passed and total >= 60.0
+    qualified = veto_passed and total >= 70.0
 
-    if total >= 85:
-        tier, tier_zh = "National green factory candidate", "国家级绿色工厂候选"
-    elif total >= 70:
-        tier, tier_zh = "Provincial 深绿 Tier 2", "省级深绿（二级）"
-    elif total >= 60:
-        tier, tier_zh = "Municipal green factory", "市级绿色工厂"
+    if total >= 70:
+        tier, tier_zh = f"{total:.0f}% — pass (thr 70%)", f"{total:.0f}% — 通过（阈值 70%）"
     else:
-        tier, tier_zh = "Below threshold — gaps remain", "未达绿色工厂门槛"
+        tier, tier_zh = f"{total:.0f}% — below thr 70%", f"{total:.0f}% — 未达阈值 70%"
 
     formulas = [
         {

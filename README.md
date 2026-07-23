@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/GreenGru-绿毂-0d9488?style=for-the-badge" alt="GreenGru" />
   <img src="https://img.shields.io/badge/CBAM-EU_2026-1d4ed8?style=for-the-badge" alt="CBAM" />
   <img src="https://img.shields.io/badge/IoT-ESP32-f59e0b?style=for-the-badge" alt="ESP32" />
-  <img src="https://img.shields.io/badge/AI-Qwen_via_OpenRouter-8b5cf6?style=for-the-badge" alt="Qwen" />
+  <img src="https://img.shields.io/badge/AI-Qwen3.7--Plus_+_Embedding--8B-8b5cf6?style=for-the-badge" alt="Qwen" />
 </p>
 
 <h1 align="center">GreenGru · 绿毂</h1>
@@ -150,7 +150,7 @@ flowchart LR
     MATH["Math-safe chunking<br/>保公式上下文"]
   end
   subgraph EMB["向量化 · Qwen3"]
-    QE["Qwen3-Embedding<br/>中英 · 懂数学环境"]
+    QE["Qwen3-Embedding-8B<br/>中英 · 懂数学环境"]
   end
   subgraph STORE["向量库 · Supabase"]
     VEC[("pgvector<br/>Hybrid Search")]
@@ -173,11 +173,36 @@ flowchart LR
 |------|------|----------|
 | 抽取 | **MinerU** | PDF/扫描件 → Markdown；公式标准化为 LaTeX |
 | 分块 | **LangChain** MarkdownTextSplitter | 按结构切；**Math-safe** 不打断公式块 |
-| 嵌入 | **Qwen3-Embedding**（MVP 经 OpenRouter） | 中英双语 + 复杂数学/表格语义 |
-| 存储检索 | **Supabase pgvector** | **Hybrid Search**（关键词+向量，公式友好）；通道隔离，避免 Agent 串库 |
-| 消费 | 预筛 Agent 1.1 / 1.2 / 1.3 | 只检索本通道语料 → 分数与缺口清单 |
+| 嵌入 | **Qwen3-Embedding-8B**（1024-d） | 中英双语 + 复杂数学/表格语义 |
+| 存储检索 | **Supabase pgvector** | 通道隔离检索；公式友好分块 |
+| 消费 | 预筛 Agent 1.1 / 1.2 / 1.3（Stage 1 RAG） | 只检索本通道语料 → 材料缺口 / 义务解释 |
 
-生产可迁：**百炼 Embedding / ModelScope `Qwen3-Embedding-*`** + **PolarDB**，管线形状不变。
+生产可迁：百炼 / DashScope 同系 Embedding + PolarDB — **MVP 聊天与嵌入走 OpenRouter**。
+
+**已落地通道（Stage 1 预筛面板，可展开/收起）：**
+- **CBAM** — MinerU → `knowledge/cbam/` → `python -m scripts.ingest_kb_cbam` → 护照 Stage 1
+- **Loan 绿贷** — MinerU → `knowledge/loan/`（《绿色金融支持项目目录》+ GB/T 36132）→ `python -m scripts.ingest_kb_loan` → 绿贷 Stage 1
+- **Grant 补贴** — MinerU → `knowledge/grant/`（《绿色工厂评价通则》GB/T 36132）→ `python -m scripts.ingest_kb_grant` → 补贴 Stage 1
+
+均经 `kb_chunks` + `POST /api/rag/query` — **不编造关税、补贴金额等受监管数字**。
+
+**用户上传（Stage 1）：** Section A 上传 PDF → MinerU → 分块嵌入 → `upload_chunks`（`0004_upload_chunks.sql`）→ Stage 1 展示 **Top 3 + 短摘要 + 页码 + 出处 + 相关度 %**。
+
+**MVP 栈分工（不要混用）：**
+| 角色 | 用什么 | MVP 出口 |
+|------|--------|----------|
+| 对话 / Agents | **Qwen3.7-Plus** | OpenRouter（`LLM_BASE_URL` + `LLM_API_KEY`） |
+| 向量嵌入 | **Qwen3-Embedding-8B** | 同一 OpenRouter key |
+| PDF→Markdown（OCR/表格） | **MinerU**（本地） | *不是* OpenRouter，*也不是* ModelScope |
+
+MinerU 会下载自己的版面/OCR 权重（默认 HuggingFace），与 OpenRouter 上的 Qwen **无关**。未装 MinerU 时走 **Qwen-VL**（`MODEL_PDF_VISION`，默认 `qwen/qwen3-vl-235b-a22b-thinking`）做页面 OCR（可识别截图），最后才是 **pypdf**。
+
+```bash
+# 可选 — 本地 MinerU（Windows 若 pip 报 Access denied，先停掉 uvicorn）
+cd backend && .venv\Scripts\activate
+pip install -U "mineru[core]" pypdfium2
+mineru-models-download
+```
 
 #### 3. 六阶段流水线（代码编排）
 
@@ -308,11 +333,11 @@ DDL：`supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 - **电表即证据** — IoT 时间窗只服务绿融，不污染 CBAM  
 - **HMAC 可落地** — 防篡改 + 保护商业秘密，无需重链  
 - **RAG 通道隔离** — MinerU → LangChain → Qwen Embedding → Supabase；三预筛各取各的法规库  
-- **MVP → 中国栈** — OpenRouter / Supabase 今天跑；百炼 / PolarDB 明天切
+- **MVP → 中国栈** — Supabase 今天跑；PolarDB / 百炼同系模型明天切
 
 | 能力 | MVP | 生产 |
 |------|-----|------|
-| LLM | **OpenRouter · Qwen** | **阿里云百炼** · ModelScope（Stage-0 可选） |
+| LLM | **Qwen3.7-Plus** · **Qwen3-Embedding-8B** | 百炼 / ModelScope 同系（Stage-0 可选） |
 | DB | **Supabase** | **PolarDB / RDS Postgres** |
 | 对象 | Supabase Storage | **OSS** |
 
@@ -326,8 +351,8 @@ DDL：`supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 | Backend | FastAPI · 确定性引擎 · 评分器 · OCR · IoT · 流水线 |
 | 发票验真 | **诺诺 Nuonuo** 第三方 API → **国家税务总局** 发票数据库 |
 | Agents | Copilot · CBAM / Loan / Grant 预筛 · Advisory（Qwen） |
-| RAG | MinerU · LangChain · Qwen3-Embedding · Supabase pgvector / Hybrid Search |
-| LLM | OpenRouter（MVP）→ 百炼 / ModelScope（生产） |
+| RAG | MinerU · LangChain · **Qwen3-Embedding-8B** · Supabase pgvector |
+| LLM | **Qwen3.7-Plus**（对话 / 文书）· **Qwen3-Embedding-8B**（向量） |
 | DB | Supabase（MVP）→ PolarDB（生产） |
 | Edge | ESP32 · ZMPT101B · SCT-013 · HTTP ingest |
 | Trust | HMAC 授权包 · RLS |
@@ -363,8 +388,8 @@ DDL：`supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 **❓ 为什么用 HMAC，而不是更重的密码学叙事？**  
 目标是：**验真 + 不暴露原始发票**。HMAC 轻量、可审计、评委当场能讲清，适合渠道 SaaS 落地。
 
-**❓ 为什么 MVP 用 OpenRouter + Supabase？**  
-黑客松要快。生产切 **百炼（北京）+ PolarDB**，同一 OpenAI 兼容接口与 SQLAlchemy 模型，数据主权可升级。
+**❓ 为什么 MVP 用 Supabase？**  
+黑客松要快。生产可切 **PolarDB**，同一 SQLAlchemy 模型；LLM 始终是 **Qwen3.7-Plus / Qwen3-Embedding-8B**，接口可换。
 
 **❓ 链主为什么买单？**  
 把散落 SME 合规结果聚成 Scope 3 · Cat.10 与 CISA 分档——客户经理能直接行动，而不是再要 Excel。

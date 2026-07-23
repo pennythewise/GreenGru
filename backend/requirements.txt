@@ -14,11 +14,19 @@ aiosqlite==0.20.0
 asyncpg==0.30.0
 supabase==2.10.0
 python-dotenv==1.0.1
+# Also remove duplicate MODEL_EMBEDDING at top if we now have them in the middle - check file
 pypdf==5.1.0
+pypdfium2>=4.30.0
+pymupdf>=1.24.0
+langchain-text-splitters==0.3.4
+langchain-core==0.3.28
 # PaddleOCR — in-process Stage-1 image OCR (lang=ch: 简体中文 + English)
 paddlepaddle>=3.3.0
 paddleocr>=3.7.0
-numpy<2
+# PaddleOCR wants numpy<2.4; MinerU may pull newer — pin after mineru install:
+numpy>=1.24,<2.4
 pillow>=10.0.0
+# Optional Stage-1 PDF OCR (heavy): pip install -U "mineru[core]"
+# then: python -m mineru.cli.models_download -s huggingface -m pipeline
 pytest==8.3.4
 pytest-asyncio==0.24.0

@@ -83,3 +83,47 @@ async def store_document_embeddings(
         encoding="utf-8",
     )
     return "local"
+
+
+async def fetch_document_embeddings_by_hash(file_hash: str) -> dict[str, Any] | None:
+    """Return cached embedding metadata if this file_hash was already stored."""
+    if not file_hash:
+        return None
+
+    client = _get_supabase_client()
+    if client is not None:
+        try:
+            resp = (
+                client.table("document_embeddings")
+                .select("chunk_index,chunk_text")
+                .eq("file_hash", file_hash)
+                .order("chunk_index")
+                .execute()
+            )
+            rows = resp.data or []
+            if rows:
+                preview = "\n\n".join(r.get("chunk_text") or "" for r in rows[:2])
+                return {
+                    "chunk_count": len(rows),
+                    "storage": "supabase",
+                    "text_preview": preview,
+                }
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Supabase document_embeddings lookup failed: %s", exc)
+
+    path = Path(settings.local_storage_dir) / "embeddings" / f"{file_hash}.json"
+    if path.is_file():
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            chunks = payload.get("chunks") or []
+            preview = "\n\n".join(
+                (c.get("chunk_text") or "") for c in chunks[:2]
+            )
+            return {
+                "chunk_count": len(chunks),
+                "storage": "local",
+                "text_preview": preview,
+            }
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Local embedding cache read failed: %s", exc)
+    return None

@@ -916,14 +916,10 @@ def compute_cbam_operator_score(
         total = round(min(total, 54.9), 1)
 
     qualified = veto_passed and total >= 70.0
-    if qualified and total >= 85:
-        tier, tier_zh = "Operator ready — declarant packable", "运营方就绪 — 可打包给申报人"
-    elif qualified:
-        tier, tier_zh = "Transitional-period ready", "过渡期就绪"
-    elif veto_passed:
-        tier, tier_zh = "Partial readiness — close MRV gaps", "部分就绪 — 需补齐 MRV"
+    if qualified:
+        tier, tier_zh = f"{total:.0f}% — pass (thr 70%)", f"{total:.0f}% — 通过（阈值 70%）"
     else:
-        tier, tier_zh = "Not ready — veto gates open", "未就绪 — 准入项未满足"
+        tier, tier_zh = f"{total:.0f}% — below thr 70%", f"{total:.0f}% — 未达阈值 70%"
 
     tons_note = f"{production_tonnes:.1f} t" if production_tonnes else "volume n/a"
     formulas = [

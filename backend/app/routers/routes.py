@@ -1,9 +1,12 @@
 """Route preview PDF generation — themed report from frontend-assembled state."""
 
 from pathlib import Path
+from typing import Literal
+import asyncio
 
-from fastapi import APIRouter
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
 from app.schemas import (
@@ -18,6 +21,8 @@ from app.schemas import (
     RoutePreviewPdfRequest,
     RoutePreviewPdfResponse,
 )
+from app.services.application_form_parse import parse_application_form_pdf
+from app.services.cbam_workbook_parse import parse_cbam_workbook_pdf
 from app.services.cbam_communication_xlsx import (
     OUTPUT_FILENAME,
     fill_cbam_communication_xlsx,
@@ -166,6 +171,78 @@ async def download_filled_application_form_pdf(payload: ApplicationFormPdfReques
             "X-Signature": generated.signature,
         },
     )
+
+
+class ApplicationFormParseResponse(BaseModel):
+    route: Literal["loan", "grant"]
+    application_form: dict
+    convert_method: str
+    char_count: int = 0
+    source_file: str | None = None
+
+
+@router.post("/application-form-pdf/parse", response_model=ApplicationFormParseResponse)
+async def parse_filled_application_form_pdf(
+    file: UploadFile = File(...),
+    route: Literal["loan", "grant"] = Form(...),
+) -> ApplicationFormParseResponse:
+    """Upload a filled application PDF → PyMuPDF/pypdf → map into editable form JSON."""
+    name = file.filename or "application.pdf"
+    if not name.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF uploads are supported")
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty upload")
+    try:
+        result = await asyncio.to_thread(
+            parse_application_form_pdf,
+            content=content,
+            filename=name,
+            route=route,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=500,
+            detail=f"Application form PDF parse failed: {exc}",
+        ) from exc
+    return ApplicationFormParseResponse(**result)
+
+
+class CbamWorkbookPdfParseResponse(BaseModel):
+    workbook_values: dict[str, str]
+    convert_method: str | None = None
+    char_count: int = 0
+    field_count: int = 0
+    source_file: str | None = None
+
+
+@router.post("/cbam-workbook-pdf/parse", response_model=CbamWorkbookPdfParseResponse)
+async def parse_filled_cbam_workbook_pdf(
+    file: UploadFile = File(...),
+) -> CbamWorkbookPdfParseResponse:
+    """Upload filled CBAM PDF → PyMuPDF → map into editable workbook field values."""
+    name = file.filename or "cbam.pdf"
+    if not name.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF uploads are supported")
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty upload")
+    try:
+        result = await asyncio.to_thread(
+            parse_cbam_workbook_pdf,
+            content=content,
+            filename=name,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=500,
+            detail=f"CBAM workbook PDF parse failed: {exc}",
+        ) from exc
+    return CbamWorkbookPdfParseResponse(**result)
 
 
 @router.post("/cbam-communication-xlsx/download")

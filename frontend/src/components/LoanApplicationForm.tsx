@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Download, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
+import { ApplicationFormPdfUpload } from "@/components/ApplicationFormPdfUpload";
 import {
   CheckRow,
   FieldGrid,
@@ -27,19 +28,9 @@ const SECTIONS = [
   { id: "declaration", label: "Declaration", labelZh: "签章" },
 ] as const;
 
-function downloadJson(data: LoanApplicationForm, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 export function LoanApplicationForm() {
   const { isZh } = useLocale();
-  const { data, set, reset, completionPct } = useApplicationForm("loan", defaultLoanApplication);
+  const { data, set, replace, reset, completionPct } = useApplicationForm("loan", defaultLoanApplication);
   const [activeId, setActiveId] = useState<string>("company");
 
   function selectSection(id: string) {
@@ -74,8 +65,8 @@ export function LoanApplicationForm() {
       titleZh="绿色贷款申请表"
       subtitle={
         isZh
-          ? "按 PBOC / 广州绿色金融协会模板填写，自动保存至浏览器。"
-          : "PBOC / GZGFA-aligned template — auto-saved in your browser."
+          ? "可编辑申请表 — 可手工填写，或上传已填 PDF 自动映射；自动保存至浏览器。"
+          : "Editable form — fill manually or upload a filled PDF to map fields; auto-saved in your browser."
       }
       completionPct={completionPct}
       sections={[...SECTIONS]}
@@ -83,15 +74,12 @@ export function LoanApplicationForm() {
       onSelect={selectSection}
       isZh={isZh}
     >
-      <div className="flex flex-wrap gap-2 mb-1">
-        <button
-          type="button"
-          onClick={() => downloadJson(data, "green-loan-application.json")}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-[11.5px] font-mono hover:bg-surface-2"
-        >
-          <Download className="h-3.5 w-3.5" />
-          {isZh ? "导出 JSON" : "Export JSON"}
-        </button>
+      <div className="flex flex-wrap items-start gap-3 mb-1">
+        <ApplicationFormPdfUpload
+          route="loan"
+          isZh={isZh}
+          onMapped={(form) => replace(form as LoanApplicationForm)}
+        />
         <button
           type="button"
           onClick={reset}

@@ -40,7 +40,7 @@ def extract_from_document(document_text: str, source_label: str = "upload") -> I
         "cn_code_hint": None,
         "billing_period": "2026-01 to 2026-12",
         "confidence": "medium",
-        "flags": [f"mock extraction from {source_label} — configure DASHSCOPE_API_KEY for real output"],
+        "flags": [f"mock extraction from {source_label} — configure LLM_API_KEY for real output"],
     }
     result = call_structured(
         model=settings.model_intake_vision,

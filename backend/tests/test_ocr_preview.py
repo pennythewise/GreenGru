@@ -21,7 +21,7 @@ def test_ocr_preview_image_returns_invoice_and_classification():
     data = resp.json()
     assert data["invoice"]["invoiceCode"]
     assert data["classification"]["cnCode"]
-    assert data["ocr_source"] in {"mock", "paddleocr", "qwen3.7-plus"}
+    assert data["ocr_source"] in {"mock", "paddleocr", "qwen3-vl"}
     assert "buyer" in data["invoice"]
 
 

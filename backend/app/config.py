@@ -3,6 +3,8 @@ deployment lives here, loaded from environment variables — never hardcoded
 inline in a router or service module."""
 
 from functools import lru_cache
+
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,25 +26,58 @@ class Settings(BaseSettings):
     supabase_url: str | None = None
     supabase_service_role_key: str | None = None
 
-    # --- DashScope (Qwen via Alibaba Cloud Model Studio) --------------------
-    # IMPORTANT: Beijing region — load-bearing for data sovereignty (PRD §10),
-    # not a default to leave unset. The legacy fixed domain below is the
-    # simplest correct choice for an MVP; the newer workspace-scoped domain
-    # (https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1)
-    # offers better performance/stability and should be adopted once a
-    # Model Studio workspace ID is provisioned — see README.
-    dashscope_api_key: str | None = None
-    dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    # --- LLM (OpenAI-compatible client → Qwen via OpenRouter) --------------
+    # Prefer LLM_* env names. Legacy DASHSCOPE_* names still resolve.
+    # Put a shared fallback key in LLM_API_KEY; optional per-role keys override.
+    llm_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("LLM_API_KEY", "DASHSCOPE_API_KEY"),
+    )
+    llm_base_url: str = Field(
+        default="https://openrouter.ai/api/v1",
+        validation_alias=AliasChoices("LLM_BASE_URL", "DASHSCOPE_BASE_URL"),
+    )
+    llm_copilot_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("LLM_COPILOT_API_KEY", "DASHSCOPE_COPILOT_API_KEY"),
+    )
+    llm_classifier_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("LLM_CLASSIFIER_API_KEY"),
+    )
+    llm_vision_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "LLM_VISION_API_KEY",
+            "LLM_PDF_VISION_API_KEY",
+            "LLM_INTAKE_VISION_API_KEY",
+        ),
+    )
+    llm_embedding_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("LLM_EMBEDDING_API_KEY"),
+    )
+    llm_writing_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("LLM_WRITING_API_KEY"),
+    )
 
-    # Copilot chat uses a dedicated key + model (sidebar + /entry chat).
-    dashscope_copilot_api_key: str | None = None
-    # All chat/vision agents use qwen3.7-plus — embedding is the only separate model.
+    # Chat / vision agents (OpenRouter slugs)
     model_copilot: str = "qwen/qwen3.7-plus"
-    model_intake_vision: str = "qwen/qwen3.7-plus"
-    model_classifier: str = "qwen/qwen3.7-plus"
+    # New Submission OCR fallback after PaddleOCR (also PDF VL for RAG)
+    model_intake_vision: str = "qwen/qwen3-vl-235b-a22b-thinking"
+    model_classifier: str = "qwen/qwen3.6-flash"
+    # Single escalation retry (PRD §8.3) — Plus after Flash low-confidence
     model_classifier_escalation: str = "qwen/qwen3.7-plus"
-    model_writing: str = "qwen/qwen3.7-plus"  # passport, financing report, advisory, invoice parse
-    model_embedding: str = "text-embedding-v4"
+    model_writing: str = "qwen/qwen3.7-plus"
+    # Stage-1 RAG PDF → Markdown when MinerU unavailable
+    model_pdf_vision: str = "qwen/qwen3-vl-235b-a22b-thinking"
+    pdf_vl_max_pages: int = 20
+    pdf_vl_dpi: int = 144
+    pdf_vl_timeout_s: float = 180.0
+    # RAG + intake PDF vectors (Matryoshka → 1024-d for pgvector)
+    model_embedding: str = "qwen/qwen3-embedding-8b"
+    embedding_dimensions: int = 1024
 
     # --- PaddleOCR (Stage-1 image OCR, in-process) -------------------------
     # lang='ch' = simplified Chinese + English (PP-OCR Chinese model).
@@ -52,7 +87,8 @@ class Settings(BaseSettings):
     paddleocr_version: str = "PP-OCRv4"
     paddleocr_enable_mkldnn: bool = False
     paddleocr_timeout_s: float = 45.0
-    ocr_intake_timeout_s: float = 5.0  # qwen3.7-plus vision fallback step
+    # Qwen-VL OCR fallback for new-submission images (235B needs headroom)
+    ocr_intake_timeout_s: float = 90.0
     # Temp dev flag — skip PaddleOCR + qwen vision on upload; mock templates only.
     ocr_mock_only: bool = False
 
@@ -100,6 +136,25 @@ class Settings(BaseSettings):
 
     # --- Baowu/Ansteel integration API (read-only Scope 3 feed) ------------
     integration_api_key: str | None = None  # defaults to greengru-demo-key in router
+
+    def api_key_for(self, role: str = "default") -> str | None:
+        """Resolve OpenRouter (or compatible) key for a role; fall back to LLM_API_KEY."""
+        role = (role or "default").lower()
+        dedicated = {
+            "default": self.llm_api_key,
+            "copilot": self.llm_copilot_api_key,
+            "classifier": self.llm_classifier_api_key,
+            # Escalation uses Plus — prefer writing/copilot, then classifier, then default
+            "classifier_escalation": self.llm_writing_api_key
+            or self.llm_copilot_api_key
+            or self.llm_classifier_api_key,
+            "vision": self.llm_vision_api_key,
+            "pdf_vision": self.llm_vision_api_key,
+            "intake_vision": self.llm_vision_api_key,
+            "embedding": self.llm_embedding_api_key,
+            "writing": self.llm_writing_api_key,
+        }.get(role, None)
+        return dedicated or self.llm_api_key
 
 
 @lru_cache

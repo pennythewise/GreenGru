@@ -1,7 +1,10 @@
-"""Advisory agent (PRD §8.10) — Qwen-Plus. Reads ranked paths + CBAM risk
+"""Advisory agent (PRD §8.10) — Qwen. Reads ranked paths + CBAM risk
 tier + financing tier, writes a plain-language 1-3 item prioritized action
 plan. Never given write access back to calculations/scores (PRD §10 —
-"no self-harm to gap tracking")."""
+"no self-harm to gap tracking").
+
+EU CBAM knowledge retrieval (RAG) lives on Stage 1 pre-screener, not here.
+"""
 
 from dataclasses import dataclass
 
@@ -15,7 +18,10 @@ ADVISORY_SYSTEM_PROMPT = """You are writing a plain-language, 1-3 item prioritiz
 Chinese steel SME facing CBAM exposure. Favor the cheapest path that closes the gap unless the gap is
 large enough that only a heavier fix works. You may only reason about the paths and figures given to you
 — never invent a new cost figure or a different emissions gap. If the gap is already closed, recommend
-maintaining performance and getting measured data verified, not a fabricated improvement task."""
+maintaining performance and getting measured data verified, not a fabricated improvement task.
+
+Do NOT invent or override any numeric tariff, intensity, or cost figures — those come only from the
+ranked paths / notes above."""
 
 
 @dataclass
@@ -42,7 +48,7 @@ def generate_advisory_plan(
     )
 
     mock_text = (
-        f"[MOCK ADVISORY PLAN — configure DASHSCOPE_API_KEY for real output]\n\n"
+        f"[MOCK ADVISORY PLAN — configure LLM_API_KEY for real output]\n\n"
         f"Prioritized action plan for {company_name}:\n"
         + "\n".join(f"{i + 1}. {p.path_name} — {p.cost_per_tco2e_closed_note}" for i, p in enumerate(ranked_paths[:3]))
         + f"\n\nNote: {gross_vs_net_note}"

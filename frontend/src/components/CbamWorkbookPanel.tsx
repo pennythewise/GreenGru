@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Download, RotateCcw, Upload } from "lucide-react";
+import { FileUp, Upload } from "lucide-react";
 import { CodeListsBrowser } from "@/components/CodeListsBrowser";
 import {
   FieldGrid,
@@ -9,8 +9,8 @@ import {
   TextField,
   scrollToSection,
 } from "@/components/application-form-ui";
-import { downloadBlankTemplate, importWorkbookFile } from "@/lib/cbam-excel";
-import { downloadCbamCommunicationXlsx } from "@/lib/api";
+import { importWorkbookFile } from "@/lib/cbam-excel";
+import { parseCbamWorkbookPdf } from "@/lib/api";
 import { CBAM_FORM_SECTIONS, type CbamField } from "@/lib/cbam-workbook";
 import { useCbamWorkbook } from "@/hooks/useCbamWorkbook";
 import { useLocale } from "@/lib/locale";
@@ -81,12 +81,13 @@ function CbamFieldInput({
 
 export function CbamWorkbookPanel() {
   const { isZh } = useLocale();
-  const { values, setField, mergeValues, resetToDemo, completionPct } = useCbamWorkbook();
+  const { values, setField, mergeValues, completionPct } = useCbamWorkbook();
   const [activeId, setActiveId] = useState<string>(CBAM_FORM_SECTIONS[0].id);
   const [activePickKey, setActivePickKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const excelRef = useRef<HTMLInputElement>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
 
   function selectSection(id: string) {
     setActiveId(id);
@@ -98,41 +99,42 @@ export function CbamWorkbookPanel() {
     selectSection("code_lists");
   }
 
-  async function handleDownloadBlank() {
-    setBusy(true);
-    setMsg(null);
-    try {
-      await downloadBlankTemplate();
-      setMsg(isZh ? "已下载空白模板" : "Blank template downloaded");
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Download failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleExportFilled() {
-    setBusy(true);
-    setMsg(null);
-    try {
-      await downloadCbamCommunicationXlsx(values);
-      setMsg(isZh ? "已导出已填写 Excel" : "Filled Excel exported");
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Export failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleUpload(file: File) {
+  async function handleUploadExcel(file: File) {
     setBusy(true);
     setMsg(null);
     try {
       const imported = await importWorkbookFile(file);
       mergeValues(imported);
-      setMsg(isZh ? `已导入 ${Object.keys(imported).length} 个字段` : `Imported ${Object.keys(imported).length} fields`);
+      setMsg(
+        isZh
+          ? `已从 Excel 导入 ${Object.keys(imported).length} 个字段`
+          : `Imported ${Object.keys(imported).length} fields from Excel`,
+      );
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Import failed");
+      setMsg(e instanceof Error ? e.message : "Excel import failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUploadPdf(file: File) {
+    setBusy(true);
+    setMsg(
+      isZh
+        ? "PyMuPDF 解析 PDF 并映射字段…"
+        : "Parsing PDF with PyMuPDF and mapping fields…",
+    );
+    try {
+      const result = await parseCbamWorkbookPdf(file);
+      const imported = result.workbook_values ?? {};
+      mergeValues(imported);
+      setMsg(
+        isZh
+          ? `已从 PDF 填入 ${result.field_count ?? Object.keys(imported).length} 个字段（${result.convert_method ?? "pymupdf"}）— 可继续编辑`
+          : `Filled ${result.field_count ?? Object.keys(imported).length} fields from PDF (${result.convert_method ?? "pymupdf"}) — still editable`,
+      );
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "PDF import failed");
     } finally {
       setBusy(false);
     }
@@ -146,8 +148,8 @@ export function CbamWorkbookPanel() {
       titleZh="欧盟 CBAM 评估表"
       subtitle={
         isZh
-          ? "按欧盟委员会沟通模板填写，自动保存至浏览器。"
-          : "EU Commission communication template — auto-saved in your browser."
+          ? "按欧盟委员会沟通模板填写，自动保存至浏览器。可上传已填 Excel 或 PDF。"
+          : "EU Commission communication template — auto-saved. Upload a filled Excel or PDF."
       }
       completionPct={completionPct}
       sections={NAV_SECTIONS}
@@ -159,46 +161,40 @@ export function CbamWorkbookPanel() {
         <button
           type="button"
           disabled={busy}
-          onClick={() => void handleExportFilled()}
+          onClick={() => excelRef.current?.click()}
           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-primary/40 bg-primary/10 text-[11.5px] font-mono text-primary hover:brightness-110 disabled:opacity-50"
-        >
-          <Download className="h-3.5 w-3.5" />
-          {isZh ? "导出 Excel" : "Export Excel"}
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void handleDownloadBlank()}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-[11.5px] font-mono hover:bg-surface-2 disabled:opacity-50"
-        >
-          <Download className="h-3.5 w-3.5" />
-          {isZh ? "空白模板" : "Blank template"}
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => fileRef.current?.click()}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-[11.5px] font-mono hover:bg-surface-2 disabled:opacity-50"
         >
           <Upload className="h-3.5 w-3.5" />
           {isZh ? "上传 Excel" : "Upload Excel"}
         </button>
         <button
           type="button"
-          onClick={resetToDemo}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-[11.5px] font-mono text-muted-foreground hover:bg-surface-2"
+          disabled={busy}
+          onClick={() => pdfRef.current?.click()}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-[11.5px] font-mono hover:bg-surface-2 disabled:opacity-50"
         >
-          <RotateCcw className="h-3.5 w-3.5" />
-          {isZh ? "重置表单" : "Reset form"}
+          <FileUp className="h-3.5 w-3.5" />
+          {busy ? (isZh ? "解析中…" : "Parsing…") : isZh ? "上传 PDF" : "Upload PDF"}
         </button>
         <input
-          ref={fileRef}
+          ref={excelRef}
           type="file"
-          accept=".xlsx,.xls"
+          accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) void handleUpload(f);
+            if (f) void handleUploadExcel(f);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={pdfRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void handleUploadPdf(f);
             e.target.value = "";
           }}
         />

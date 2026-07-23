@@ -50,7 +50,7 @@ def generate_financing_report(
 
     mock_programs_lines = "\n".join(f"  - {p.program_name_cn}：{p.amount_or_benefit}" for p in matched_programs) or "  (暂无匹配项目)"
     mock_text = (
-        f"【模拟生成 — 配置 DASHSCOPE_API_KEY 后将输出真实内容】\n\n"
+        f"【模拟生成 — 配置 LLM_API_KEY 后将输出真实内容】\n\n"
         f"绿色金融准备度报告\n"
         f"公司: {company_name}\n"
         f"中国钢铁工业协会低碳等级（暂定）: {score.cisa_grade}\n"

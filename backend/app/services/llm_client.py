@@ -1,9 +1,10 @@
-"""Thin wrapper around the OpenAI-compatible client pointed at DashScope
-(Qwen via Alibaba Cloud Model Studio), Beijing region (PRD §4, §10).
+"""Thin wrapper around an OpenAI-compatible client for Qwen chat models.
 
-Written against the OpenAI Python SDK interface rather than a
-DashScope-specific SDK, per the PRD's explicit rule, so a future provider
-swap only touches base_url/api_key/model strings.
+Written against the OpenAI Python SDK interface so base_url / api_key / model
+strings can change without touching call sites.
+
+Per-role keys (copilot / classifier / vision / embedding / writing) fall back
+to ``LLM_API_KEY`` when unset.
 
 Mock mode (default when no API key is configured) returns a deterministic,
 clearly-labeled stub instead of a real completion — this is what lets the
@@ -11,8 +12,10 @@ whole pipeline, including PDF generation, run end-to-end with zero external
 config. It is NOT a substitute for real output-quality review before launch.
 """
 
+from __future__ import annotations
+
 import json
-from typing import Any
+from typing import Any, Literal
 
 from openai import OpenAI
 
@@ -20,21 +23,39 @@ from app.config import get_settings
 
 settings = get_settings()
 
-_client: OpenAI | None = None
+LlmRole = Literal[
+    "default",
+    "copilot",
+    "classifier",
+    "classifier_escalation",
+    "vision",
+    "pdf_vision",
+    "intake_vision",
+    "embedding",
+    "writing",
+]
+
+_clients: dict[str, OpenAI] = {}
 
 
-def get_client() -> OpenAI:
-    global _client
-    if _client is None:
-        _client = OpenAI(
-            api_key=settings.dashscope_api_key or "mock-key-unused-in-mock-mode",
-            base_url=settings.dashscope_base_url,
+def get_client(*, role: LlmRole | str = "default", timeout: float | None = None) -> OpenAI:
+    """Return a cached OpenAI client for ``role`` (separate key ⇒ separate client)."""
+    key = settings.api_key_for(role) or "mock-key-unused-in-mock-mode"
+    to = 50.0 if timeout is None else float(timeout)
+    cache_key = f"{role}|{key[:12]}|{to}"
+    client = _clients.get(cache_key)
+    if client is None:
+        client = OpenAI(
+            api_key=key,
+            base_url=settings.llm_base_url,
+            timeout=to,
         )
-    return _client
+        _clients[cache_key] = client
+    return client
 
 
-def is_mock_mode() -> bool:
-    return settings.llm_mock_mode or not settings.dashscope_api_key
+def is_mock_mode(*, role: LlmRole | str = "default") -> bool:
+    return settings.llm_mock_mode or not settings.api_key_for(role)
 
 
 def call_structured(
@@ -44,6 +65,8 @@ def call_structured(
     user_prompt: str,
     mock_response: dict[str, Any],
     temperature: float = 0.0,
+    role: LlmRole | str = "default",
+    timeout: float | None = None,
 ) -> dict[str, Any]:
     """Forces JSON output via response_format, matching the
     forced-tool-use/JSON pattern used throughout PRD §8. `mock_response` is
@@ -52,14 +75,12 @@ def call_structured(
     exercised without a real API key.
 
     Every task in this pipeline runs with thinking disabled (PRD §4.1) —
-    schema extraction and templated prose don't benefit from reasoning
-    tokens, so DashScope's enable_thinking flag is left off by omission
-    (OpenAI-compatible mode defaults to non-thinking variants).
+    schema extraction and templated prose don't benefit from reasoning tokens.
     """
-    if is_mock_mode():
+    if is_mock_mode(role=role):
         return {**mock_response, "_mock": True}
 
-    client = get_client()
+    client = get_client(role=role, timeout=timeout)
     response = client.chat.completions.create(
         model=model,
         temperature=temperature,
@@ -80,14 +101,15 @@ def call_prose(
     user_prompt: str,
     mock_response: str,
     temperature: float = 0.3,
+    role: LlmRole | str = "writing",
 ) -> str:
     """For the writing agents (§8.6, §8.8, §8.10) — free-text prose output,
     still constrained by a prompt that lists only pre-computed numbers the
     model is allowed to restate (never compute)."""
-    if is_mock_mode():
+    if is_mock_mode(role=role):
         return mock_response
 
-    client = get_client()
+    client = get_client(role=role)
     response = client.chat.completions.create(
         model=model,
         temperature=temperature,

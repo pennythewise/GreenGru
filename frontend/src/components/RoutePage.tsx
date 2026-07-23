@@ -19,9 +19,11 @@ import { AppShell, CitationFooter, PageHeader } from "@/components/AppShell";
 import { CbamWorkbookPanel } from "@/components/CbamWorkbookPanel";
 import { GrantApplicationForm } from "@/components/GrantApplicationForm";
 import { CbamOperatorScorePanel } from "@/components/CbamOperatorScorePanel";
+import { PrescreenerRagPanel } from "@/components/PrescreenerRagPanel";
 import { GreenFactoryScorePanel } from "@/components/GreenFactoryScorePanel";
 import { LoanApplicationForm } from "@/components/LoanApplicationForm";
 import { LoanGreenFinanceScorePanel } from "@/components/LoanGreenFinanceScorePanel";
+import { StageDetailShell } from "@/components/StageDetailShell";
 import { useRouteChecklist } from "@/hooks/useRouteChecklist";
 import { useRoutePipeline } from "@/hooks/useRoutePipeline";
 import {
@@ -33,9 +35,11 @@ import {
 import {
   downloadApplicationFormPdf,
   downloadCbamCommunicationXlsx,
+  ingestRagUploadBatch,
   type CbamScoreResult,
   type GrantScoreResult,
   type LoanScoreResult,
+  type RagQueryResult,
 } from "@/lib/api";
 import { defaultGrantApplication } from "@/lib/application-forms/grant-template";
 import { defaultLoanApplication } from "@/lib/application-forms/loan-template";
@@ -48,37 +52,167 @@ import { cn } from "@/lib/utils";
 type Slug = keyof typeof routePages;
 
 /* ---------- Doc checklist ---------- */
+type UploadPhase = "idle" | "picking" | "uploading" | "converting" | "embedding" | "error";
+
 function Checklist({
   slug,
   items,
   doneCount,
-  markUploaded,
+  attachedCount,
+  queuedPdfCount,
+  attachFile,
+  markProcessed,
+  takeQueuedPdfs,
+  takeQueuedNonPdfs,
+  uploadSessionId,
+  ragChannel,
 }: {
   slug: Slug;
   items: ReturnType<typeof useRouteChecklist>["items"];
   doneCount: number;
-  markUploaded: ReturnType<typeof useRouteChecklist>["markUploaded"];
+  attachedCount: number;
+  queuedPdfCount: number;
+  attachFile: ReturnType<typeof useRouteChecklist>["attachFile"];
+  markProcessed: ReturnType<typeof useRouteChecklist>["markProcessed"];
+  takeQueuedPdfs: ReturnType<typeof useRouteChecklist>["takeQueuedPdfs"];
+  takeQueuedNonPdfs: ReturnType<typeof useRouteChecklist>["takeQueuedNonPdfs"];
+  uploadSessionId: string;
+  ragChannel: ReturnType<typeof useRouteChecklist>["ragChannel"];
 }) {
   const c = docChecklists[slug];
   const { t, isZh } = useLocale();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingItem, setPendingItem] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [phase, setPhase] = useState<UploadPhase>("idle");
+  const [phaseMsg, setPhaseMsg] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
   const displayTitle = isZh && "titleZh" in c && c.titleZh ? c.titleZh : c.title;
+  const busy = phase === "uploading" || phase === "converting" || phase === "embedding";
+  const canProcess = queuedPdfCount > 0 || items.some((i) => i.queued && !i.isPdf);
 
-  function openUpload(itemName: string) {
+  function openAttach(itemName: string) {
+    if (busy) return;
     setPendingItem(itemName);
+    setPhase("picking");
+    setPhaseMsg(null);
+    setRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[itemName];
+      return next;
+    });
     fileRef.current?.click();
   }
 
-  async function handleFile(file: File | undefined) {
-    if (!file || !pendingItem) return;
-    setUploading(true);
-    await new Promise((r) => setTimeout(r, 350));
-    markUploaded(pendingItem, file);
-    setUploading(false);
+  function handleFile(file: File | undefined) {
+    if (!file || !pendingItem) {
+      setPendingItem(null);
+      setPhase("idle");
+      return;
+    }
+    attachFile(pendingItem, file);
     setPendingItem(null);
+    setPhase("idle");
+    setPhaseMsg(isZh ? `已排队：${file.name}` : `Queued: ${file.name}`);
+  }
+
+  async function processAll() {
+    if (busy || !uploadSessionId) return;
+    const pdfs = takeQueuedPdfs();
+    const nonPdfs = takeQueuedNonPdfs();
+    if (!pdfs.length && !nonPdfs.length) {
+      setPhaseMsg(t(routePage.nothingToProcess.en, routePage.nothingToProcess.zh));
+      return;
+    }
+
+    setRowErrors({});
+    setPhase("uploading");
+    setPhaseMsg(
+      isZh
+        ? `准备处理 ${pdfs.length} 个 PDF…`
+        : `Preparing ${pdfs.length} PDF(s)…`,
+    );
+
+    try {
+      for (const { itemName, file } of nonPdfs) {
+        markProcessed(itemName, file.name, {
+          ragStored: false,
+          statusNote: isZh
+            ? "已附上（非 PDF，Stage 1 不嵌入）"
+            : "Attached (non-PDF; Stage 1 skips embed)",
+        });
+      }
+
+      if (pdfs.length) {
+        const lang = slug === "passport" ? "en" : "ch";
+        setPhase("converting");
+        setPhaseMsg(
+          isZh
+            ? `校验内容哈希 · 相同字节复用 Supabase，新文件再 MinerU→PyMuPDF→嵌入…`
+            : `Checking content hashes · reuse Supabase for identical bytes, then convert new PDFs…`,
+        );
+        const batch = await ingestRagUploadBatch({
+          files: pdfs.map((p) => ({ file: p.file, checklistItem: p.itemName })),
+          channel: ragChannel,
+          uploadSessionId,
+          language: lang,
+        });
+        setPhase("embedding");
+        const cacheN = (batch.results || []).filter((r) => r.cached).length;
+        setPhaseMsg(
+          isZh
+            ? `完成 · ${batch.embedded_chunks} 片段 · ${batch.file_count} 文件` +
+                (cacheN ? ` · ${cacheN} 缓存命中` : "")
+            : `Done · ${batch.embedded_chunks} chunks · ${batch.file_count} files` +
+                (cacheN ? ` · ${cacheN} cache hit(s)` : ""),
+        );
+
+        const byItem = new Map(
+          (batch.results || []).map((r) => [r.checklist_item || "", r]),
+        );
+        for (const { itemName, file } of pdfs) {
+          const result = byItem.get(itemName);
+          if (!result) {
+            markProcessed(itemName, file.name, {
+              ragStored: false,
+              statusNote: isZh ? "批次中无返回结果" : "No result in batch response",
+            });
+            continue;
+          }
+          const note = result.stored
+            ? isZh
+              ? `${result.chunk_count} 片段 · ${result.convert_method ?? "embed"}${result.cached ? " · 缓存" : ""}`
+              : `${result.chunk_count} chunks · ${result.convert_method ?? "embed"}${result.cached ? " · cached" : ""}`
+            : isZh
+              ? `文件已保存 · RAG 未写入（${result.reason ?? "unknown"}）`
+              : `File saved · RAG not stored (${result.reason ?? "unknown"})`;
+          if (!result.stored) {
+            setRowErrors((prev) => ({
+              ...prev,
+              [itemName]: result.reason || "not stored",
+            }));
+          }
+          markProcessed(itemName, result.source_file || file.name, {
+            fileHash: result.file_hash ?? undefined,
+            chunkCount: result.chunk_count,
+            ragStored: result.stored,
+            statusNote: note,
+          });
+        }
+        setPhaseMsg(
+          isZh
+            ? `完成：${batch.file_count} 个 PDF · ${batch.embedded_chunks} 片段已写入 Stage 1 RAG`
+            : `Done: ${batch.file_count} PDF(s) · ${batch.embedded_chunks} chunks in Stage 1 RAG`,
+        );
+      } else {
+        setPhaseMsg(isZh ? "非 PDF 已标记完成" : "Non-PDF attachments marked done");
+      }
+      setPhase("idle");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Processing failed";
+      setPhase("error");
+      setPhaseMsg(msg);
+    }
   }
 
   return (
@@ -87,18 +221,21 @@ function Checklist({
         ref={fileRef}
         type="file"
         className="hidden"
-        accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg"
+        accept=".pdf,application/pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg"
         onChange={(e) => {
-          void handleFile(e.target.files?.[0]);
+          handleFile(e.target.files?.[0]);
           e.target.value = "";
         }}
       />
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
           <FileText className="h-3.5 w-3.5 text-teal" /> {t(routePage.sectionADoc.en, routePage.sectionADoc.zh)}
         </div>
-        <span className="text-[11.5px] font-mono">
-          {t(routePage.collected.en(doneCount, items.length), routePage.collected.zh(doneCount, items.length))}
+        <span className="text-[11.5px] font-mono shrink-0">
+          {t(
+            routePage.attachedProgress.en(attachedCount, doneCount, items.length),
+            routePage.attachedProgress.zh(attachedCount, doneCount, items.length),
+          )}
         </span>
       </div>
       <h3 className="mt-1 text-[15px] font-semibold tracking-tight">{displayTitle}</h3>
@@ -107,60 +244,129 @@ function Checklist({
       </p>
 
       <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
-        <div className="h-full bg-carbon transition-all duration-500" style={{ width: `${(doneCount / items.length) * 100}%` }} />
+        <div
+          className="h-full bg-carbon transition-all duration-500"
+          style={{ width: `${items.length ? (doneCount / items.length) * 100 : 0}%` }}
+        />
       </div>
 
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={busy || !canProcess}
+          onClick={() => void processAll()}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12px] font-medium text-primary-foreground teal-glow hover:brightness-110 transition disabled:opacity-40"
+        >
+          {busy ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Play className="h-3.5 w-3.5" />
+          )}
+          {busy
+            ? phase === "converting"
+              ? t(routePage.converting.en, routePage.converting.zh)
+              : phase === "embedding"
+                ? t(routePage.embedding.en, routePage.embedding.zh)
+                : t(routePage.uploading.en, routePage.uploading.zh)
+            : t(routePage.processAll.en, routePage.processAll.zh)}
+        </button>
+        <span className="text-[10.5px] font-mono text-muted-foreground max-w-md">
+          {t(routePage.processAllHint.en, routePage.processAllHint.zh)}
+        </span>
+      </div>
+
+      {(busy || phaseMsg) && (
+        <div
+          className={cn(
+            "mt-3 flex items-center gap-2 rounded-md border px-3 py-2 text-[11.5px] font-mono",
+            phase === "error"
+              ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300"
+              : "border-primary/25 bg-primary/5 text-primary",
+          )}
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" /> : null}
+          <span className="min-w-0 truncate">{phaseMsg}</span>
+        </div>
+      )}
+
       <ul className="mt-4 divide-y divide-border">
-        {items.map((it) => (
-          <li key={it.name} className="py-2.5 flex items-center gap-3">
-            <span
-              className={cn(
-                "h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors",
-                it.done ? "bg-carbon/15 text-carbon" : "bg-muted/60 text-muted-foreground border border-dashed border-border",
-              )}
-            >
-              {it.done ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
-            </span>
-            <span className={cn("flex-1 text-[13px] min-w-0", !it.done && "text-muted-foreground")}>
-              <span className="block truncate">{isZh && "nameZh" in it && it.nameZh ? it.nameZh : it.name}</span>
-              {it.fileName && (
-                <span className="block text-[10px] font-mono text-muted-foreground truncate mt-0.5">{it.fileName}</span>
-              )}
-            </span>
-            {it.done ? (
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[10.5px] font-mono text-carbon">{t(routePage.done.en, routePage.done.zh)}</span>
+        {items.map((it) => {
+          const err = rowErrors[it.name];
+          const showDone = it.done && !it.queued;
+          return (
+            <li key={it.name} className="py-3 flex items-start gap-3">
+              <span
+                className={cn(
+                  "mt-0.5 h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors",
+                  showDone
+                    ? "bg-carbon/15 text-carbon"
+                    : it.queued
+                      ? "bg-primary/15 text-primary"
+                      : "bg-muted/60 text-muted-foreground border border-dashed border-border",
+                )}
+              >
+                {showDone ? (
+                  <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                ) : (
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                )}
+              </span>
+              <div className={cn("flex-1 min-w-0", !showDone && !it.queued && "text-muted-foreground")}>
+                <span className="block text-[13px] truncate">
+                  {isZh && "nameZh" in it && it.nameZh ? it.nameZh : it.name}
+                </span>
+                {it.fileName ? (
+                  <span className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded border border-border bg-muted/40 px-2 py-1 text-[11px] font-mono text-foreground">
+                    <FileText className="h-3 w-3 shrink-0 text-teal" />
+                    <span className="truncate" title={it.fileName}>
+                      {it.fileName}
+                    </span>
+                    {it.queued ? (
+                      <span className="shrink-0 text-primary">
+                        · {t(routePage.queued.en, routePage.queued.zh)}
+                      </span>
+                    ) : null}
+                  </span>
+                ) : null}
+                {it.statusNote && !it.queued ? (
+                  <span className="mt-1 block text-[10.5px] font-mono text-muted-foreground truncate">
+                    {it.statusNote}
+                  </span>
+                ) : null}
+                {err ? (
+                  <span className="mt-1 block text-[10.5px] font-mono text-amber-700 dark:text-amber-400 truncate">
+                    {err}
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                {showDone ? (
+                  <span className="text-[10.5px] font-mono text-carbon">
+                    {t(routePage.done.en, routePage.done.zh)}
+                  </span>
+                ) : null}
                 <button
                   type="button"
-                  onClick={() => openUpload(it.name)}
-                  className="text-[10px] font-mono text-muted-foreground hover:text-primary"
+                  disabled={busy}
+                  onClick={() => openAttach(it.name)}
+                  className="inline-flex items-center gap-1 text-[11.5px] font-mono text-primary hover:brightness-125 disabled:opacity-50"
                 >
-                  {t(routePage.replaceFile.en, routePage.replaceFile.zh)}
+                  <Upload className="h-3 w-3" />
+                  {it.attached
+                    ? t(routePage.replaceFile.en, routePage.replaceFile.zh)
+                    : t(routePage.upload.en, routePage.upload.zh)}
                 </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                disabled={uploading && pendingItem === it.name}
-                onClick={() => openUpload(it.name)}
-                className="inline-flex items-center gap-1 text-[11.5px] font-mono text-primary hover:brightness-125 disabled:opacity-50 shrink-0"
-              >
-                {uploading && pendingItem === it.name ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Upload className="h-3 w-3" />
-                )}
-                {uploading && pendingItem === it.name
-                  ? t(routePage.uploading.en, routePage.uploading.zh)
-                  : t(routePage.upload.en, routePage.upload.zh)}
-              </button>
-            )}
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       <div className="mt-3 pt-3 border-t border-border flex items-center gap-1.5 text-[10.5px] font-mono text-muted-foreground">
         <BookOpen className="h-3 w-3" /> {c.kb}
+        <span className="text-muted-foreground/80">
+          {isZh ? " · PDF→MinerU/PyMuPDF→嵌入" : " · PDF→MinerU/PyMuPDF→embed"}
+        </span>
       </div>
     </div>
   );
@@ -178,7 +384,15 @@ function StageStrip({
   grantScore,
   loanScore,
   cbamScore,
+  cbamRag,
+  grantRag,
+  loanRag,
   scoreError,
+  ragError,
+  stage1Open,
+  stage3Open,
+  onToggleStage1,
+  onToggleStage3,
 }: {
   kb: string;
   slug: Slug;
@@ -190,9 +404,25 @@ function StageStrip({
   grantScore: GrantScoreResult | null;
   loanScore: LoanScoreResult | null;
   cbamScore: CbamScoreResult | null;
+  cbamRag: RagQueryResult | null;
+  grantRag: RagQueryResult | null;
+  loanRag: RagQueryResult | null;
   scoreError: string | null;
+  ragError: string | null;
+  stage1Open: boolean;
+  stage3Open: boolean;
+  onToggleStage1: () => void;
+  onToggleStage3: () => void;
 }) {
   const { t, isZh } = useLocale();
+  const stage1Rag =
+    slug === "passport" ? cbamRag : slug === "grant" ? grantRag : slug === "loan" ? loanRag : null;
+  const hasStage1Panel = slug === "passport" || slug === "grant" || slug === "loan";
+  const hasStage3Panel =
+    (slug === "grant" && grantScore != null) ||
+    (slug === "loan" && loanScore != null) ||
+    (slug === "passport" && cbamScore != null);
+
   return (
     <div className="panel p-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -234,17 +464,51 @@ function StageStrip({
           const isGrantScore = slug === "grant" && s.n === 3;
           const isLoanScore = slug === "loan" && s.n === 3;
           const isCbamScore = slug === "passport" && s.n === 3;
+          const isCbamPrescreen = slug === "passport" && s.n === 1;
+          const isGrantPrescreen = slug === "grant" && s.n === 1;
+          const isLoanPrescreen = slug === "loan" && s.n === 1;
+          const clickableStage1 =
+            (isCbamPrescreen || isGrantPrescreen || isLoanPrescreen) &&
+            hasStage1Panel &&
+            done;
+          const clickableStage3 =
+            (isGrantScore || isLoanScore || isCbamScore) && hasStage3Panel && done;
           return (
             <li
               key={s.n}
+              role={clickableStage1 || clickableStage3 ? "button" : undefined}
+              tabIndex={clickableStage1 || clickableStage3 ? 0 : undefined}
+              onClick={() => {
+                if (clickableStage1) onToggleStage1();
+                if (clickableStage3) onToggleStage3();
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                if (clickableStage1) onToggleStage1();
+                if (clickableStage3) onToggleStage3();
+              }}
               className={cn(
                 "rounded-lg border p-3 relative transition-all duration-300",
                 done && "border-carbon/40 bg-carbon/[0.06]",
                 loading && "border-primary/50 bg-primary/[0.08] teal-glow",
                 pending && "border-border bg-surface/50",
-                (isGrantScore || isLoanScore || isCbamScore) &&
+                (isGrantScore ||
+                  isLoanScore ||
+                  isCbamScore ||
+                  isCbamPrescreen ||
+                  isGrantPrescreen ||
+                  isLoanPrescreen) &&
                   (done || loading) &&
                   "ring-1 ring-primary/30",
+                (clickableStage1 || clickableStage3) && "cursor-pointer hover:brightness-110",
+                clickableStage1 &&
+                  stage1Open &&
+                  (isLoanPrescreen
+                    ? "ring-2 ring-gold/50"
+                    : isGrantPrescreen
+                      ? "ring-2 ring-primary/50"
+                      : "ring-2 ring-teal/50"),
+                clickableStage3 && stage3Open && "ring-2 ring-primary/50",
               )}
             >
               <div className="flex items-baseline justify-between">
@@ -272,6 +536,27 @@ function StageStrip({
               >
                 {s.method}
               </div>
+              {isCbamPrescreen && (
+                <div className="mt-1.5 text-[9.5px] font-mono text-teal/90 leading-snug">
+                  {isZh
+                    ? "RAG 检索 CBAM 指南 · 点击展开/收起"
+                    : "RAG · CBAM guidance · click show/hide"}
+                </div>
+              )}
+              {isGrantPrescreen && (
+                <div className="mt-1.5 text-[9.5px] font-mono text-primary/80 leading-snug">
+                  {isZh
+                    ? "RAG 检索 GB/T 36132 通则 · 点击展开/收起"
+                    : "RAG · GB/T 36132 · click show/hide"}
+                </div>
+              )}
+              {isLoanPrescreen && (
+                <div className="mt-1.5 text-[9.5px] font-mono text-gold/90 leading-snug">
+                  {isZh
+                    ? "RAG 检索绿金目录 + 通则 · 点击展开/收起"
+                    : "RAG · catalogue + GB/T 36132 · click show/hide"}
+                </div>
+              )}
               {isGrantScore && (
                 <div className="mt-1.5 text-[9.5px] font-mono text-primary/80 leading-snug">
                   {isZh
@@ -289,8 +574,8 @@ function StageStrip({
               {isCbamScore && (
                 <div className="mt-1.5 text-[9.5px] font-mono text-teal/90 leading-snug">
                   {isZh
-                    ? "依据欧委会《非欧盟装置运营方 CBAM 实施指南》"
-                    : "Per EU CBAM Operator Guidance (DG TAXUD)"}
+                    ? "依据欧委会指南 · 点击展开/收起评分"
+                    : "Per EU CBAM guidance · click show/hide score"}
                 </div>
               )}
             </li>
@@ -302,20 +587,93 @@ function StageStrip({
           {scoreError}
         </div>
       )}
+
+      {hasStage1Panel && (
+        <StageDetailShell
+          stageN={1}
+          titleEn={
+            slug === "loan"
+              ? "Pre-screener · green finance retrieve"
+              : slug === "grant"
+                ? "Pre-screener · GB/T 36132 retrieve"
+                : "Pre-screener · CBAM knowledge retrieve"
+          }
+          titleZh={
+            slug === "loan"
+              ? "预筛 · 绿金目录 + 通则检索"
+              : slug === "grant"
+                ? "预筛 · 绿色工厂通则检索"
+                : "预筛 · CBAM 知识库检索"
+          }
+          accentClass={
+            slug === "loan"
+              ? "border-gold/35"
+              : slug === "grant"
+                ? "border-primary/35"
+                : "border-teal/35"
+          }
+          open={stage1Open}
+          onOpenChange={(v) => {
+            if (v !== stage1Open) onToggleStage1();
+          }}
+        >
+          <div className="p-3 pt-0">
+            <PrescreenerRagPanel
+              channel={slug === "loan" ? "loan" : slug === "grant" ? "grant" : "cbam"}
+              result={stage1Rag}
+              error={ragError}
+            />
+          </div>
+        </StageDetailShell>
+      )}
+
       {grantScore && slug === "grant" && (
-        <div className="mt-4">
-          <GreenFactoryScorePanel result={grantScore} />
-        </div>
+        <StageDetailShell
+          stageN={3}
+          titleEn="Score · Green factory readiness"
+          titleZh="评分 · 绿色工厂就绪"
+          accentClass="border-primary/35"
+          open={stage3Open}
+          onOpenChange={(v) => {
+            if (v !== stage3Open) onToggleStage3();
+          }}
+        >
+          <div className="p-3 pt-0">
+            <GreenFactoryScorePanel result={grantScore} />
+          </div>
+        </StageDetailShell>
       )}
       {loanScore && slug === "loan" && (
-        <div className="mt-4">
-          <LoanGreenFinanceScorePanel result={loanScore} />
-        </div>
+        <StageDetailShell
+          stageN={3}
+          titleEn="Score · Green loan readiness"
+          titleZh="评分 · 绿贷就绪"
+          accentClass="border-gold/35"
+          open={stage3Open}
+          onOpenChange={(v) => {
+            if (v !== stage3Open) onToggleStage3();
+          }}
+        >
+          <div className="p-3 pt-0">
+            <LoanGreenFinanceScorePanel result={loanScore} />
+          </div>
+        </StageDetailShell>
       )}
       {cbamScore && slug === "passport" && (
-        <div className="mt-4">
-          <CbamOperatorScorePanel result={cbamScore} />
-        </div>
+        <StageDetailShell
+          stageN={3}
+          titleEn="Score · CBAM operator readiness"
+          titleZh="评分 · CBAM 运营方就绪"
+          accentClass="border-teal/35"
+          open={stage3Open}
+          onOpenChange={(v) => {
+            if (v !== stage3Open) onToggleStage3();
+          }}
+        >
+          <div className="p-3 pt-0">
+            <CbamOperatorScorePanel result={cbamScore} />
+          </div>
+        </StageDetailShell>
       )}
       <p className="mt-3 text-[11.5px] text-muted-foreground italic">
         {t(routePage.factoryNote.en, routePage.factoryNote.zh)}
@@ -324,10 +682,21 @@ function StageStrip({
   );
 }
 
-/* ---------- Score gauge (small, CISA-style) ---------- */
-function ScoreGauge({ value, grade }: { value: number; grade: string }) {
-  const pct = Math.max(0, Math.min(100, value)) / 100;
-  const angle = -90 + pct * 180;
+/* ---------- Score gauge (percentage · 70% threshold) ---------- */
+const SECTION_C_THRESHOLD = 70;
+
+function ScoreGauge({
+  value,
+  threshold = SECTION_C_THRESHOLD,
+  isZh = false,
+}: {
+  value: number;
+  threshold?: number;
+  isZh?: boolean;
+}) {
+  const pct = Math.max(0, Math.min(100, value));
+  const angle = -90 + (pct / 100) * 180;
+  const passes = pct >= threshold;
   return (
     <div className="relative w-[220px] h-[120px] mx-auto">
       <svg viewBox="0 0 200 110" className="w-full h-full">
@@ -338,15 +707,62 @@ function ScoreGauge({ value, grade }: { value: number; grade: string }) {
             <stop offset="1" stopColor="var(--color-carbon)" />
           </linearGradient>
         </defs>
-        <path d="M 15 100 A 85 85 0 0 1 185 100" fill="none" stroke="url(#rpg)" strokeWidth="12" strokeLinecap="round" />
+        <path
+          d="M 15 100 A 85 85 0 0 1 185 100"
+          fill="none"
+          stroke="url(#rpg)"
+          strokeWidth="12"
+          strokeLinecap="round"
+        />
+        {/* Threshold tick at 70% */}
+        <g transform={`rotate(${-90 + (threshold / 100) * 180} 100 100)`}>
+          <line
+            x1="100"
+            y1="28"
+            x2="100"
+            y2="42"
+            stroke="var(--color-foreground)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            opacity="0.55"
+          />
+        </g>
         <g transform={`rotate(${angle} 100 100)`}>
-          <line x1="100" y1="100" x2="100" y2="35" stroke="var(--color-gold)" strokeWidth="2.5" strokeLinecap="round" />
-          <circle cx="100" cy="100" r="5" fill="var(--color-gold)" />
+          <line
+            x1="100"
+            y1="100"
+            x2="100"
+            y2="35"
+            stroke={passes ? "var(--color-carbon)" : "var(--color-warning)"}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+          <circle
+            cx="100"
+            cy="100"
+            r="5"
+            fill={passes ? "var(--color-carbon)" : "var(--color-warning)"}
+          />
         </g>
       </svg>
       <div className="absolute inset-x-0 bottom-0 text-center">
-        <div className="font-mono text-[26px] font-semibold text-gold leading-none">{grade}</div>
-        <div className="text-[10.5px] font-mono text-muted-foreground mt-0.5">{value} / 100</div>
+        <div
+          className={cn(
+            "font-mono text-[26px] font-semibold leading-none tabular-nums",
+            passes ? "text-carbon" : "text-warning",
+          )}
+        >
+          {Math.round(pct)}%
+        </div>
+        <div className="text-[10.5px] font-mono text-muted-foreground mt-0.5">
+          {passes
+            ? isZh
+              ? `通过 · 阈值 ${threshold}%`
+              : `Pass · thr ${threshold}%`
+            : isZh
+              ? `未达阈值 ${threshold}%`
+              : `Below thr ${threshold}%`}
+        </div>
       </div>
     </div>
   );
@@ -362,10 +778,24 @@ export function RoutePage({ slug }: { slug: Slug }) {
   const gapList = gaps[slug];
   const flow = getFlowProgress(slug);
   const checklist = useRouteChecklist(slug);
-  const { stages, running, complete, runPipeline, grantScore, loanScore, cbamScore, scoreError } =
-    useRoutePipeline(cfg.kb, slug);
+  const {
+    stages,
+    running,
+    complete,
+    runPipeline,
+    grantScore,
+    loanScore,
+    cbamScore,
+    cbamRag,
+    grantRag,
+    loanRag,
+    scoreError,
+    ragError,
+  } = useRoutePipeline(cfg.kb, slug, checklist.uploadSessionId);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
+  const [stage1Open, setStage1Open] = useState(true);
+  const [stage3Open, setStage3Open] = useState(true);
 
   function handleContinueFlow() {
     const next = advanceRouteFlow();
@@ -393,9 +823,9 @@ export function RoutePage({ slug }: { slug: Slug }) {
         }
         const scoreSummary =
           slug === "grant" && grantScore
-            ? `${grantScore.total_score}/${grantScore.max_score} · ${grantScore.tier_label} · ${grantScore.standard}`
+            ? `${Math.round(grantScore.total_score)}% (thr 70%) · ${grantScore.standard}`
             : slug === "loan" && loanScore
-              ? `${loanScore.total_score}/${loanScore.max_score} · ${loanScore.tier_label} · ${loanScore.standard}`
+              ? `${Math.round(loanScore.total_score)}% (thr 70%) · ${loanScore.standard}`
               : null;
         await downloadApplicationFormPdf({
           route: slug,
@@ -471,7 +901,14 @@ export function RoutePage({ slug }: { slug: Slug }) {
         slug={slug}
         items={checklist.items}
         doneCount={checklist.doneCount}
-        markUploaded={checklist.markUploaded}
+        attachedCount={checklist.attachedCount}
+        queuedPdfCount={checklist.queuedPdfCount}
+        attachFile={checklist.attachFile}
+        markProcessed={checklist.markProcessed}
+        takeQueuedPdfs={checklist.takeQueuedPdfs}
+        takeQueuedNonPdfs={checklist.takeQueuedNonPdfs}
+        uploadSessionId={checklist.uploadSessionId}
+        ragChannel={checklist.ragChannel}
       />
       {slug === "passport" && <CbamWorkbookPanel />}
       {slug === "loan" && <LoanApplicationForm />}
@@ -487,7 +924,15 @@ export function RoutePage({ slug }: { slug: Slug }) {
         grantScore={grantScore}
         loanScore={loanScore}
         cbamScore={cbamScore}
+        cbamRag={cbamRag}
+        grantRag={grantRag}
+        loanRag={loanRag}
         scoreError={scoreError}
+        ragError={ragError}
+        stage1Open={stage1Open}
+        stage3Open={stage3Open}
+        onToggleStage1={() => setStage1Open((v) => !v)}
+        onToggleStage3={() => setStage3Open((v) => !v)}
       />
 
       {!complete && (
@@ -528,7 +973,9 @@ export function RoutePage({ slug }: { slug: Slug }) {
             </div>
 
             <h3 className="mt-2 text-[17px] font-semibold tracking-tight">{isZh ? (cfg.titleZh ?? cfg.title) : cfg.title}</h3>
-            <p className="text-[11.5px] font-mono text-muted-foreground">{cfg.scoreLabel} · {cfg.scoreValue}</p>
+            <p className="text-[11.5px] font-mono text-muted-foreground">
+              {cfg.scoreLabel} · {isZh ? "百分比 / 阈值 70%" : "Score % · thr 70%"}
+            </p>
 
             <div className="mt-4 rounded-lg border border-border bg-surface/40 p-4">
               <ScoreGauge
@@ -541,21 +988,7 @@ export function RoutePage({ slug }: { slug: Slug }) {
                         ? Math.round(cbamScore.total_score)
                         : cfg.gauge
                 }
-                grade={
-                  grantScore && slug === "grant"
-                    ? grantScore.qualified
-                      ? "B"
-                      : "C"
-                    : loanScore && slug === "loan"
-                      ? loanScore.qualified
-                        ? "B"
-                        : "C"
-                      : cbamScore && slug === "passport"
-                        ? cbamScore.qualified
-                          ? "B"
-                          : "C"
-                        : cfg.scoreGrade
-                }
+                isZh={isZh}
               />
             </div>
 

@@ -47,7 +47,7 @@ PAGE_FALLBACKS: dict[str, str] = {
 
 
 def _copilot_api_key() -> str | None:
-    return settings.dashscope_copilot_api_key or settings.dashscope_api_key
+    return settings.llm_copilot_api_key or settings.llm_api_key
 
 
 def is_copilot_mock_mode() -> bool:
@@ -59,7 +59,7 @@ def get_copilot_client() -> OpenAI:
     if _copilot_client is None:
         _copilot_client = OpenAI(
             api_key=_copilot_api_key() or "mock-key-unused-in-mock-mode",
-            base_url=settings.dashscope_base_url,
+            base_url=settings.llm_base_url,
         )
     return _copilot_client
 

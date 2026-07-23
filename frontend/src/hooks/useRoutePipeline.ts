@@ -1,12 +1,15 @@
 import { useCallback, useRef, useState } from "react";
 import { routeStrip } from "@/lib/dashboard-data";
 import {
+  queryRag,
   runCbamScore,
   runGrantScore,
   runLoanScore,
   type CbamScoreResult,
   type GrantScoreResult,
   type LoanScoreResult,
+  type RagChannel,
+  type RagQueryResult,
 } from "@/lib/api";
 import { collectCbamScoreInputs } from "@/lib/cbam-score-inputs";
 import { collectGrantScoreInputs } from "@/lib/grant-score-inputs";
@@ -25,6 +28,40 @@ export type PipelineStage = {
 
 const STAGE_DURATIONS_MS = [400, 1200, 650, 900, 1800];
 
+const CBAM_PRESREEN_QUERY =
+  "CBAM installation operator obligations monitoring methodology default values iron and steel reporting to EU importer";
+
+const GRANT_PRESREEN_QUERY =
+  "绿色工厂评价 评价指标 废钢比 绿色电力 计量覆盖 固废利用 申报材料要求";
+
+const LOAN_PRESREEN_QUERY =
+  "绿色金融支持项目目录 钢铁 废钢 绿色工厂 贷款用途 项目类别 申报材料 计量";
+
+function emptyRag(channel: RagChannel, query: string): RagQueryResult {
+  return {
+    channel,
+    query,
+    hit_count: 0,
+    chunks: [],
+    prompt_block: "",
+    confidence_score: 0,
+    threshold: 0.7,
+    passes_threshold: false,
+    form_chunks_scored: 0,
+    upload_chunks_scored: 0,
+  };
+}
+
+function readApplicationForm(slug: "loan" | "grant"): unknown | null {
+  try {
+    const raw = localStorage.getItem(`greengru-application-${slug}`);
+    if (!raw) return null;
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 function initialStages(kb: string, slug?: "loan" | "grant" | "passport"): PipelineStage[] {
   return routeStrip(kb, slug).map((s) => ({
     n: s.n,
@@ -41,14 +78,22 @@ function formatElapsed(ms: number) {
   return `${(ms / 1000).toFixed(1)} s`;
 }
 
-export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport") {
+export function useRoutePipeline(
+  kb: string,
+  slug?: "loan" | "grant" | "passport",
+  uploadSessionId?: string,
+) {
   const [stages, setStages] = useState<PipelineStage[]>(() => initialStages(kb, slug));
   const [running, setRunning] = useState(false);
   const [complete, setComplete] = useState(false);
   const [grantScore, setGrantScore] = useState<GrantScoreResult | null>(null);
   const [loanScore, setLoanScore] = useState<LoanScoreResult | null>(null);
   const [cbamScore, setCbamScore] = useState<CbamScoreResult | null>(null);
+  const [cbamRag, setCbamRag] = useState<RagQueryResult | null>(null);
+  const [grantRag, setGrantRag] = useState<RagQueryResult | null>(null);
+  const [loanRag, setLoanRag] = useState<RagQueryResult | null>(null);
   const [scoreError, setScoreError] = useState<string | null>(null);
+  const [ragError, setRagError] = useState<string | null>(null);
   const abortRef = useRef(false);
 
   const reset = useCallback(() => {
@@ -68,7 +113,11 @@ export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport
     setGrantScore(null);
     setLoanScore(null);
     setCbamScore(null);
+    setCbamRag(null);
+    setGrantRag(null);
+    setLoanRag(null);
     setScoreError(null);
+    setRagError(null);
   }, [kb, slug]);
 
   const runPipeline = useCallback(async (): Promise<PipelineStage[]> => {
@@ -79,7 +128,11 @@ export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport
     setGrantScore(null);
     setLoanScore(null);
     setCbamScore(null);
+    setCbamRag(null);
+    setGrantRag(null);
+    setLoanRag(null);
     setScoreError(null);
+    setRagError(null);
 
     const meta = routeStrip(kb, slug);
     let current: PipelineStage[] = meta.map((s) => ({
@@ -104,7 +157,60 @@ export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport
 
       const start = performance.now();
 
-      if (slug === "grant" && meta[idx]?.n === 3) {
+      if (slug === "passport" && meta[idx]?.n === 1) {
+        try {
+          const rag = await queryRag({
+            channel: "cbam",
+            query: CBAM_PRESREEN_QUERY,
+            k: 3,
+            language: "en",
+            uploadSessionId: uploadSessionId || null,
+            source: "hybrid",
+            timeoutMs: 45_000,
+          });
+          setCbamRag(rag);
+        } catch (err) {
+          setRagError(err instanceof Error ? err.message : "CBAM RAG failed");
+          setCbamRag(emptyRag("cbam", CBAM_PRESREEN_QUERY));
+        }
+        await new Promise((r) => setTimeout(r, Math.max(duration, 400)));
+      } else if (slug === "grant" && meta[idx]?.n === 1) {
+        try {
+          const rag = await queryRag({
+            channel: "grant",
+            query: GRANT_PRESREEN_QUERY,
+            k: 3,
+            language: "zh",
+            uploadSessionId: uploadSessionId || null,
+            source: "hybrid",
+            applicationForm: readApplicationForm("grant"),
+            timeoutMs: 90_000,
+          });
+          setGrantRag(rag);
+        } catch (err) {
+          setRagError(err instanceof Error ? err.message : "Grant RAG failed");
+          setGrantRag(emptyRag("grant", GRANT_PRESREEN_QUERY));
+        }
+        await new Promise((r) => setTimeout(r, Math.max(duration, 400)));
+      } else if (slug === "loan" && meta[idx]?.n === 1) {
+        try {
+          const rag = await queryRag({
+            channel: "loan",
+            query: LOAN_PRESREEN_QUERY,
+            k: 3,
+            language: "zh",
+            uploadSessionId: uploadSessionId || null,
+            source: "hybrid",
+            applicationForm: readApplicationForm("loan"),
+            timeoutMs: 90_000,
+          });
+          setLoanRag(rag);
+        } catch (err) {
+          setRagError(err instanceof Error ? err.message : "Loan RAG failed");
+          setLoanRag(emptyRag("loan", LOAN_PRESREEN_QUERY));
+        }
+        await new Promise((r) => setTimeout(r, Math.max(duration, 400)));
+      } else if (slug === "grant" && meta[idx]?.n === 3) {
         try {
           const inputs = collectGrantScoreInputs();
           const score = await runGrantScore({
@@ -160,7 +266,7 @@ export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport
     }
     setRunning(false);
     return current;
-  }, [kb, running, stages, slug]);
+  }, [kb, running, stages, slug, uploadSessionId]);
 
   return {
     stages,
@@ -171,6 +277,10 @@ export function useRoutePipeline(kb: string, slug?: "loan" | "grant" | "passport
     grantScore,
     loanScore,
     cbamScore,
+    cbamRag,
+    grantRag,
+    loanRag,
     scoreError,
+    ragError,
   };
 }

@@ -508,14 +508,10 @@ def compute_loan_green_finance_score(
         total = round(min(total, 54.9), 1)
 
     qualified = veto_passed and total >= 70.0
-    if qualified and total >= 85:
-        tier, tier_zh = "Green-loan ready · preferential pricing path", "绿色贷款就绪 · 可走优惠定价"
-    elif qualified:
-        tier, tier_zh = "Catalogue-aligned · bankable with gaps", "目录对齐 · 可申报但有缺口"
-    elif veto_passed:
-        tier, tier_zh = "Partial — strengthen MRV / proceeds", "部分达标 — 需补齐 MRV/资金管理"
+    if qualified:
+        tier, tier_zh = f"{total:.0f}% — pass (thr 70%)", f"{total:.0f}% — 通过（阈值 70%）"
     else:
-        tier, tier_zh = "Not ready — compliance gates open", "未就绪 — 合规准入未满足"
+        tier, tier_zh = f"{total:.0f}% — below thr 70%", f"{total:.0f}% — 未达阈值 70%"
 
     formulas = [
         {

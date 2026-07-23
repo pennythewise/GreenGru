@@ -40,10 +40,11 @@ export function collectLoanScoreInputs(): LoanScorePayload {
   const baseItems = docChecklists.loan.items;
   const checklist = baseItems.map((it) => {
     const up = uploads?.[it.name];
+    const fileName = up?.fileName?.trim();
     return {
       name: it.name,
-      done: up?.done ?? it.done,
-      file_name: up?.fileName ?? null,
+      done: Boolean(fileName),
+      file_name: fileName || null,
     };
   });
 

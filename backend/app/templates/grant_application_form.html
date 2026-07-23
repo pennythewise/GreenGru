@@ -126,7 +126,7 @@
 {% set outline = form.evaluation_report_outline_attached %}
 {% set decl = form.declaration %}
 
-<h1>GreenGru 绿色工厂申报自评价表</h1>
+<h1>绿色工厂申报自评价表</h1>
 <div class="en-title">Green Factory Grant — Application &amp; Self-Evaluation Form</div>
 <p class="intro">
   Structured from MIIT’s official 绿色制造体系建设 申报书/评价报告 templates and 绿色工厂评价通则 (GB/T36132)
@@ -239,7 +239,7 @@
 <p class="note">Weights and categories per GB/T36132 绿色工厂评价通则 (used where no industry-specific standard has been published for this sector).</p>
 
 {% if score_summary %}
-<p class="note"><strong>GreenGru Stage-3 score (GB/T 36132—2025 engine):</strong> {{ score_summary }}</p>
+<p class="note"><strong>Stage-3 score (GB/T 36132—2025 engine):</strong> {{ score_summary }}</p>
 {% endif %}
 
 <h2>5. Evaluation Method 评价方式</h2>
@@ -271,7 +271,7 @@
 </div>
 
 <p class="footer">
-  This is GreenGru's own working template, structured from MIIT's published 绿色工厂第三方评价报告 format and provincial notices.
+  Working template structured from MIIT's published 绿色工厂第三方评价报告 format and provincial notices.
   Actual submission channels, deadlines, and annex format are set by the province/municipality's annual 绿色制造名单 notice.
   Generated {{ generated_at }} · hash {{ content_hash[:16] }}…
 </p>

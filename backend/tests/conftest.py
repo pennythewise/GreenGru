@@ -8,7 +8,8 @@ import pathlib
 _TEST_DB_PATH = pathlib.Path(__file__).parent / "test_carbon_passport.db"
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_TEST_DB_PATH}"
 os.environ["LLM_MOCK_MODE"] = "true"
-os.environ["DASHSCOPE_API_KEY"] = ""
+os.environ["LLM_API_KEY"] = ""
+os.environ["DASHSCOPE_API_KEY"] = ""  # legacy alias
 os.environ["OCR_MOCK_ONLY"] = "true"
 
 import pytest

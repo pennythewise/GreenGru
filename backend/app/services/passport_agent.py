@@ -68,7 +68,7 @@ def generate_passport(
     )
 
     mock_text = (
-        f"[MOCK PASSPORT — configure DASHSCOPE_API_KEY for real output]\n\n"
+        f"[MOCK PASSPORT — configure LLM_API_KEY for real output]\n\n"
         f"CBAM EXPORT PASSPORT / CBAM出口护照\n"
         f"Company / 公司: {company_name}\nCN code / 税则号: {cn_code}\n"
         f"Production route / 生产工艺: {production_route}\n\n"

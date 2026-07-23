@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/GreenGru-绿毂-0d9488?style=for-the-badge" alt="GreenGru" />
   <img src="https://img.shields.io/badge/CBAM-EU_2026-1d4ed8?style=for-the-badge" alt="CBAM" />
   <img src="https://img.shields.io/badge/IoT-ESP32-f59e0b?style=for-the-badge" alt="ESP32" />
-  <img src="https://img.shields.io/badge/AI-Qwen_via_OpenRouter-8b5cf6?style=for-the-badge" alt="Qwen" />
+  <img src="https://img.shields.io/badge/AI-Qwen3.7--Plus_+_Embedding--8B-8b5cf6?style=for-the-badge" alt="Qwen" />
 </p>
 
 <h1 align="center">GreenGru</h1>
@@ -150,7 +150,7 @@ flowchart LR
     MATH["Math-safe chunking<br/>keep formula context"]
   end
   subgraph EMB["Embed · Qwen3"]
-    QE["Qwen3-Embedding<br/>CN/EN · math-aware"]
+    QE["Qwen3-Embedding-8B<br/>CN/EN · math-aware"]
   end
   subgraph STORE["Vector DB · Supabase"]
     VEC[("pgvector<br/>Hybrid Search")]
@@ -173,11 +173,36 @@ flowchart LR
 |------|------|-----|
 | Extract | **MinerU** | PDF/scans → Markdown; formulas → LaTeX |
 | Chunk | **LangChain** MarkdownTextSplitter | Structure-aware; **math-safe** (don’t split equations) |
-| Embed | **Qwen3-Embedding** (MVP via OpenRouter) | Multilingual + math/table semantics |
-| Store / retrieve | **Supabase pgvector** | **Hybrid search** (keyword + vector — critical for math); channel isolation so agents don’t cross-contaminate |
-| Consume | Pre-screeners 1.1 / 1.2 / 1.3 | Retrieve only that channel’s corpus → score + gap list |
+| Embed | **Qwen3-Embedding-8B** (1024-d) | Multilingual + math/table semantics |
+| Store / retrieve | **Supabase pgvector** | Channel-isolated retrieval; math-safe chunks |
+| Consume | Pre-screener Agents 1.1 / 1.2 / 1.3 (Stage 1 RAG) | Channel corpus → doc gaps / obligations only |
 
-Production swap: **Bailian embedding / ModelScope `Qwen3-Embedding-*`** + **PolarDB** — same pipeline shape.
+Production note: same pipeline shape can later pin Qwen embedding via Bailian/DashScope + PolarDB — **MVP uses OpenRouter** for chat + embed.
+
+**Shipped channels (Stage 1 pre-screener panels, show/hide):**
+- **CBAM** — MinerU → `knowledge/cbam/` → `python -m scripts.ingest_kb_cbam` → passport Stage 1
+- **Loan** — MinerU → `knowledge/loan/` (绿色金融支持项目目录 + GB/T 36132) → `python -m scripts.ingest_kb_loan` → loan Stage 1
+- **Grant** — MinerU → `knowledge/grant/` (GB/T 36132 绿色工厂评价通则) → `python -m scripts.ingest_kb_grant` → grant Stage 1
+
+All three use `kb_chunks` + `POST /api/rag/query` — **never invent tariffs, subsidy amounts, or other regulated numbers**.
+
+**User uploads (Stage 1):** Section A PDF → MinerU → chunk/embed → `upload_chunks` (`0004_upload_chunks.sql`) → Stage 1 shows **top 3 + short snippet + page + origin + relevancy %**.
+
+**MVP stack split (do not mix):**
+| Role | What | MVP endpoint |
+|------|------|----------------|
+| Chat / agents | **Qwen3.7-Plus** | OpenRouter (`LLM_BASE_URL` + `LLM_API_KEY`) |
+| Embeddings | **Qwen3-Embedding-8B** | same OpenRouter key |
+| PDF → Markdown (OCR/tables) | **MinerU** (local) | *not* OpenRouter / *not* ModelScope |
+
+MinerU downloads its **own** layout/OCR weights (HuggingFace by default). That is unrelated to Qwen on OpenRouter. Without MinerU installed, convert uses **Qwen-VL** (`MODEL_PDF_VISION`, default `qwen/qwen3-vl-235b-a22b-thinking`) for page OCR (screenshots OK), then **pypdf** as last resort.
+
+```bash
+# Optional — local MinerU (stop uvicorn first on Windows if pip hits Access denied on Pillow)
+cd backend && .venv\Scripts\activate
+pip install -U "mineru[core]" pypdfium2
+mineru-models-download
+```
 
 #### 3. Six-stage pipeline (code-orchestrated)
 
@@ -308,11 +333,11 @@ DDL: `supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 - **Meters as evidence** — IoT windows feed green finance only, never CBAM  
 - **HMAC that ships** — integrity + trade-secret privacy without heavy crypto theater  
 - **RAG, channel-isolated** — MinerU → LangChain → Qwen Embedding → Supabase; each pre-screener hits its own corpus  
-- **MVP → China stack** — OpenRouter / Supabase today; Bailian / PolarDB tomorrow  
+- **MVP → China stack** — Supabase today; PolarDB / same Qwen family tomorrow  
 
 | Capability | MVP | Production |
 |------------|-----|------------|
-| LLM | **OpenRouter · Qwen** | **Alibaba Bailian** · ModelScope (optional Stage-0) |
+| LLM | **Qwen3.7-Plus** · **Qwen3-Embedding-8B** | Bailian / ModelScope family (optional Stage-0) |
 | DB | **Supabase** | **PolarDB / RDS Postgres** |
 | Objects | Supabase Storage | **OSS** |
 
@@ -326,8 +351,8 @@ DDL: `supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 | Backend | FastAPI · calc engine · scorers · OCR · IoT · pipeline |
 | Invoice verify | **Nuonuo** third-party API → **State Taxation Administration (国家税务总局)** invoice DB |
 | Agents | Copilot · CBAM / Loan / Grant pre-screeners · Advisory (Qwen) |
-| RAG | MinerU · LangChain · Qwen3-Embedding · Supabase pgvector / hybrid search |
-| LLM | OpenRouter (MVP) → Bailian / ModelScope (prod) |
+| RAG | MinerU · LangChain · **Qwen3-Embedding-8B** · Supabase pgvector |
+| LLM | **Qwen3.7-Plus** (chat / prose) · **Qwen3-Embedding-8B** (vectors) |
 | DB | Supabase (MVP) → PolarDB (prod) |
 | Edge | ESP32 · ZMPT101B · SCT-013 · HTTP ingest |
 | Trust | HMAC packs · RLS |
@@ -363,8 +388,8 @@ Loan, grant, and CBAM have different rulebooks and evidence packs. Separation cu
 **❓ Why HMAC?**  
 Goal: **prove integrity without exposing raw invoices**. HMAC is lightweight, auditable, and demo-explainable for channel SaaS.
 
-**❓ Why OpenRouter + Supabase for MVP?**  
-Hackathon velocity. Production swaps to **Bailian (Beijing) + PolarDB** via the same OpenAI-compatible client and ORM.
+**❓ Why Supabase for MVP?**  
+Hackathon velocity. Production can move to **PolarDB** with the same ORM; models stay **Qwen3.7-Plus / Qwen3-Embedding-8B** behind an OpenAI-compatible client.
 
 **❓ Why do anchors pay?**  
 Scattered SME compliance becomes Scope 3 Cat.10 + CISA tiers — account managers act, instead of chasing Excel.

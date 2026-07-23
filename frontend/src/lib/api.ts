@@ -488,6 +488,444 @@ export async function runCbamScore(payload: {
   return withIndustryIllustration(raw);
 }
 
+export type RagChannel = "cbam" | "loan" | "grant";
+export type RagSource = "uploads" | "kb" | "hybrid";
+
+export type RagChunk = {
+  chunk_text: string;
+  heading_path: string;
+  source_file: string;
+  similarity: number;
+  chunk_index: number;
+  channel: string;
+  language: string;
+  corpus?: string;
+  matched_kb_file?: string;
+  matched_kb_heading?: string;
+  checklist_item?: string;
+};
+
+export type RagQueryResult = {
+  channel: string;
+  query: string;
+  hit_count: number;
+  chunks: RagChunk[];
+  prompt_block: string;
+  source?: string;
+  confidence_score?: number;
+  threshold?: number;
+  passes_threshold?: boolean;
+  ranked_pool_size?: number;
+  upload_chunks_scored?: number;
+  form_chunks_scored?: number;
+  kb_chunks_compared?: number;
+  matched_kb_files?: string[];
+  form_ingest?: { stored?: boolean; chunk_count?: number; reason?: string | null } | null;
+};
+
+export type RagIngestUploadResult = {
+  stored: boolean;
+  reason?: string | null;
+  chunk_count: number;
+  storage?: string | null;
+  file_hash?: string | null;
+  source_file?: string | null;
+  convert_method?: string | null;
+  channel?: string | null;
+  upload_session_id?: string | null;
+  checklist_item?: string | null;
+  model?: string | null;
+  cached?: boolean | null;
+};
+
+export async function ingestRagUpload(payload: {
+  file: File;
+  channel: RagChannel;
+  uploadSessionId: string;
+  checklistItem?: string;
+  language?: string;
+  timeoutMs?: number;
+}): Promise<RagIngestUploadResult> {
+  const timeoutMs = payload.timeoutMs ?? 120_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const form = new FormData();
+  form.append("file", payload.file);
+  form.append("channel", payload.channel);
+  form.append("upload_session_id", payload.uploadSessionId);
+  form.append("checklist_item", payload.checklistItem ?? "");
+  form.append("language", payload.language ?? "en");
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/rag/ingest-upload`, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(
+        `Upload RAG ingest timed out after ${timeoutMs / 1000}s — embedding may be slow.`,
+      );
+    }
+    throw new Error("Cannot reach backend for upload RAG. Start backend on :8000.");
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Upload RAG ingest failed (${res.status})`);
+  }
+  return res.json() as Promise<RagIngestUploadResult>;
+}
+
+export type RagBatchIngestResult = {
+  results: RagIngestUploadResult[];
+  embedded_chunks: number;
+  file_count: number;
+  channel?: string | null;
+  upload_session_id?: string | null;
+};
+
+export async function ingestRagUploadBatch(payload: {
+  files: { file: File; checklistItem: string }[];
+  channel: RagChannel;
+  uploadSessionId: string;
+  language?: string;
+  timeoutMs?: number;
+}): Promise<RagBatchIngestResult> {
+  if (!payload.files.length) {
+    return { results: [], embedded_chunks: 0, file_count: 0 };
+  }
+
+  const hashed = await Promise.all(
+    payload.files.map(async (entry) => ({
+      ...entry,
+      hash: await sha256Hex(entry.file),
+    })),
+  );
+  const hits = await lookupRagHashes({
+    channel: payload.channel,
+    corpus: "upload",
+    hashes: hashed.map((h) => h.hash),
+  });
+
+  const cachedEntries = hashed.filter((h) => hits[h.hash]);
+  const freshEntries = hashed.filter((h) => !hits[h.hash]);
+
+  let adopted: RagBatchIngestResult = { results: [], embedded_chunks: 0, file_count: 0 };
+  if (cachedEntries.length) {
+    adopted = await adoptRagUploads({
+      channel: payload.channel,
+      uploadSessionId: payload.uploadSessionId,
+      language: payload.language,
+      items: cachedEntries.map((e) => ({
+        contentHash: e.hash,
+        checklistItem: e.checklistItem,
+        sourceFile: e.file.name,
+      })),
+    });
+  }
+
+  let fresh: RagBatchIngestResult = { results: [], embedded_chunks: 0, file_count: 0 };
+  if (freshEntries.length) {
+    const timeoutMs =
+      payload.timeoutMs ?? Math.max(180_000, freshEntries.length * 90_000);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const form = new FormData();
+    const labels: string[] = [];
+    for (const entry of freshEntries) {
+      form.append("files", entry.file);
+      labels.push(entry.checklistItem);
+    }
+    form.append("channel", payload.channel);
+    form.append("upload_session_id", payload.uploadSessionId);
+    form.append("checklist_items", JSON.stringify(labels));
+    form.append("language", payload.language ?? "en");
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}/api/rag/ingest-upload-batch`, {
+        method: "POST",
+        body: form,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw new Error(
+          `Batch RAG ingest timed out after ${timeoutMs / 1000}s.`,
+        );
+      }
+      throw new Error("Cannot reach backend for batch RAG. Start backend on :8000.");
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res.ok) {
+      const detail = await res.text();
+      throw new Error(detail || `Batch RAG ingest failed (${res.status})`);
+    }
+    fresh = (await res.json()) as RagBatchIngestResult;
+  }
+
+  const results = [...(adopted.results ?? []), ...(fresh.results ?? [])];
+  return {
+    results,
+    embedded_chunks: (adopted.embedded_chunks ?? 0) + (fresh.embedded_chunks ?? 0),
+    file_count: results.length,
+    channel: payload.channel,
+    upload_session_id: payload.uploadSessionId,
+  };
+}
+
+export type RagIngestKbItem = {
+  stored: boolean;
+  reason?: string | null;
+  chunk_count: number;
+  storage?: string | null;
+  file_hash?: string | null;
+  source_file?: string | null;
+  convert_method?: string | null;
+  channel?: string | null;
+  model?: string | null;
+  char_count?: number;
+  cached?: boolean;
+};
+
+export type RagIngestKbBatchResult = {
+  results: RagIngestKbItem[];
+  embedded_chunks: number;
+  file_count: number;
+  stored_count: number;
+  channel?: string | null;
+  cache_hits?: number;
+};
+
+/** SHA-256 hex of file bytes (matches backend ``file_content_hash``). */
+export async function sha256Hex(file: Blob): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+export type RagHashHit = {
+  content_hash: string;
+  file_hash?: string;
+  chunk_count: number;
+  source_file?: string;
+  model?: string;
+  channel?: string;
+  corpus?: string;
+  checklist_item?: string;
+};
+
+export async function lookupRagHashes(payload: {
+  channel: RagChannel;
+  corpus: "kb" | "upload";
+  hashes: string[];
+}): Promise<Record<string, RagHashHit>> {
+  if (!payload.hashes.length) return {};
+  const res = await fetch(`${API_BASE}/api/rag/lookup-hashes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      channel: payload.channel,
+      corpus: payload.corpus,
+      hashes: payload.hashes,
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Hash lookup failed (${res.status})`);
+  }
+  const data = (await res.json()) as { hits?: Record<string, RagHashHit> };
+  return data.hits ?? {};
+}
+
+export async function adoptRagUploads(payload: {
+  channel: RagChannel;
+  uploadSessionId: string;
+  language?: string;
+  items: { contentHash: string; checklistItem: string; sourceFile?: string }[];
+}): Promise<RagBatchIngestResult> {
+  if (!payload.items.length) {
+    return { results: [], embedded_chunks: 0, file_count: 0 };
+  }
+  const res = await fetch(`${API_BASE}/api/rag/adopt-uploads`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      channel: payload.channel,
+      upload_session_id: payload.uploadSessionId,
+      language: payload.language ?? "en",
+      items: payload.items.map((i) => ({
+        content_hash: i.contentHash,
+        checklist_item: i.checklistItem,
+        source_file: i.sourceFile ?? "",
+      })),
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Adopt uploads failed (${res.status})`);
+  }
+  return res.json() as Promise<RagBatchIngestResult>;
+}
+
+/** Stage 1: upload regulatory PDF(s) → PyMuPDF→pypdf → Qwen embed → kb_chunks.
+ * Skips ingest API for files whose content hash already exists in Supabase. */
+export async function ingestKbPdfs(payload: {
+  files: File[];
+  channel: RagChannel;
+  language?: string;
+  timeoutMs?: number;
+}): Promise<RagIngestKbBatchResult> {
+  if (!payload.files.length) {
+    return { results: [], embedded_chunks: 0, file_count: 0, stored_count: 0, cache_hits: 0 };
+  }
+
+  const hashed = await Promise.all(
+    payload.files.map(async (file) => ({
+      file,
+      hash: await sha256Hex(file),
+    })),
+  );
+  const hits = await lookupRagHashes({
+    channel: payload.channel,
+    corpus: "kb",
+    hashes: hashed.map((h) => h.hash),
+  });
+
+  const cachedResults: RagIngestKbItem[] = [];
+  const toUpload: File[] = [];
+  for (const { file, hash } of hashed) {
+    const hit = hits[hash];
+    if (hit) {
+      cachedResults.push({
+        stored: true,
+        reason: "cache_hit",
+        chunk_count: hit.chunk_count,
+        storage: "supabase",
+        file_hash: hit.file_hash ?? hash,
+        source_file: hit.source_file || file.name,
+        convert_method: "cache",
+        channel: payload.channel,
+        model: hit.model,
+        cached: true,
+      });
+    } else {
+      toUpload.push(file);
+    }
+  }
+
+  let fresh: RagIngestKbBatchResult = {
+    results: [],
+    embedded_chunks: 0,
+    file_count: 0,
+    stored_count: 0,
+    cache_hits: 0,
+  };
+
+  if (toUpload.length) {
+    const timeoutMs = payload.timeoutMs ?? Math.max(120_000, toUpload.length * 60_000);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const form = new FormData();
+    for (const file of toUpload) {
+      form.append("files", file);
+    }
+    form.append("channel", payload.channel);
+    form.append(
+      "language",
+      payload.language ?? (payload.channel === "cbam" ? "en" : "zh"),
+    );
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}/api/rag/ingest-kb`, {
+        method: "POST",
+        body: form,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw new Error(`KB ingest timed out after ${timeoutMs / 1000}s.`);
+      }
+      throw new Error("Cannot reach backend for KB ingest. Start backend on :8000.");
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res.ok) {
+      const detail = await res.text();
+      throw new Error(detail || `KB ingest failed (${res.status})`);
+    }
+    fresh = (await res.json()) as RagIngestKbBatchResult;
+  }
+
+  const results = [...cachedResults, ...(fresh.results ?? [])];
+  return {
+    results,
+    embedded_chunks:
+      (fresh.embedded_chunks ?? 0) +
+      cachedResults.reduce((n, r) => n + (r.chunk_count || 0), 0),
+    file_count: results.length,
+    stored_count: results.filter((r) => r.stored).length,
+    channel: payload.channel,
+    cache_hits: cachedResults.length,
+  };
+}
+
+export async function queryRag(payload: {
+  channel: RagChannel;
+  query: string;
+  k?: number;
+  language?: string | null;
+  uploadSessionId?: string | null;
+  source?: RagSource;
+  applicationForm?: unknown | null;
+  /** Abort if backend / embedding hangs (default 45s — OpenRouter embed can be slow). */
+  timeoutMs?: number;
+}): Promise<RagQueryResult> {
+  const timeoutMs = payload.timeoutMs ?? 90_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/rag/query`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        channel: payload.channel,
+        query: payload.query,
+        k: payload.k ?? 3,
+        language: payload.language ?? "en",
+        upload_session_id: payload.uploadSessionId ?? null,
+        source: payload.source ?? "hybrid",
+        application_form: payload.applicationForm ?? null,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(
+        `RAG timed out after ${timeoutMs / 1000}s — OpenRouter embedding may be slow; check backend :8000, LLM_API_KEY, MODEL_EMBEDDING.`,
+      );
+    }
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      throw new Error("Cannot reach backend RAG. Start backend on :8000.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `RAG query failed (${res.status})`);
+  }
+  return res.json() as Promise<RagQueryResult>;
+}
+
 export async function fetchLatestIotReading(
   companyId = "demo-hengfeng",
 ): Promise<IotReading | null> {
@@ -613,6 +1051,86 @@ export async function downloadApplicationFormPdf(payload: {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export type ApplicationFormParseResult = {
+  route: "loan" | "grant";
+  application_form: unknown;
+  convert_method: string;
+  char_count: number;
+  source_file?: string | null;
+};
+
+export async function parseApplicationFormPdf(payload: {
+  file: File;
+  route: "loan" | "grant";
+  timeoutMs?: number;
+}): Promise<ApplicationFormParseResult> {
+  const timeoutMs = payload.timeoutMs ?? 600_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const form = new FormData();
+  form.append("file", payload.file);
+  form.append("route", payload.route);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/routes/application-form-pdf/parse`, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`PDF parse timed out after ${timeoutMs / 1000}s.`);
+    }
+    throw new Error("Cannot reach backend to parse application PDF. Start backend on :8000.");
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Application form PDF parse failed (${res.status})`);
+  }
+  return res.json() as Promise<ApplicationFormParseResult>;
+}
+
+export type CbamWorkbookPdfParseResult = {
+  workbook_values: Record<string, string>;
+  convert_method?: string | null;
+  char_count?: number;
+  field_count?: number;
+  source_file?: string | null;
+};
+
+/** EU CBAM evaluation PDF → PyMuPDF → flat workbook field values. */
+export async function parseCbamWorkbookPdf(
+  file: File,
+  timeoutMs = 600_000,
+): Promise<CbamWorkbookPdfParseResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const form = new FormData();
+  form.append("file", file);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/routes/cbam-workbook-pdf/parse`, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`CBAM PDF parse timed out after ${timeoutMs / 1000}s.`);
+    }
+    throw new Error("Cannot reach backend for CBAM PDF parse. Start backend on :8000.");
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `CBAM PDF parse failed (${res.status})`);
+  }
+  return res.json() as Promise<CbamWorkbookPdfParseResult>;
 }
 
 export async function downloadCbamCommunicationXlsx(

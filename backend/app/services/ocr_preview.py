@@ -121,12 +121,12 @@ def _mock_classification_preview(product_desc: str) -> ClassificationPreviewOut:
 
 
 async def _ocr_image_intake(content: bytes, filename: str) -> tuple[str, str, list[str]]:
-    """PaddleOCR (zh+en) → qwen3.7-plus (5s) → mock — or mock only when OCR_MOCK_ONLY=true."""
+    """PaddleOCR (zh+en) → Qwen-VL → mock — or mock only when OCR_MOCK_ONLY=true."""
     if settings.ocr_mock_only:
         return "", "mock", ["ocr:mock_only_mode"]
 
     flags: list[str] = []
-    qwen_timeout = settings.ocr_intake_timeout_s
+    vl_timeout = settings.ocr_intake_timeout_s
 
     # 1 · PaddleOCR (in-process, lang=ch = 简体中文 + English)
     try:
@@ -138,21 +138,21 @@ async def _ocr_image_intake(content: bytes, filename: str) -> tuple[str, str, li
         logger.warning("PaddleOCR intake failed for %s: %s", filename, exc)
         flags.append("ocr:paddleocr_failed")
 
-    # 2 · qwen3.7-plus vision fallback
+    # 2 · Qwen-VL vision fallback (MODEL_INTAKE_VISION)
     try:
         vision_text, vision_source = await asyncio.wait_for(
             ocr_image_with_vision(content, filename=filename),
-            timeout=qwen_timeout,
+            timeout=vl_timeout,
         )
-        if vision_text.strip() and vision_source == "qwen3.7-plus":
-            return vision_text, "qwen3.7-plus", flags
-        flags.append("ocr:qwen37_empty_or_unavailable")
+        if vision_text.strip() and vision_source == "qwen3-vl":
+            return vision_text, "qwen3-vl", flags
+        flags.append("ocr:qwen_vl_empty_or_unavailable")
     except TimeoutError:
-        logger.warning("qwen3.7-plus OCR timed out after %ss for %s", qwen_timeout, filename)
-        flags.append(f"ocr:qwen37_timeout_{qwen_timeout}s")
+        logger.warning("Qwen-VL OCR timed out after %ss for %s", vl_timeout, filename)
+        flags.append(f"ocr:qwen_vl_timeout_{vl_timeout}s")
     except Exception as exc:  # noqa: BLE001
-        logger.warning("qwen3.7-plus OCR failed for %s: %s", filename, exc)
-        flags.append("ocr:qwen37_failed")
+        logger.warning("Qwen-VL OCR failed for %s: %s", filename, exc)
+        flags.append("ocr:qwen_vl_failed")
 
     # 3 · mock template fill (no OCR text)
     flags.append("ocr:mock_fallback")
@@ -171,6 +171,25 @@ async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
         else:
             ocr_text = extract_pdf_text(content)
             ocr_source = "pdf_text" if ocr_text.strip() else "mock"
+            # Scanned PDF with no text layer → page images via Qwen-VL
+            if not ocr_text.strip():
+                try:
+                    import tempfile
+                    from pathlib import Path as _P
+
+                    from app.services.rag.qwen_vl_pdf import convert_pdf_with_qwen_vl
+
+                    with tempfile.TemporaryDirectory(prefix="intake_vl_") as tmp:
+                        pdf_path = _P(tmp) / (filename or "upload.pdf")
+                        pdf_path.write_bytes(content)
+                        vl_md = await asyncio.to_thread(
+                            convert_pdf_with_qwen_vl, pdf_path, lang="zh"
+                        )
+                    if vl_md.strip():
+                        ocr_text = vl_md
+                        ocr_source = "qwen3-vl"
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("New-submission PDF VL fallback failed: %s", exc)
         try:
             embed_result = await embed_pdf_and_store(content=content, filename=filename)
             pdf_embedding = PdfEmbeddingOut(**embed_result)
@@ -210,7 +229,8 @@ async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
             value=ocr_source,
             citation=(
                 f"PaddleOCR (lang={settings.paddleocr_lang}, {settings.paddleocr_version}) "
-                f"→ qwen3.7-plus → mock ({settings.ocr_intake_timeout_s}s qwen step)"
+                f"→ {settings.model_intake_vision} → mock "
+                f"({settings.ocr_intake_timeout_s}s VL step)"
             ),
         ),
     ]
@@ -219,7 +239,7 @@ async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
             SourceCitation(
                 constant="PDF embedding",
                 value=f"{pdf_embedding.chunk_count} chunks → {pdf_embedding.storage}",
-                citation="Qwen text-embedding-v4 · Supabase pgvector",
+                citation="Qwen3-Embedding-8B · Supabase pgvector",
             )
         )
 

@@ -33,3 +33,13 @@ out/
 
 # Packaged skill archives (build artifact of .claude/skills/)
 *.skill
+
+# MinerU clone + model caches (too large to commit)
+third_party/MinerU/
+**/mineru_models/
+.cache/huggingface/
+.cache/modelscope/
+
+# KB source PDFs (large); markdown outputs may be committed when small
+knowledge/**/source/
+knowledge/**/markdown/_mineru_work/

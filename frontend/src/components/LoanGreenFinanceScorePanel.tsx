@@ -55,9 +55,9 @@ function ScoreRing({ value, max, qualified }: { value: number; max: number; qual
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4 }}
         >
-          {value}
+          {Math.round(pct)}%
         </motion.span>
-        <span className="text-[10px] font-mono text-muted-foreground">/ {max}</span>
+        <span className="text-[10px] font-mono text-muted-foreground">thr 70%</span>
       </div>
     </div>
   );
@@ -184,7 +184,7 @@ export function LoanGreenFinanceScorePanel({ result }: { result: LoanScoreResult
       className="rounded-xl border border-gold/30 bg-gradient-to-br from-gold/[0.07] via-surface/40 to-teal/[0.05] p-5 space-y-5"
     >
       <div className="flex flex-wrap items-start gap-5">
-        <ScoreRing value={result.total_score} max={result.max_score} qualified={result.qualified} />
+        <ScoreRing value={result.total_score} max={result.max_score} qualified={result.total_score >= 70} />
         <div className="flex-1 min-w-[200px]">
           <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-gold">
             <Landmark className="h-3.5 w-3.5" />
@@ -213,13 +213,21 @@ export function LoanGreenFinanceScorePanel({ result }: { result: LoanScoreResult
             transition={{ delay: 0.6 }}
             className={cn(
               "mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium",
-              result.qualified
+              result.total_score >= 70
                 ? "bg-carbon/15 text-carbon border border-carbon/30"
                 : "bg-warning/15 text-warning border border-warning/30",
             )}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            {isZh ? result.tier_label_zh : result.tier_label}
+            {Math.round(result.total_score)}%
+            {" · "}
+            {result.total_score >= 70
+              ? isZh
+                ? "通过（阈值 70%）"
+                : "Pass (thr 70%)"
+              : isZh
+                ? "未达阈值 70%"
+                : "Below thr 70%"}
           </motion.div>
         </div>
       </div>

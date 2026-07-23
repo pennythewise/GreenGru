@@ -1,9 +1,9 @@
 // Shown in the Documents section once a file is attached, replacing the plain
-// "file attached" chip with what Stage 1 (Intake, OCR + StructBERT) and Stage 3
-// (Classify, CN-code classifier) would actually hand back: extracted fields
-// grouped by invoice party, plus the classified CN code and the calculation
-// method it selects. Read-only until the operator clicks Edit (top right) —
-// if they never touch it, the extracted values are what gets submitted as-is.
+// "file attached" chip with what Stage 1 (Intake, OCR) and Stage 3
+// (Classify, qwen3.6-flash) produced: extracted fields grouped by invoice
+// party, plus the classified CN code and the calculation method it selects.
+// Read-only until the operator clicks Edit (top right) — if they never touch
+// it, the extracted values are what gets submitted as-is.
 import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { Check, ChevronDown, FileText, Loader2, Pencil, ShieldCheck, X } from "lucide-react";
@@ -251,7 +251,7 @@ export function ExtractedInvoiceCard({
           <span className="text-[11.5px] text-muted-foreground">{classification.cnLabel}</span>
         </div>
         <div className="mt-2 text-[11px] font-mono text-muted-foreground">
-          qwen3.7-plus {classification.flashConfidence}%
+          qwen3.6-flash {classification.flashConfidence}%
           {classification.escalated && classification.plusConfidence != null && (
             <> · {t(invoiceCard.lowConfidence.en, invoiceCard.lowConfidence.zh)} qwen3.7-plus {classification.plusConfidence}%</>
           )}

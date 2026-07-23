@@ -1,4 +1,4 @@
--- Document embedding vectors for PDF intake (Qwen text-embedding-v4)
+-- Document embedding vectors for PDF intake (Qwen3-Embedding-8B @ 1024-d)
 -- Requires pgvector on Supabase Postgres. Safe to skip on SQLite dev —
 -- the backend falls back to ./storage/embeddings/*.json locally.
 

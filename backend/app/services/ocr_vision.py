@@ -1,10 +1,15 @@
-"""Qwen3.7-plus OCR fallback when PaddleOCR is unavailable or times out."""
+"""Qwen-VL OCR fallback when PaddleOCR is unavailable or returns empty text.
+
+New Submission images: PaddleOCR → ``MODEL_INTAKE_VISION``
+(default ``qwen/qwen3-vl-235b-a22b-thinking``).
+"""
 
 from __future__ import annotations
 
 import asyncio
 import base64
 import logging
+import re
 from pathlib import Path
 
 from app.config import get_settings
@@ -12,6 +17,8 @@ from app.services.llm_client import get_client, is_mock_mode
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+VISION_SOURCE = "qwen3-vl"
 
 _VISION_PROMPT = """You are an OCR engine for Chinese VAT invoices (增值税发票).
 Extract ALL visible text from the image, preserving line breaks.
@@ -29,15 +36,23 @@ def _mime_for_filename(filename: str) -> str:
     }.get(ext, "image/jpeg")
 
 
+def _strip_thinking(text: str) -> str:
+    t = (text or "").strip()
+    t = re.sub(r"<think>[\s\S]*?</think>", "", t, flags=re.IGNORECASE)
+    t = re.sub(r"<thinking>[\s\S]*?</thinking>", "", t, flags=re.IGNORECASE)
+    return t.strip()
+
+
 def _ocr_image_with_vision_sync(content: bytes, *, filename: str = "upload") -> str:
-    """Blocking qwen3.7-plus vision OCR — run via asyncio.to_thread from async callers."""
-    if is_mock_mode():
+    """Blocking Qwen-VL OCR — run via asyncio.to_thread from async callers."""
+    if is_mock_mode(role="vision"):
         return ""
 
     b64 = base64.b64encode(content).decode("ascii")
     mime = _mime_for_filename(filename)
+    timeout = float(settings.ocr_intake_timeout_s or 90.0)
 
-    client = get_client()
+    client = get_client(role="vision", timeout=timeout)
     response = client.chat.completions.create(
         model=settings.model_intake_vision,
         temperature=0.0,
@@ -51,16 +66,16 @@ def _ocr_image_with_vision_sync(content: bytes, *, filename: str = "upload") -> 
             }
         ],
     )
-    return (response.choices[0].message.content or "").strip()
+    return _strip_thinking(response.choices[0].message.content or "")
 
 
 async def ocr_image_with_vision(content: bytes, *, filename: str = "upload") -> tuple[str, str]:
-    """Run qwen3.7-plus on image bytes. Returns (ocr_text, source_label)."""
+    """Run intake vision model on image bytes. Returns (ocr_text, source_label)."""
     try:
         text = await asyncio.to_thread(_ocr_image_with_vision_sync, content, filename=filename)
         if text:
-            return text, "qwen3.7-plus"
+            return text, VISION_SOURCE
     except Exception as exc:  # noqa: BLE001 — optional fallback path
-        logger.warning("Qwen3.7-plus OCR failed for %s: %s", filename, exc)
+        logger.warning("Qwen-VL OCR failed for %s: %s", filename, exc)
 
     return "", "vision_unavailable"

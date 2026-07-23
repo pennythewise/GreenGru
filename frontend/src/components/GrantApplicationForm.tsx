@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Download, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
+import { ApplicationFormPdfUpload } from "@/components/ApplicationFormPdfUpload";
 import {
   CheckRow,
   FieldGrid,
   FormShell,
-  NumberField,
   SectionBlock,
   TextField,
   scrollToSection,
@@ -42,19 +42,9 @@ function weightedTotal(scoring: GrantApplicationForm["indicator_scoring_self_eva
   ) / 10;
 }
 
-function downloadJson(data: GrantApplicationForm, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 export function GrantApplicationForm() {
   const { isZh } = useLocale();
-  const { data, set, reset, completionPct } = useApplicationForm("grant", defaultGrantApplication);
+  const { data, set, replace, reset, completionPct } = useApplicationForm("grant", defaultGrantApplication);
   const [activeId, setActiveId] = useState<string>("factory");
 
   function selectSection(id: string) {
@@ -84,8 +74,8 @@ export function GrantApplicationForm() {
       titleZh="零碳工厂培育补贴申请表"
       subtitle={
         isZh
-          ? "按 GB/T 36132 模板填写，自动保存至浏览器。"
-          : "GB/T 36132-aligned template — auto-saved in your browser."
+          ? "可编辑申请表 — 可手工填写，或上传已填 PDF 自动映射；自动保存至浏览器。"
+          : "Editable form — fill manually or upload a filled PDF to map fields; auto-saved in your browser."
       }
       completionPct={completionPct}
       sections={[...SECTIONS]}
@@ -93,15 +83,12 @@ export function GrantApplicationForm() {
       onSelect={selectSection}
       isZh={isZh}
     >
-      <div className="flex flex-wrap gap-2 mb-1">
-        <button
-          type="button"
-          onClick={() => downloadJson(data, "zero-carbon-factory-grant-application.json")}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-[11.5px] font-mono hover:bg-surface-2"
-        >
-          <Download className="h-3.5 w-3.5" />
-          {isZh ? "导出 JSON" : "Export JSON"}
-        </button>
+      <div className="flex flex-wrap items-start gap-3 mb-1">
+        <ApplicationFormPdfUpload
+          route="grant"
+          isZh={isZh}
+          onMapped={(form) => replace(form as GrantApplicationForm)}
+        />
         <button
           type="button"
           onClick={reset}

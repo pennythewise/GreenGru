@@ -1,5 +1,5 @@
-"""CN code classifier agent (PRD §8.3) — qwen3.7-plus first pass, single
-escalation retry on low confidence (same model). The only model-escalation
+"""CN code classifier agent (PRD §8.3) — qwen3.6-flash first pass, single
+escalation retry to qwen3.7-plus on low confidence. The only model-escalation
 path in the whole system (PRD §4.1)."""
 
 from dataclasses import dataclass
@@ -42,6 +42,7 @@ def classify_product(product_description: str, cn_code_hint: str | None = None) 
         system_prompt=CLASSIFIER_SYSTEM_PROMPT,
         user_prompt=f"Product description: {product_description}",
         mock_response=mock,
+        role="classifier",
     )
     cn_code = first_pass.get("cn_code", "out_of_scope")
     confidence = float(first_pass.get("confidence", 0.0))
@@ -58,6 +59,7 @@ def classify_product(product_description: str, cn_code_hint: str | None = None) 
             user_prompt=f"Product description: {product_description}\n\n(Escalated retry — the first-pass "
             f"classifier returned '{cn_code}' at confidence {confidence:.2f}, below threshold.)",
             mock_response={"cn_code": "7208 10 00", "confidence": 0.82},
+            role="classifier_escalation",
         )
         cn_code = second_pass.get("cn_code", cn_code)
         confidence = float(second_pass.get("confidence", confidence))
