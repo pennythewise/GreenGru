@@ -63,6 +63,7 @@ async def health():
     copilot_key = settings.api_key_for("copilot")
     return {
         "status": "ok",
+        "service": "carbon-passport",
         "llm_mock_mode": settings.llm_mock_mode or not settings.api_key_for("default"),
         "copilot_mock_mode": settings.llm_mock_mode or not copilot_key,
         "copilot_model": settings.model_copilot,

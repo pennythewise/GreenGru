@@ -54,11 +54,12 @@ def test_full_checklist_can_qualify():
     assert result.export_margin.cost_pct_of_fob_if_approved >= 0
     ill = result.industry_illustration
     assert ill.has_lifecycle_transparency is True
-    assert ill.default_path_eur_per_tonne == 172.46
-    # Plant SEE 2.1 → discounted walkthrough well below industry default
+    # Default path = engine denied (Annex I); approved = measured 2.1
+    assert ill.default_path_eur_per_tonne == result.tariff_if_denied.tariff_eur_per_tonne
+    assert ill.approved_path_eur_per_tonne == result.tariff_if_approved.tariff_eur_per_tonne
     assert ill.approved_path_eur_per_tonne < ill.default_path_eur_per_tonne
-    assert ill.discount_pct > 50.0
     assert ill.approved_see_tco2e_per_t == 2.1
+    assert "172.46" not in ill.note_en and "526.47" not in ill.note_en
 
 
 def test_default_values_path_when_no_emissions_evidence():
@@ -75,25 +76,24 @@ def test_default_values_path_when_no_emissions_evidence():
     assert result.tariff.data_source == "china_default"
     assert result.tariff.markup_applied == 0.10
     assert result.tariff.certificate_price_eur_per_tco2e == 75.36
-    # BF-BOF: (3.506-1.370)*75.36*(1.1)*0.025 ≈ 4.42 €/t
-    assert 3.0 < result.tariff.tariff_eur_per_tonne < 6.0
+    # Annex I China×7208: (3.187×1.10 − 1.370)×75.36×0.025 ≈ €4.02/t (mark-up once)
+    assert 3.0 < result.tariff.tariff_eur_per_tonne < 5.0
     assert result.tariff_if_denied.tariff_eur_per_tonne == result.tariff.tariff_eur_per_tonne
-    # Margin after deny is lower than before CBAM
     assert result.export_margin.margin_eur_after_denied < result.export_margin.margin_eur_per_tonne_before
-    # No lifecycle transparency → industry default, no discount unlocked
     ill = result.industry_illustration
     assert ill.has_lifecycle_transparency is False
-    assert ill.default_path_eur_per_tonne == 172.46
+    assert ill.default_path_eur_per_tonne == result.tariff_if_denied.tariff_eur_per_tonne
     assert ill.approved_path_eur_per_tonne == ill.default_path_eur_per_tonne
     assert ill.discount_eur_per_tonne == 0.0
+    assert ill.see_source == "engine_annex_i_default"
 
 
-def test_fastener_baseline_and_mock_china_actual_discount():
-    """Placeholder China-default SEE + emissions evidence → mock 1.60 actual discount."""
+def test_fastener_annex_i_vs_measured():
+    """Annex I China×7318 15 default vs measured intensity on engine path."""
     result = compute_cbam_operator_score(
         cn_code="7318 15 88",
         production_route="BF-BOF",
-        intensity_tco2e_per_t=3.506,
+        intensity_tco2e_per_t=2.0,
         checklist=[
             {"name": "CN-code product list · 税则号", "done": True},
             {"name": "Route-of-production statement", "done": True},
@@ -104,13 +104,14 @@ def test_fastener_baseline_and_mock_china_actual_discount():
     )
     ill = result.industry_illustration
     assert ill.baseline_key == "fastener"
-    assert ill.default_path_eur_per_tonne == 526.47
     assert ill.has_lifecycle_transparency is True
-    assert ill.see_source == "mock_china_actual_1.60"
-    assert ill.approved_see_tco2e_per_t == 1.60
-    # (1.60 − 1.364×0.975) × 80 ≈ €21.61
-    assert 20.0 < ill.approved_path_eur_per_tonne < 25.0
-    assert ill.discount_pct > 90.0
+    assert ill.see_source == "engine_measured"
+    assert ill.approved_see_tco2e_per_t == 2.0
+    assert ill.default_see_tco2e_per_t == result.tariff_if_denied.intensity_tco2e_per_tonne
+    # Denied uses 6.375×1.10; approved uses 2.0 measured — large gap
+    assert ill.default_path_eur_per_tonne > ill.approved_path_eur_per_tonne
+    assert ill.discount_pct > 50.0
+    assert ill.default_path_eur_per_tonne != 526.47
 
 
 def test_slash_cn_code_does_not_crash():
@@ -164,5 +165,8 @@ def test_api_cbam_score_endpoint():
     assert "export_margin" in data
     assert data["export_margin"]["margin_pct_before_cbam"] == 12.0
     assert "industry_illustration" in data
-    assert data["industry_illustration"]["default_path_eur_per_tonne"] == 172.46
-    assert data["industry_illustration"]["approved_path_eur_per_tonne"] < 172.46
+    ill = data["industry_illustration"]
+    assert ill["default_path_eur_per_tonne"] == data["tariff_if_denied"]["tariff_eur_per_tonne"]
+    assert ill["approved_path_eur_per_tonne"] == data["tariff_if_approved"]["tariff_eur_per_tonne"]
+    assert ill["approved_path_eur_per_tonne"] < ill["default_path_eur_per_tonne"]
+    assert 172.46 not in (ill["default_path_eur_per_tonne"], ill["approved_path_eur_per_tonne"])

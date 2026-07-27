@@ -27,8 +27,9 @@ and write prose or classify around them — never the reverse.
 
 ## Known open TODOs
 
-1. DRI-EAF and scrap-EAF China GHG factor DB values — only BF-BOF
-   (3.506 tCO2e/t) is confirmed.
+1. DRI-EAF and scrap-EAF Annex I (or verified) defaults by CN — BF-BOF
+   China×CN cells are wired from IR 2025/2621 Annex I; DRI/scrap widgets
+   still use worldsteel 2024 globals as interim only.
 2. CISA low-carbon-steel tier boundaries (E through A) — not yet obtained.
 
 Do not hardcode placeholders for either as if final.

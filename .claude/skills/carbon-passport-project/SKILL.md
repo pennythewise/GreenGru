@@ -75,11 +75,11 @@ product; breaking it anywhere breaks the pitch.
 
 ## Two known open TODOs — do not hardcode placeholder values as if final
 
-1. Exact CISA low-carbon-steel tier boundaries (E through A) — only the
-   BF-BOF China-default intensity (3.506 tCO2e/t) is confirmed in the PRD.
-2. DRI-EAF and scrap-EAF China factor database values — placeholders in
-   `calculation_engine.py` are marked as such in code comments. Replace them
-   from the real database before treating any output as launch-ready.
+1. Exact CISA low-carbon-steel tier boundaries (E through A) — provisional
+   in `cisa_tiers.py` until the finalized T/CISA text is confirmed.
+2. DRI-EAF and scrap-EAF **Annex I** (or verified) defaults by CN — BF-BOF
+   China×CN cells are wired from IR 2025/2621 Annex I; DRI/scrap route
+   widgets still use worldsteel 2024 globals as interim only.
 
 ## When starting a new session on this repo
 

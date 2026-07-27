@@ -2,9 +2,16 @@
 Deterministic CBAM carbon passport calculation engine.
 
 No LLM anywhere in this file. Every number this module produces must be
-traceable to a cited regulatory value — see carbon_passport_build_spec.md
-section 2 for the formula derivation and worked example.
+traceable to a cited regulatory value.
+
+Default embedded emissions (when the declarant has no verified installation
+data) come from Commission Implementing Regulation (EU) 2025/2621 Annex I
+— country × CN code. They are NOT taken from a Chinese domestic GHG factor
+database. Free-allocation benchmarks come from IR (EU) 2025/2620 (route
+indicators C/D/E cross-referenced by 2621 Annex I notes).
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
@@ -12,82 +19,61 @@ from typing import Optional
 
 
 class ProductionRoute(Enum):
-    BF_BOF = "BF-BOF"        # 高炉-转炉 (blast furnace - basic oxygen furnace)
-    DRI_EAF = "DRI-EAF"      # 直接还原铁-电弧炉
+    BF_BOF = "BF-BOF"  # 高炉-转炉 (blast furnace - basic oxygen furnace)
+    DRI_EAF = "DRI-EAF"  # 直接还原铁-电弧炉
     SCRAP_EAF = "scrap-EAF"  # 废钢-电弧炉
 
 
 # --- Official reference data -------------------------------------------
-# Update these values only when the source regulation/database updates,
-# and keep the source citation attached to each constant.
+# Update only when the source regulation updates; keep citations attached.
 
-# Source: Commission Implementing Regulation (EU) 2025/2621 — the free
-# allocation benchmark, i.e. the threshold above which CBAM certificates
-# are owed (tCO2e per tonne of crude steel).
+# Source: Commission Implementing Regulation (EU) 2025/2620 — CBAM free-
+# allocation / benchmark (BM) by underlying production route.
 EU_BENCHMARK_TCO2E_PER_TONNE = {
-    ProductionRoute.BF_BOF: 1.370,
-    ProductionRoute.DRI_EAF: 0.481,
-    ProductionRoute.SCRAP_EAF: 0.072,
+    ProductionRoute.BF_BOF: 1.370,  # route (C) carbon steel BF/BOF
+    ProductionRoute.DRI_EAF: 0.481,  # route (D)
+    ProductionRoute.SCRAP_EAF: 0.072,  # route (E)
 }
 
-# Source, BF-BOF: China National GHG Emission Factor Database v2
-# (data.ncsc.org.cn/factories). Default embedded-emissions intensity for
-# crude steel by production route, used only when the SME has no verified
-# installation-level measurement of their own.
+# Source: IR (EU) 2025/2621 Annex I — China table, "Default Value (total
+# emissions)" column (direct; indirect N/A for iron & steel Annex II goods).
+# Verified against EUR-Lex CELEX 32025R2621 (European decimal comma → float).
+# Year columns already publish "including mark-up"; this engine stores the
+# *pre-mark-up* total and applies MARKUP_BY_YEAR once — never twice.
 #
-# Source, DRI-EAF / scrap-EAF: data.ncsc.org.cn/factories is a live query
-# portal, not a fetchable document, so the exact China-specific route
-# averages still haven't been pulled (see primary-sources/INVENTORY.md item
-# 9). The two figures below are NOT that — they're worldsteel's global
-# production-weighted averages (Sustainability Indicators Report 2024,
-# worldsteel.org), used as a real, citable interim anchor in place of the
-# old un-sourced guesses (1.9 / 0.6). China's grid is materially more
-# carbon-intensive than the global average worldsteel blends into these
-# figures, so the true China-specific numbers are almost certainly HIGHER
-# than what's below — treat these as a conservative floor, not a ceiling,
-# until the actual factor-database values are obtained.
-#
-# A real bottom-up China estimate can be built once someone owns this: MEE's
-# own steel-industry GHG accounting guideline (全国碳排放权交易市场技术规范
-# CETS—AG—03.01—V01—2024, mee.gov.cn) gives official process-emission
-# factors for the carbon-bearing inputs an EAF consumes — DRI 0.073 tCO2/t,
-# scrap 0.037 tCO2/t, electrode 3.663 tCO2/t (Appendix A.2) — but combining
-# those with electricity/fuel consumption-per-tonne to get a full route
-# intensity still requires activity-rate assumptions (kWh/t, electrode kg/t)
-# that are NOT in that document and would need their own citation.
+# Locked CN scope (PRD §6.1) → China cells used here:
+ANNEX_I_CHINA_DEFAULT_SEE_TCO2E_PER_TONNE: dict[str, float] = {
+    "7207": 3.169,  # representative semi-finished (e.g. 7207 11 14 / 7207 12 10)
+    "7208": 3.187,  # heading 7208 hot-rolled flat ≥600 mm
+    "7208 10 00": 3.187,
+    "7213": 3.169,
+    "7214": 3.169,  # e.g. 7214 20 00
+    "7301": 2.275,
+    "7302": 6.205,
+    "7318 15": 6.375,
+    "7318 15 42": 6.375,
+    "7318 15 88": 6.375,
+    "7326": 3.076,  # e.g. 7326 11 00 / 7326 90 98 family
+}
+
+# Legacy route-level proxy for non-CBAM widgets (CISA dashboard). BF-BOF uses
+# Annex I China×7208 *pre-mark-up* SEE — not a China GHG Factor DB figure.
+# DRI-EAF / scrap-EAF remain worldsteel 2024 globals (interim) until Annex I
+# route-(D)/(E) cells are wired per CN.
 CHINA_DEFAULT_INTENSITY_TCO2E_PER_TONNE = {
-    ProductionRoute.BF_BOF: 3.506,
-    ProductionRoute.DRI_EAF: 1.47,    # worldsteel 2024 global average — NOT China-specific, see above
-    ProductionRoute.SCRAP_EAF: 0.69,  # worldsteel 2024 global average — NOT China-specific, see above
+    ProductionRoute.BF_BOF: ANNEX_I_CHINA_DEFAULT_SEE_TCO2E_PER_TONNE["7208"],
+    ProductionRoute.DRI_EAF: 1.47,
+    ProductionRoute.SCRAP_EAF: 0.69,
 }
 
-# Source: EU IR 2025/2621, Annex IV point 4.1 — mark-up applied to default
-# (non-verified) values only, to incentivize obtaining real supplier data.
-# Measured/verified data is never marked up. This is DISTINCT from
-# CBAM_PHASE_IN_FACTOR_BY_YEAR below — the two mechanisms are additive, not
-# alternatives; both apply simultaneously to a default-value calculation.
+# Source: IR 2025/2621 Annex I year columns / Annex IV point 4.1 — mark-up on
+# default (non-verified) SEE only. Measured data is never marked up.
+# Applied once: intensity_used = base_see × (1 + markup). Do not also multiply
+# the tariff by (1 + markup).
 MARKUP_BY_YEAR = {2026: 0.10, 2027: 0.20, 2028: 0.30}
 
-# Source: Regulation (EU) 2023/956 Article 31(3) (CBAM certificate reduction
-# mirroring the EU ETS free-allocation phase-out) + Directive 2003/87/EC
-# Article 10a(1a), as inserted by Directive (EU) 2023/959 — the "CBAM factor"
-# schedule. Only this fraction of embedded emissions above the benchmark
-# requires a certificate in a given year; the rest still benefits from the
-# EU ETS free-allocation mechanism during the phase-in window. 2034 onward
-# (not in this table) is 1.0 — full obligation, no free allocation remains.
-# VERIFICATION STATUS: sourced from secondary reporting (European Parliament
-# EPRS briefing PDF, emissions-euets.com, climat.be) that all agree on these
-# figures, but NOT yet cross-checked against the delegated act's own formula
-# text (the free-allocation-equivalent calculation methodology). Flagged in
-# primary-sources/INVENTORY.md as needing primary-source verification before
-# launch — treat the same as any other unconfirmed constant in this file.
-#
-# IMPORTANT: this factor was missing from earlier versions of this engine,
-# which caused tariff costs to be overstated by roughly 10-40x for
-# 2026-2033 (the full un-phased-in taxable emissions were charged at the
-# full certificate price). Do not remove this factor to "simplify" the
-# formula — omitting it is the single most consequential error this engine
-# can make in the current phase-in window.
+# Source: Regulation (EU) 2023/956 Article 31(3) + Directive 2003/87/EC
+# Article 10a(1a) — CBAM certificate phase-in factor. Distinct from mark-up.
 CBAM_PHASE_IN_FACTOR_BY_YEAR = {
     2026: 0.025,
     2027: 0.05,
@@ -98,7 +84,58 @@ CBAM_PHASE_IN_FACTOR_BY_YEAR = {
     2032: 0.735,
     2033: 0.86,
 }
-CBAM_PHASE_IN_FACTOR_FULL_FROM_YEAR = 2034  # 100% obligation, no free allocation left
+CBAM_PHASE_IN_FACTOR_FULL_FROM_YEAR = 2034
+
+
+def normalize_cn_code(cn_code: str) -> str:
+    """Normalize CN strings ('72081000', '7208 10 00', 'CN 7208') for lookup."""
+    raw = (cn_code or "").strip()
+    # Classifier sometimes emits "7213 / 7214" — use the first heading.
+    if "/" in raw:
+        raw = raw.split("/", 1)[0].strip()
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    if len(digits) >= 8:
+        return f"{digits[:4]} {digits[4:6]} {digits[6:8]}"
+    if len(digits) >= 6:
+        return f"{digits[:4]} {digits[4:6]}"
+    if len(digits) >= 4:
+        return digits[:4]
+    return raw
+
+
+def annex_i_china_default_see(cn_code: str) -> float:
+    """Pre-mark-up Annex I China default SEE (tCO2e/t) for a CN code.
+
+    Raises ValueError if the code is outside the locked table — never invent
+    a default.
+    """
+    normalized = normalize_cn_code(cn_code)
+    if normalized in ANNEX_I_CHINA_DEFAULT_SEE_TCO2E_PER_TONNE:
+        return ANNEX_I_CHINA_DEFAULT_SEE_TCO2E_PER_TONNE[normalized]
+
+    # Longest-prefix match on spaced keys (e.g. 7318 15 88 → 7318 15)
+    digits = "".join(ch for ch in normalized if ch.isdigit())
+    candidates: list[tuple[int, str]] = []
+    for key in ANNEX_I_CHINA_DEFAULT_SEE_TCO2E_PER_TONNE:
+        key_digits = "".join(ch for ch in key if ch.isdigit())
+        if digits.startswith(key_digits):
+            candidates.append((len(key_digits), key))
+    if candidates:
+        candidates.sort(reverse=True)
+        return ANNEX_I_CHINA_DEFAULT_SEE_TCO2E_PER_TONNE[candidates[0][1]]
+
+    raise ValueError(
+        f"No IR 2025/2621 Annex I China default SEE for CN {cn_code!r} "
+        f"(normalized={normalized!r}). Locked codes only — do not invent."
+    )
+
+
+def markup_for_year(year: int) -> float:
+    if year <= 2026:
+        return MARKUP_BY_YEAR[2026]
+    if year == 2027:
+        return MARKUP_BY_YEAR[2027]
+    return MARKUP_BY_YEAR[2028]  # 2028+ plateau
 
 
 @dataclass
@@ -107,14 +144,11 @@ class CBAMInput:
     route: ProductionRoute
     annual_export_tonnes: float
     year: int
-    # If the SME has verified installation-level data, pass it here.
-    # It always overrides the China default value.
+    # Verified installation-level data always overrides Annex I default.
     measured_intensity_tco2e_per_tonne: Optional[float] = None
 
 
 def phase_in_factor_for_year(year: int) -> float:
-    """CBAM factor (Article 31(3)/10a(1a)) — see CBAM_PHASE_IN_FACTOR_BY_YEAR
-    docstring above. 2034+ is full (1.0) obligation."""
     if year >= CBAM_PHASE_IN_FACTOR_FULL_FROM_YEAR:
         return 1.0
     return CBAM_PHASE_IN_FACTOR_BY_YEAR[year]
@@ -123,27 +157,26 @@ def phase_in_factor_for_year(year: int) -> float:
 @dataclass
 class CBAMResult:
     intensity_tco2e_per_tonne: float
-    data_source: str  # "measured" or "china_default" — always disclosed on the passport
+    # "measured" or "china_default" (= EU Annex I China×CN default path)
+    data_source: str
     benchmark_tco2e_per_tonne: float
     taxable_emissions_tco2e_per_tonne: float
     certificate_price_eur_per_tco2e: float
     markup_applied: float
-    phase_in_factor: float  # fraction of taxable emissions actually charged this year
-    tariff_cost_eur_per_tonne: float  # net of phase-in — what the SME actually owes this year
-    gross_tariff_cost_eur_per_tonne: float  # phase_in_factor = 1.0 case — the 2034 steady-state cost, for advisory framing
+    phase_in_factor: float
+    tariff_cost_eur_per_tonne: float
+    gross_tariff_cost_eur_per_tonne: float
     annual_exposure_eur: float
+    # Pre-mark-up Annex I cell when on default path; None if measured
+    annex_i_base_see_tco2e_per_tonne: float | None = None
 
 
 def calculate_cbam_exposure(
     inp: CBAMInput,
     certificate_price_eur_per_tco2e: float,
 ) -> CBAMResult:
-    """Pure function. Same input always produces the same output —
-    that reproducibility is the entire trust argument for this module."""
+    """Pure function. Same input always produces the same output."""
 
-    # Input guards (PRD §8.4) — raise, don't guess.
-    # Pre-2026 would otherwise silently take the 2028+ markup via the
-    # .get() fallback below; 2029+ correctly takes the 30% plateau.
     if inp.year < 2026:
         raise ValueError(f"CBAM definitive regime starts 2026; got year={inp.year}")
     if inp.annual_export_tonnes < 0:
@@ -155,29 +188,28 @@ def calculate_cbam_exposure(
     if certificate_price_eur_per_tco2e <= 0:
         raise ValueError(f"certificate price must be > 0; got {certificate_price_eur_per_tco2e}")
 
-    # Step 1 — verified data always wins over the default value
+    annex_base: float | None = None
+
+    # Step 1 — verified data wins; else Annex I China × CN (pre-mark-up × year mark-up once)
     if inp.measured_intensity_tco2e_per_tonne is not None:
         intensity = inp.measured_intensity_tco2e_per_tonne
         source = "measured"
+        markup = 0.0
     else:
-        intensity = CHINA_DEFAULT_INTENSITY_TCO2E_PER_TONNE[inp.route]
+        annex_base = annex_i_china_default_see(inp.cn_code)
+        markup = markup_for_year(inp.year)
+        intensity = annex_base * (1.0 + markup)
         source = "china_default"
 
-    # Step 2 — subtract the EU free-allocation benchmark for this route
+    # Step 2 — subtract free-allocation BM for the declared route
     benchmark = EU_BENCHMARK_TCO2E_PER_TONNE[inp.route]
     taxable = max(0.0, intensity - benchmark)
 
-    # Step 3 — phase-in markup applies only to default (non-verified) values
-    markup = MARKUP_BY_YEAR.get(inp.year, 0.30) if source == "china_default" else 0.0
+    # Step 3 — certificate cost (mark-up already in intensity when default;
+    # do NOT multiply by (1+markup) again)
+    gross_tariff_cost = taxable * certificate_price_eur_per_tco2e
 
-    # Step 4 — gross cost per tonne (as if the CBAM obligation were already
-    # fully phased in — this is the honest 2034 steady-state number, useful
-    # for advisory framing so an SME doesn't mistake a small 2026 number for
-    # their long-run exposure)
-    gross_tariff_cost = taxable * certificate_price_eur_per_tco2e * (1 + markup)
-
-    # Step 5 — apply the CBAM phase-in factor to get what's actually owed
-    # this year (Article 31(3) — see CBAM_PHASE_IN_FACTOR_BY_YEAR above)
+    # Step 4 — phase-in factor (Art. 31(3)) — everyone, measured or default
     phase_in = phase_in_factor_for_year(inp.year)
     tariff_cost = gross_tariff_cost * phase_in
     annual_exposure = tariff_cost * inp.annual_export_tonnes
@@ -193,21 +225,19 @@ def calculate_cbam_exposure(
         tariff_cost_eur_per_tonne=tariff_cost,
         gross_tariff_cost_eur_per_tonne=gross_tariff_cost,
         annual_exposure_eur=annual_exposure,
+        annex_i_base_see_tco2e_per_tonne=annex_base,
     )
 
 
 if __name__ == "__main__":
-    # Worked example from the build spec: CN 7208 10 00 hot-rolled coil, BF-BOF route
     example = CBAMInput(
-        cn_code="72081000",
+        cn_code="7208 10 00",
         route=ProductionRoute.BF_BOF,
         annual_export_tonnes=5000,
         year=2026,
     )
     result = calculate_cbam_exposure(example, certificate_price_eur_per_tco2e=75.36)
     print(result)
-    # gross_tariff_cost_eur_per_tonne ≈ 177.07  (matches the original build spec
-    #   worked example — but that example predates the phase-in factor fix and
-    #   was implicitly a 2034-steady-state / un-phased-in number)
-    # tariff_cost_eur_per_tonne ≈ 4.43  (the correct 2026 net figure: gross x 2.5%
-    #   phase-in factor — this is what actually appears on a 2026 passport)
+    # intensity = 3.187 × 1.10 = 3.5057 ≈ Annex I 2026 column 3.506
+    # taxable = 3.5057 − 1.370; gross = taxable × 75.36 (no second mark-up)
+    # net 2026 = gross × 0.025

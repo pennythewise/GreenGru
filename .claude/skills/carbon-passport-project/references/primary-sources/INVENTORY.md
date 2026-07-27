@@ -182,17 +182,23 @@ without at least the ✅ items in context.
 - **Assign to**: whoever owns the CBAM passport agent (§8.6)
 
 ### 8. EU IR 2025/2621 default values (the actual Excel annex, not the secondary reporting of it)
-- **What it is**: the legally binding default values and benchmarks — we've
-  been citing numbers *about* this regulation (1.370, 0.481, 0.072 tCO2e/t)
-  from secondary sources (industry press). The regulation's own Excel annex
-  is the authoritative version.
-- **Why it matters**: every number in `calculation_engine.py` traces back to
-  this file. If a secondary source made a transcription error, it propagates
-  into every passport you generate.
-- **Where to get it**: taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-legislation-and-guidance_en,
-  Commission Implementing Regulation (EU) 2025/2621 — an Excel file is
-  provided alongside the legal text "for information purposes only."
-- **Assign to**: whoever owns the calculation engine (§8.4)
+- **What it is**: the legally binding **country × CN code** default SEE values
+  (Annex I) plus mark-up year columns. Free-allocation **benchmarks** (1.370 /
+  0.481 / 0.072) live in **IR (EU) 2025/2620**, referenced by 2621 Annex I
+  route notes (C)/(D)/(E) — not as Annex I default cells.
+- **Verified against EUR-Lex HTML (2026-07):** China × CN **7208** =
+  **3.187** tCO2e/t (total/direct) → **3.506** @2026 incl. 10% mark-up.
+  China × CN **7318 15** = **6.375** → **7.013** @2026. The engine constant
+  **3.506 was mis-attributed to China GHG Factor DB v2** — that citation is
+  wrong for CBAM; answer to "which annex?" is **IR 2025/2621 Annex I**.
+- **Why it matters**: every default-path passport number must cite Annex I
+  (or measured data). Domestic Chinese factor DBs are not Art. 7(2)(b)
+  defaults. Route-level 3.506 also understates fastener CN codes.
+- **Where to get it**: EUR-Lex CELEX 32025R2621; Commission Excel annex on
+  taxation-customs.ec.europa.eu (information purposes).
+- **Assign to**: whoever owns the calculation engine (§8.4) — next step is
+  CN-code×country lookup + stop double-applying mark-up when intensity is
+  already an "including mark-up" cell.
 
 ### 9. China National GHG Emission Factor Database v2 — the DRI-EAF and scrap-EAF values
 - **What it is**: this is a live query portal (data.ncsc.org.cn/factories),

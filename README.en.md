@@ -28,14 +28,14 @@
 
 ### 🔥 Problem
 
-From **2026**, EU **CBAM** bills for real. Exporters without **verified actuals** fall onto costly **default-value paths** — industry walkthroughs put slab near **~€172/t** and downstream fasteners near **~€526/t**, enough to wipe thin SME margins.
+From **2026**, EU **CBAM** bills for real. Exporters without **verified actuals** must use **country × CN default SEE** from **IR (EU) 2025/2621 Annex I** — for China, hot-rolled flat (CN 7208) is **3.187 tCO₂e/t** (→ **3.506** with 2026’s 10% mark-up) and threaded fasteners (CN 7318 15) **6.375** (→ **7.013**), both far above the free-allocation BM **1.370** (IR 2025/2620 route C) — enough to wipe thin SME margins.
 
 Domestically, **green loans, CERF-style facilities, and zero-carbon factory subsidies** are expanding — but SMEs lack **meters, evidence packs, and bilingual filings**. Anchors like **Baowu / Ansteel** need auditable **Scope 3 Category 10** across thousands of suppliers — today it’s still Excel and chase emails.
 
 ```mermaid
 flowchart TB
   subgraph PAIN["Today's fracture"]
-    CBAM["CBAM default path<br/>~€172–€526/t"]
+    CBAM["CBAM default path<br/>Annex I high default SEE"]
     LOAN["Green loan / grant<br/>scattered · hard to verify"]
     S3["Anchor Scope 3<br/>spreadsheet black hole"]
   end
@@ -362,13 +362,7 @@ DDL: `supabase/migrations/0001_init.sql` · `0002_iot_window_snapshots.sql`
 
 ### 💰 Business model
 
-> Sell **compliance + financing readiness** to SMEs; sell **Scope 3 visibility + supplier tiering** to anchors.  
-> One verified spine — two paying sides. Channel SaaS, not a carbon toy.
-
-- SME SaaS / per-passport fees  
-- Anchor seats (account-manager DSS)  
-- Hardware metering kits  
-- Bank / subsidy channel share  
+One verified spine, two paying sides: SMEs pay for their own compliance and financing readiness (SME SaaS / per-passport — CNY 6,000/year, or CNY 500 per passport); anchor enterprises pay for Scope 3 visibility and supplier tiering (anchor seats — CNY 500,000+/year). The two revenue lines stand alone and reinforce each other; hardware metering kits are optional add-on revenue.
 
 ---
 

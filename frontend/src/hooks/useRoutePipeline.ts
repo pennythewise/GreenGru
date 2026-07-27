@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { routeStrip } from "@/lib/dashboard-data";
 import {
+  assertCarbonPassportBackend,
   queryRag,
   runCbamScore,
   runGrantScore,
@@ -133,6 +134,16 @@ export function useRoutePipeline(
     setLoanRag(null);
     setScoreError(null);
     setRagError(null);
+
+    try {
+      await assertCarbonPassportBackend();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Backend not reachable";
+      setRagError(msg);
+      setScoreError(msg);
+      setRunning(false);
+      return stages;
+    }
 
     const meta = routeStrip(kb, slug);
     let current: PipelineStage[] = meta.map((s) => ({

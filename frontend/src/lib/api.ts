@@ -1,8 +1,12 @@
 // In dev, use same-origin requests (Vite proxies /api → backend :8000).
 // In production, set VITE_API_URL to your deployed backend URL.
+import { assertCarbonPassportBackend, throwIfNotOk } from "@/lib/api-error";
+
 const API_BASE = import.meta.env.DEV
   ? ""
   : (import.meta.env.VITE_API_URL ?? "http://localhost:8000");
+
+export { assertCarbonPassportBackend };
 
 export type InvoiceParty = {
   name: string;
@@ -106,10 +110,7 @@ export async function previewOcr(file: File): Promise<OcrPreviewResponse> {
     throw err;
   }
 
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `OCR preview failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "OCR preview");
 
   return res.json() as Promise<OcrPreviewResponse>;
 }
@@ -130,10 +131,7 @@ export async function verifyExtract(payload: {
       ocr_source: payload.ocr_source ?? "",
     }),
   });
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Verify extract failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Verify extract");
   return res.json() as Promise<ExtractionVerification>;
 }
 
@@ -194,10 +192,7 @@ export async function runPipeline(payload: {
     }
     throw err;
   }
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Pipeline failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Pipeline");
   return res.json() as Promise<PipelineRunResponse>;
 }
 
@@ -249,10 +244,7 @@ export async function sendCopilotChat(params: {
     throw err;
   }
 
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Copilot chat failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Copilot chat");
 
   return res.json() as Promise<CopilotChatResponse>;
 }
@@ -281,10 +273,7 @@ export async function sendRouteIntent(history: CopilotHistoryMessage[]): Promise
     throw err;
   }
 
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Route intent failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Route intent");
 
   return res.json() as Promise<RouteIntentResponse>;
 }
@@ -385,10 +374,7 @@ export async function runGrantScore(payload: {
     }
     throw err;
   }
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Grant score failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Grant score");
   return res.json() as Promise<GrantScoreResult>;
 }
 
@@ -430,7 +416,7 @@ export type CbamExportMargin = {
   note_zh: string;
 };
 
-/** Literature-baseline industry €/t for Stage-3 UX (not φ-regulated passport invoice). */
+/** Stage-3 default vs measured CBAM €/t — both from calculation_engine (Annex I). */
 export type CbamIndustryIllustration = {
   baseline_key: string;
   baseline_label_en: string;
@@ -490,10 +476,7 @@ export async function runLoanScore(payload: {
     }
     throw err;
   }
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Loan score failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Loan score");
   return res.json() as Promise<LoanScoreResult>;
 }
 
@@ -521,10 +504,7 @@ export async function runCbamScore(payload: {
     }
     throw err;
   }
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `CBAM score failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "CBAM score");
   const raw = (await res.json()) as CbamScoreResult;
   const { withIndustryIllustration } = await import("@/lib/cbam-industry-mock");
   return withIndustryIllustration(raw);
@@ -614,10 +594,7 @@ export async function ingestRagUpload(payload: {
   } finally {
     clearTimeout(timer);
   }
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Upload RAG ingest failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Upload RAG ingest");
   return res.json() as Promise<RagIngestUploadResult>;
 }
 
@@ -702,10 +679,7 @@ export async function ingestRagUploadBatch(payload: {
     } finally {
       clearTimeout(timer);
     }
-    if (!res.ok) {
-      const detail = await res.text();
-      throw new Error(detail || `Batch RAG ingest failed (${res.status})`);
-    }
+    await throwIfNotOk(res, "Batch RAG ingest");
     fresh = (await res.json()) as RagBatchIngestResult;
   }
 
@@ -777,10 +751,7 @@ export async function lookupRagHashes(payload: {
       hashes: payload.hashes,
     }),
   });
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Hash lookup failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Hash lookup");
   const data = (await res.json()) as { hits?: Record<string, RagHashHit> };
   return data.hits ?? {};
 }
@@ -808,10 +779,7 @@ export async function adoptRagUploads(payload: {
       })),
     }),
   });
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Adopt uploads failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Adopt uploads");
   return res.json() as Promise<RagBatchIngestResult>;
 }
 
@@ -897,10 +865,7 @@ export async function ingestKbPdfs(payload: {
     } finally {
       clearTimeout(timer);
     }
-    if (!res.ok) {
-      const detail = await res.text();
-      throw new Error(detail || `KB ingest failed (${res.status})`);
-    }
+    await throwIfNotOk(res, "KB ingest");
     fresh = (await res.json()) as RagIngestKbBatchResult;
   }
 
@@ -961,10 +926,7 @@ export async function queryRag(payload: {
   } finally {
     clearTimeout(timer);
   }
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `RAG query failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "RAG query");
   return res.json() as Promise<RagQueryResult>;
 }
 
@@ -1047,10 +1009,7 @@ export async function createIotSnapshot(payload: {
       green_trading: payload.green_trading,
     }),
   });
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Save IoT window failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Save IoT window");
   return res.json() as Promise<IotSnapshot>;
 }
 
@@ -1075,10 +1034,7 @@ export async function downloadApplicationFormPdf(payload: {
     }
     throw err;
   }
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Application form PDF failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Application form PDF");
   const blob = await res.blob();
   const disposition = res.headers.get("Content-Disposition");
   const match = disposition?.match(/filename="?([^"]+)"?/);
@@ -1129,10 +1085,7 @@ export async function parseApplicationFormPdf(payload: {
   } finally {
     clearTimeout(timer);
   }
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `Application form PDF parse failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "Application form PDF parse");
   return res.json() as Promise<ApplicationFormParseResult>;
 }
 
@@ -1168,10 +1121,7 @@ export async function parseCbamWorkbookPdf(
   } finally {
     clearTimeout(timer);
   }
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `CBAM PDF parse failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "CBAM PDF parse");
   return res.json() as Promise<CbamWorkbookPdfParseResult>;
 }
 
@@ -1194,10 +1144,7 @@ export async function downloadCbamCommunicationXlsx(
     }
     throw err;
   }
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `CBAM Excel download failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "CBAM Excel download");
   const blob = await res.blob();
   const disposition = res.headers.get("Content-Disposition");
   const match = disposition?.match(/filename="?([^"]+)"?/);
@@ -1228,10 +1175,7 @@ export async function downloadRoutePreviewPdf(payload: RoutePreviewPdfPayload): 
     throw err;
   }
 
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(detail || `PDF download failed (${res.status})`);
-  }
+  await throwIfNotOk(res, "PDF download");
 
   const blob = await res.blob();
   const disposition = res.headers.get("Content-Disposition");

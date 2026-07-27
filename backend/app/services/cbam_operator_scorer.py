@@ -110,10 +110,11 @@ class ExportMarginImpact:
 
 @dataclass
 class IndustryCostIllustration:
-    """Literature-baseline industry CBAM €/t for Stage-3 UX (not the φ-regulated passport figure).
+    """Stage-3 default vs approved CBAM €/t — both from calculation_engine only.
 
-    Walkthrough: (SEE − benchmark × 97.5% free allocation) × ~80 €/tCO₂e
-    — matches published 2026 examples (~€172 slab / ~€526 fasteners).
+    default_path = Annex I China×CN default (denied) φ-net €/t
+    approved_path = measured/verified path φ-net €/t
+    No literature walkthroughs (€172 / €526 etc.).
     """
 
     baseline_key: str
@@ -125,17 +126,14 @@ class IndustryCostIllustration:
     approved_see_tco2e_per_t: float
     see_source: str
     benchmark_tco2e_per_t: float
-    free_allocation_pct: float
+    free_allocation_pct: float  # CBAM phase-in φ for the estimate year (not ETS free %)
     carbon_price_eur: float
-    # Industry standard when CBAM not configured / no transparent lifecycle data
     default_path_eur_per_tonne: float
-    # Discounted cost if approval unlocked with verified / mock actual SEE
     approved_path_eur_per_tonne: float
     discount_eur_per_tonne: float
     discount_pct: float
     cost_pct_of_fob_default: float
     cost_pct_of_fob_approved: float
-    # Regulated 2026 φ-net figures kept for disclosure (engine)
     regulated_approved_eur_per_tonne: float
     regulated_denied_eur_per_tonne: float
     note_en: str
@@ -170,76 +168,51 @@ class CbamOperatorScoreResult:
     industry_illustration: IndustryCostIllustration
 
 
-# Illustrative SME fastener FOB economics for margin framing only (not regulated).
+# Illustrative SME FOB economics for margin framing only (not regulated).
 _ILLUSTRATIVE_FOB_EUR_PER_T = 850.0
 _ILLUSTRATIVE_MARGIN_PCT_BEFORE = 12.0
 
-# Literature walkthrough constants (Stage-3 UX) — not calculation_engine φ path.
-_LIT_FREE_ALLOC_2026 = 0.975
-_LIT_CARBON_PRICE_EUR = 80.0
-_LIT_BENCHMARK_TCO2E = 1.364
-# Published China crude-steel factor used when intake still carries a China-default placeholder.
-_MOCK_CHINA_ACTUAL_SEE = 1.60
-_CHINA_ROUTE_DEFAULT_SEE = 3.506
-
-# CN-family → published 2026 default-path baseline (SEE + €/t anchor).
-_INDUSTRY_BASELINES: dict[str, dict] = {
+# CN-family → labels only (SEE/€ always from calculation_engine).
+_INDUSTRY_LABELS: dict[str, dict[str, str]] = {
     "7207": {
         "key": "slab",
         "label_en": "Semi-finished steel (slab/billet)",
         "label_zh": "半成品钢（板坯/方坯）",
-        "default_see": 3.486,
-        "anchor_eur": 172.46,
     },
     "7208": {
         "key": "flat",
         "label_en": "Flat-rolled steel (hot-rolled)",
         "label_zh": "扁平材（热轧）",
-        "default_see": 3.486,
-        "anchor_eur": 172.46,
     },
     "7213": {
         "key": "bar",
         "label_en": "Bars / rods",
         "label_zh": "棒材 / 线材",
-        "default_see": 3.486,
-        "anchor_eur": 172.46,
     },
     "7214": {
         "key": "bar",
         "label_en": "Bars / rods",
         "label_zh": "棒材 / 线材",
-        "default_see": 3.486,
-        "anchor_eur": 172.46,
     },
     "7301": {
         "key": "sheet-piling",
         "label_en": "Sheet piling",
         "label_zh": "板桩",
-        "default_see": 3.486,
-        "anchor_eur": 172.46,
     },
     "7302": {
         "key": "rail",
         "label_en": "Railway material",
         "label_zh": "铁道用材",
-        "default_see": 3.486,
-        "anchor_eur": 172.46,
     },
     "7318": {
         "key": "fastener",
         "label_en": "Downstream fasteners (screws/bolts)",
         "label_zh": "下游紧固件（螺钉/螺栓）",
-        # Reverse-engineered from published €526.47 @ 80 €/tCO₂e walkthrough.
-        "default_see": 7.911,
-        "anchor_eur": 526.47,
     },
     "7326": {
         "key": "articles",
         "label_en": "Other articles of iron/steel",
         "label_zh": "其他钢铁制品",
-        "default_see": 7.911,
-        "anchor_eur": 526.47,
     },
 }
 
@@ -249,77 +222,56 @@ def _cn_family(cn_code: str | None) -> str:
     return digits[:4] if len(digits) >= 4 else "7318"
 
 
-def _lit_walkthrough_eur(see: float, *, benchmark: float, free_alloc: float, price: float) -> float:
-    taxable = max(0.0, see - benchmark * free_alloc)
-    return round(taxable * price, 2)
-
-
-def _is_placeholder_see(see: float, default_see: float) -> bool:
-    """Intake still carries China-default / literature-default as if it were plant actual."""
-    return abs(see - _CHINA_ROUTE_DEFAULT_SEE) < 0.05 or abs(see - default_see) < 0.05
-
-
 def _industry_cost_illustration(
     *,
     cn_code: str | None,
-    intensity_tco2e_per_t: float,
     has_lifecycle_transparency: bool,
     regulated_approved: TariffEstimate,
     regulated_denied: TariffEstimate,
 ) -> IndustryCostIllustration:
     family = _cn_family(cn_code)
-    base = _INDUSTRY_BASELINES.get(family, _INDUSTRY_BASELINES["7318"])
-    bm = _LIT_BENCHMARK_TCO2E
-    free_alloc = _LIT_FREE_ALLOC_2026
-    price = _LIT_CARBON_PRICE_EUR
-    default_see = float(base["default_see"])
-    # Pin default € to published anchor when walkthrough rounds match; else recompute.
-    default_eur = float(base["anchor_eur"])
-    walk_default = _lit_walkthrough_eur(default_see, benchmark=bm, free_alloc=free_alloc, price=price)
-    if abs(walk_default - default_eur) > 1.0:
-        default_eur = walk_default
+    labels = _INDUSTRY_LABELS.get(family, _INDUSTRY_LABELS["7318"])
 
-    try:
-        input_see = float(intensity_tco2e_per_t)
-    except (TypeError, ValueError):
-        input_see = default_see
-    if input_see <= 0:
-        input_see = default_see
-
-    if has_lifecycle_transparency:
-        if _is_placeholder_see(input_see, default_see):
-            approved_see = _MOCK_CHINA_ACTUAL_SEE
-            see_source = "mock_china_actual_1.60"
-        else:
-            approved_see = input_see
-            see_source = "input_measured"
-        approved_eur = _lit_walkthrough_eur(
-            approved_see, benchmark=bm, free_alloc=free_alloc, price=price
-        )
-        # Never show "approved" above industry default — clamp for UX sanity.
-        approved_eur = min(approved_eur, round(default_eur * 0.98, 2))
-    else:
-        approved_see = default_see
+    default_eur = float(regulated_denied.tariff_eur_per_tonne)
+    approved_eur = float(regulated_approved.tariff_eur_per_tonne)
+    if not has_lifecycle_transparency:
         approved_eur = default_eur
-        see_source = "no_lifecycle_transparency"
+
+    default_see = float(regulated_denied.intensity_tco2e_per_tonne)
+    approved_see = (
+        float(regulated_approved.intensity_tco2e_per_tonne)
+        if has_lifecycle_transparency
+        else default_see
+    )
+    see_source = (
+        "engine_measured"
+        if has_lifecycle_transparency and regulated_approved.data_source == "measured"
+        else "engine_annex_i_default"
+        if not has_lifecycle_transparency
+        else "engine_path"
+    )
 
     discount = round(max(0.0, default_eur - approved_eur), 2)
     discount_pct = round((discount / default_eur) * 100.0, 1) if default_eur else 0.0
     fob = _ILLUSTRATIVE_FOB_EUR_PER_T
     pct_def = round((default_eur / fob) * 100.0, 1) if fob else 0.0
     pct_ok = round((approved_eur / fob) * 100.0, 1) if fob else 0.0
+    cn = _sanitize_cn_code(cn_code)
+    bm = float(regulated_denied.benchmark_tco2e_per_tonne)
+    phi = float(regulated_denied.phase_in_factor)
+    price = float(regulated_denied.certificate_price_eur_per_tco2e)
 
     return IndustryCostIllustration(
-        baseline_key=str(base["key"]),
-        baseline_label_en=str(base["label_en"]),
-        baseline_label_zh=str(base["label_zh"]),
-        cn_code=_sanitize_cn_code(cn_code),
+        baseline_key=str(labels["key"]),
+        baseline_label_en=str(labels["label_en"]),
+        baseline_label_zh=str(labels["label_zh"]),
+        cn_code=cn,
         has_lifecycle_transparency=has_lifecycle_transparency,
-        default_see_tco2e_per_t=default_see,
-        approved_see_tco2e_per_t=approved_see,
+        default_see_tco2e_per_t=round(default_see, 4),
+        approved_see_tco2e_per_t=round(approved_see, 4),
         see_source=see_source,
         benchmark_tco2e_per_t=bm,
-        free_allocation_pct=free_alloc,
+        free_allocation_pct=phi,
         carbon_price_eur=price,
         default_path_eur_per_tonne=default_eur,
         approved_path_eur_per_tonne=approved_eur,
@@ -330,20 +282,18 @@ def _industry_cost_illustration(
         regulated_approved_eur_per_tonne=regulated_approved.tariff_eur_per_tonne,
         regulated_denied_eur_per_tonne=regulated_denied.tariff_eur_per_tonne,
         note_en=(
-            "Industry illustration for Stage-3 UX — not the passport's φ-regulated 2026 invoice. "
-            "Default path = published walkthrough when lifecycle data is missing/opaque "
-            f"(SEE {default_see} tCO₂e/t → €{default_eur}/t). "
-            "Approved path = same formula on verified/mock actual SEE "
-            f"({approved_see} tCO₂e/t → €{approved_eur}/t, −{discount_pct}%). "
-            f"Regulated φ=2.5% engine figures remain €{regulated_approved.tariff_eur_per_tonne}/t "
-            f"vs €{regulated_denied.tariff_eur_per_tonne}/t."
+            f"Engine-only Stage-3 comparison for CN {cn} (IR 2025/2621 Annex I China×CN "
+            f"vs measured). Default path €{default_eur}/t (SEE {default_see:.3f}, φ={phi}); "
+            f"approved path €{approved_eur}/t (SEE {approved_see:.3f}). "
+            f"BM {bm} tCO₂e/t (IR 2025/2620); cert {price} €/tCO₂e. "
+            "No literature walkthrough €/t."
         ),
         note_zh=(
-            "阶段 3 行业示意 — 非护照 φ 管制 2026 应缴额。"
-            f"无碳足迹透明数据时走默认路径（SEE {default_see} → €{default_eur}/t）；"
-            f"核验通过后按实际/示意 SEE {approved_see} 折算 €{approved_eur}/t（节省 {discount_pct}%）。"
-            f"引擎 φ=2.5% 管制数字仍为 €{regulated_approved.tariff_eur_per_tonne}/t "
-            f"对 €{regulated_denied.tariff_eur_per_tonne}/t。"
+            f"阶段 3 对比仅来自核算引擎（CN {cn} · IR 2025/2621 Annex I 中国×税则号 vs 实测）。"
+            f"默认路径 €{default_eur}/t（SEE {default_see:.3f}，φ={phi}）；"
+            f"通过路径 €{approved_eur}/t（SEE {approved_see:.3f}）。"
+            f"基准 {bm} tCO₂e/t（IR 2025/2620）；证书价 {price} €/tCO₂e。"
+            "不含文献算例 €/t。"
         ),
     )
 
@@ -527,7 +477,7 @@ def _export_margin_impact(
     fob = _ILLUSTRATIVE_FOB_EUR_PER_T
     pct_before = _ILLUSTRATIVE_MARGIN_PCT_BEFORE
     margin_before = round(fob * pct_before / 100.0, 2)
-    # Prefer industry baseline € for UX margin story; fall back to φ-regulated.
+    # Prefer engine default/approved € for UX margin story.
     if industry is not None:
         t_ok = industry.approved_path_eur_per_tonne
         t_no = industry.default_path_eur_per_tonne
@@ -554,17 +504,16 @@ def _export_margin_impact(
         cost_pct_of_fob_if_approved=pct_fob_ok,
         cost_pct_of_fob_if_denied=pct_fob_no,
         note_en=(
-            "Illustrative China→EU FOB margin using industry baseline CBAM €/t "
-            "(literature walkthrough, not φ-regulated 2026 invoice). "
+            "Illustrative China→EU FOB margin using calculation_engine CBAM €/t "
+            "(Annex I default vs measured, φ-net). "
             "Assumes exporter absorbs cost; legal obligation sits with the EU importer. "
-            "FOB €850/t and 12% pre-CBAM margin are MVP framing constants. "
-            "Opaque lifecycle → industry default path; approved actuals → discounted path."
+            "FOB €850/t and 12% pre-CBAM margin are MVP framing constants only."
         ),
         note_zh=(
-            "示意性中国→欧盟 FOB 利润，采用行业基线 CBAM €/t（文献算例，非 φ 管制应缴额）。"
+            "示意性中国→欧盟 FOB 利润，CBAM €/t 来自核算引擎"
+            "（Annex I 默认值 vs 实测，φ 净额）。"
             "假设出口商吸收成本；法定义务在欧盟进口商。"
-            "FOB €850/t、税前毛利 12% 为 MVP 示意常数。"
-            "无碳足迹透明数据 → 行业默认路径；核验通过 → 折扣路径。"
+            "FOB €850/t、税前毛利 12% 仅为 MVP 示意常数。"
         ),
     )
 
@@ -987,7 +936,6 @@ def compute_cbam_operator_score(
         )
         industry_illustration = _industry_cost_illustration(
             cn_code=cn_code,
-            intensity_tco2e_per_t=float(intensity_tco2e_per_t or 3.506),
             has_lifecycle_transparency=use_measured,
             regulated_approved=tariff_if_approved,
             regulated_denied=tariff_if_denied,
@@ -1021,7 +969,6 @@ def compute_cbam_operator_score(
         tariff = tariff_if_approved = tariff_if_denied = empty
         industry_illustration = _industry_cost_illustration(
             cn_code=cn_code,
-            intensity_tco2e_per_t=float(intensity_tco2e_per_t or 3.506),
             has_lifecycle_transparency=False,
             regulated_approved=empty,
             regulated_denied=empty,
@@ -1052,12 +999,10 @@ def compute_cbam_operator_score(
     )
     formulas.append(
         {
-            "eq": "Industry walkthrough",
-            "label": "Default vs discounted industry CBAM €/t (literature baseline)",
+            "eq": "Annex I / Art. 31",
+            "label": "Default (Annex I) vs measured CBAM €/t — calculation_engine",
             "latex": (
-                f"(SEE − {industry_illustration.benchmark_tco2e_per_t}×"
-                f"{industry_illustration.free_allocation_pct}) × "
-                f"{industry_illustration.carbon_price_eur} € → "
+                f"(SEE − BM) × cert × φ → "
                 f"default €{industry_illustration.default_path_eur_per_tonne}/t · "
                 f"approved €{industry_illustration.approved_path_eur_per_tonne}/t "
                 f"(−{industry_illustration.discount_pct}%)"
@@ -1068,6 +1013,8 @@ def compute_cbam_operator_score(
                 "discount_%": industry_illustration.discount_pct,
                 "SEE_default": industry_illustration.default_see_tco2e_per_t,
                 "SEE_approved": industry_illustration.approved_see_tco2e_per_t,
+                "φ": industry_illustration.free_allocation_pct,
+                "cert_€": industry_illustration.carbon_price_eur,
             },
             "result": industry_illustration.approved_path_eur_per_tonne,
         }
@@ -1080,8 +1027,8 @@ def compute_cbam_operator_score(
         f"({n_done}/{n_total} docs), intensity {intensity_tco2e_per_t} tCO2e/t, "
         f"and metering coverage {meter}%. "
         f"Approval likelihood {approve_pct}% / deny {deny_pct}%. "
-        f"Industry default path ≈ €{industry_illustration.default_path_eur_per_tonne}/t; "
-        f"if approved (discounted) ≈ €{industry_illustration.approved_path_eur_per_tonne}/t "
+        f"Annex I default path ≈ €{industry_illustration.default_path_eur_per_tonne}/t; "
+        f"measured path ≈ €{industry_illustration.approved_path_eur_per_tonne}/t "
         f"(−{industry_illustration.discount_pct}%). "
         f"{'All veto gates passed.' if veto_passed else 'Veto gates incomplete — see Quick Guide §3.'}"
     )
@@ -1089,8 +1036,8 @@ def compute_cbam_operator_score(
         f"依据欧委会《非欧盟装置运营方 CBAM 实施指南》（2023-11-21），结合护照清单 "
         f"{n_done}/{n_total} 份文件、强度 {intensity_tco2e_per_t} tCO2e/t、计量覆盖 {meter}%，"
         f"评分 {total}/100。通过可能性 {approve_pct}% / 否决 {deny_pct}%。"
-        f"行业默认路径约 €{industry_illustration.default_path_eur_per_tonne}/t；"
-        f"若通过折扣价约 €{industry_illustration.approved_path_eur_per_tonne}/t"
+        f"Annex I 默认路径约 €{industry_illustration.default_path_eur_per_tonne}/t；"
+        f"实测路径约 €{industry_illustration.approved_path_eur_per_tonne}/t"
         f"（节省 {industry_illustration.discount_pct}%）。"
         f"{'准入项全部满足。' if veto_passed else '准入项未全部满足 — 见快速指南 §3。'}"
     )

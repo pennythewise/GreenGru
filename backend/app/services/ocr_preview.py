@@ -73,6 +73,33 @@ def _invoice_out(data: dict) -> InvoiceDataOut:
     )
 
 
+def _default_intensity_label(cn_code: str) -> str:
+    """Judge-facing provenance: CBAM defaults are IR 2025/2621 Annex I only."""
+    # China Annex I cells verified against EUR-Lex CELEX 32025R2621 (comma = decimal).
+    annex_china = {
+        "7208 10 00": ("7208", 3.187, 3.506),
+        "7208": ("7208", 3.187, 3.506),
+        "7213": ("7213", 3.169, 3.486),
+        "7214": ("7214 20 00", 3.169, 3.486),
+        "7213 / 7214": ("7213", 3.169, 3.486),
+        "7318 15 42": ("7318 15", 6.375, 7.013),
+        "7318 15 88": ("7318 15", 6.375, 7.013),
+        "7318 15": ("7318 15", 6.375, 7.013),
+    }
+    key = cn_code.strip()
+    hit = annex_china.get(key)
+    if hit is None:
+        return (
+            "EU default: IR 2025/2621 Annex I (China × CN) — "
+            "look up country×CN cell; not China GHG Factor DB"
+        )
+    cn_label, base, y2026 = hit
+    return (
+        f"EU default China×CN {cn_label}: {base:.3f} tCO2e/t "
+        f"(IR 2025/2621 Annex I; 2026 incl. 10% mark-up = {y2026:.3f})"
+    )
+
+
 def _classification_out(invoice: dict, result) -> ClassificationPreviewOut:
     entry = SUPPORTED_CN_CODES.get(result.cn_code)
     cn_label = (
@@ -81,15 +108,16 @@ def _classification_out(invoice: dict, result) -> ClassificationPreviewOut:
         else "Product outside locked 8-code table"
     )
     route = "BF-BOF"
+    cn_code = result.cn_code if result.cn_code != "out_of_scope" else "7213 / 7214"
     return ClassificationPreviewOut(
-        cnCode=result.cn_code if result.cn_code != "out_of_scope" else "7213 / 7214",
+        cnCode=cn_code,
         cnLabel=cn_label,
         flashConfidence=int(round((result.confidence if not result.escalated else 0.63) * 100)),
         escalated=result.escalated,
         plusConfidence=int(round(result.confidence * 100)) if result.escalated else None,
         route=route,
-        benchmark="EU benchmark 1.370 tCO2e/t (IR 2025/2621)",
-        defaultIntensity="China default 3.506 tCO2e/t (China GHG Factor DB v2)",
+        benchmark="EU free-allocation BM 1.370 tCO2e/t (IR 2025/2620 · route C)",
+        defaultIntensity=_default_intensity_label(cn_code),
     )
 
 
@@ -116,8 +144,8 @@ def _mock_classification_preview(product_desc: str) -> ClassificationPreviewOut:
         escalated=True,
         plusConfidence=91,
         route="BF-BOF",
-        benchmark="EU benchmark 1.370 tCO2e/t (IR 2025/2621)",
-        defaultIntensity="China default 3.506 tCO2e/t (China GHG Factor DB v2)",
+        benchmark="EU free-allocation BM 1.370 tCO2e/t (IR 2025/2620 · route C)",
+        defaultIntensity=_default_intensity_label(cn_code),
     )
 
 

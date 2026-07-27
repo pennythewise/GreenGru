@@ -16,10 +16,9 @@ import type { CbamScoreResult } from "@/lib/api";
 import { DimensionCard, ScoreRing, ThresholdPassBadge } from "@/components/score-panel";
 import { withIndustryIllustration } from "@/lib/cbam-industry-mock";
 import {
-  CBAM_RESEARCH_EXAMPLES,
+  ANNEX_I_CHINA_ROWS,
   CBAM_RESEARCH_SOURCES,
   costSharePct,
-  sourceById,
 } from "@/lib/cbam-research-baseline";
 import { useLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
@@ -48,10 +47,6 @@ function ResearchBaselineBlock({
   discountPct: number;
 }) {
   const [showSources, setShowSources] = useState(false);
-  const steelExamples = CBAM_RESEARCH_EXAMPLES.filter((e) => e.inScope);
-  const contextExamples = CBAM_RESEARCH_EXAMPLES.filter((e) => !e.inScope);
-  const litShareSlab = costSharePct(172.46, fobEur);
-  const litShareScrews = costSharePct(526.47, fobEur);
   const yourApprovedShare = costSharePct(approvedEur, fobEur);
   const yourDefaultShare = costSharePct(defaultEur, fobEur);
 
@@ -66,17 +61,17 @@ function ResearchBaselineBlock({
         <BookOpen className="h-4 w-4 text-teal shrink-0 mt-0.5" />
         <div className="min-w-0">
           <div className="text-[10px] font-mono uppercase tracking-wider text-teal">
-            {isZh ? "研究基线 · 2026 默认值路径" : "Research baseline · 2026 default-value path"}
+            {isZh ? "监管默认值 · IR 2025/2621 附件 I" : "Regulatory defaults · IR 2025/2621 Annex I"}
           </div>
           <h5 className="mt-0.5 text-[14px] font-semibold tracking-tight">
             {isZh
-              ? "为何争取实际值通过：默认值路径关税更高"
-              : "Why chase actual-values approval: default path costs more"}
+              ? "为何争取实测通过：Annex I 默认 SEE 更高"
+              : "Why chase measured approval: Annex I default SEE is higher"}
           </h5>
           <p className="mt-1 text-[11.5px] text-muted-foreground leading-relaxed">
             {isZh
-              ? "行业研究显示：对华默认排放值常高于 3–7 tCO₂/t，而粗钢实际因子约 1.60。公开算例下板坯默认路径约 €172/t、下游螺钉约 €526/t——相对示意 FOB，占比可达两成至六成。护照内数字仍由核算引擎给出；下表仅为文献对照。"
-              : "Industry research: China defaults often sit at 3–7 tCO₂/t vs ~1.60 actual crude-steel factors. Published walkthroughs put slab default-path CBAM near €172/t and downstream screws near €526/t — a large share of thin FOB margins. Passport € figures still come from the calculation engine; the table is literature context only."}
+              ? "CBAM 默认隐含排放来自 IR (EU) 2025/2621 附件 I（国家×税则号），不是中国国内 GHG 因子库。下表为锁定范围内中国单元格（含 2026 年 10% 加价后 SEE）。护照 €/t 仅由核算引擎按附件 I + IR 2025/2620 基准 + 证书价计算。"
+              : "CBAM default SEE comes from IR (EU) 2025/2621 Annex I (country × CN) — not a Chinese domestic GHG factor DB. Table: China cells in locked scope (incl. 2026 10% mark-up SEE). Passport €/t come only from the calculation engine (Annex I + IR 2025/2620 BM + certificate price)."}
           </p>
         </div>
       </div>
@@ -84,21 +79,19 @@ function ResearchBaselineBlock({
       <div className="rounded-lg border border-carbon/25 bg-carbon/5 px-3 py-2.5 text-[11.5px] leading-relaxed">
         {isZh ? (
           <>
-            对本批货物：无透明碳足迹时行业默认约占 FOB{" "}
+            对本批货物（引擎）：默认路径约占 FOB{" "}
             <span className="font-mono font-semibold text-warning">{yourDefaultShare}%</span>
-            ；核验通过后折扣价约占{" "}
+            ；实测通过后约占{" "}
             <span className="font-mono font-semibold text-carbon">{yourApprovedShare}%</span>
-            （相对默认节省 {discountPct}%）。文献对照：板坯默认约 {litShareSlab}% FOB、螺钉约{" "}
-            {litShareScrews}% FOB（示意 FOB €{fobEur}/t）。
+            （相对默认节省 {discountPct}% · 示意 FOB €{fobEur}/t）。
           </>
         ) : (
           <>
-            For this shipment: opaque lifecycle → industry default ~{" "}
+            This shipment (engine): default path ~{" "}
             <span className="font-mono font-semibold text-warning">{yourDefaultShare}%</span> of FOB;
-            approved discount ~{" "}
-            <span className="font-mono font-semibold text-carbon">{yourApprovedShare}%</span> (
-            −{discountPct}% vs default). Literature: slab ~{litShareSlab}% FOB, screws ~
-            {litShareScrews}% FOB (illustrative FOB €{fobEur}/t).
+            measured path ~{" "}
+            <span className="font-mono font-semibold text-carbon">{yourApprovedShare}%</span> (−
+            {discountPct}% vs default · illustrative FOB €{fobEur}/t).
           </>
         )}
       </div>
@@ -110,54 +103,32 @@ function ResearchBaselineBlock({
               <th className="px-2.5 py-2 font-medium">{isZh ? "品类" : "Category"}</th>
               <th className="px-2.5 py-2 font-medium">{isZh ? "产品 / CN" : "Product / CN"}</th>
               <th className="px-2.5 py-2 font-medium whitespace-nowrap">
-                {isZh ? "默认路径 €/t" : "Default path €/t"}
+                {isZh ? "附件 I SEE" : "Annex I SEE"}
               </th>
-              <th className="px-2.5 py-2 font-medium">{isZh ? "约占 FOB" : "~% FOB"}</th>
+              <th className="px-2.5 py-2 font-medium whitespace-nowrap">
+                {isZh ? "2026+10%" : "2026 +10%"}
+              </th>
               <th className="px-2.5 py-2 font-medium">{isZh ? "说明" : "Notes"}</th>
             </tr>
           </thead>
           <tbody>
-            {steelExamples.map((ex) => (
-              <tr key={ex.id} className="border-t border-border/60">
+            {ANNEX_I_CHINA_ROWS.map((row) => (
+              <tr key={row.id} className="border-t border-border/60">
                 <td className="px-2.5 py-2 align-top text-muted-foreground">
-                  {isZh ? ex.categoryZh : ex.categoryEn}
+                  {isZh ? row.categoryZh : row.categoryEn}
                 </td>
                 <td className="px-2.5 py-2 align-top">
-                  <div className="font-medium">{isZh ? ex.productZh : ex.productEn}</div>
-                  <div className="font-mono text-[10px] text-muted-foreground">{ex.cnCode}</div>
+                  <div className="font-medium">{isZh ? row.productZh : row.productEn}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">{row.cnCode}</div>
                 </td>
                 <td className="px-2.5 py-2 align-top font-mono whitespace-nowrap">
-                  {ex.defaultPathEurPerT != null
-                    ? `€${ex.defaultPathEurPerT.toFixed(2)}`
-                    : isZh
-                      ? "未直接公布"
-                      : "n/a"}
+                  {row.annexSeeTco2ePerT.toFixed(3)}
                 </td>
-                <td className="px-2.5 py-2 align-top font-mono text-warning">
-                  {ex.defaultPathEurPerT != null
-                    ? `${costSharePct(ex.defaultPathEurPerT, fobEur)}%`
-                    : "—"}
+                <td className="px-2.5 py-2 align-top font-mono whitespace-nowrap text-warning">
+                  {row.see2026MarkedUp.toFixed(3)}
                 </td>
                 <td className="px-2.5 py-2 align-top text-muted-foreground leading-snug max-w-[220px]">
-                  {isZh ? ex.noteZh : ex.noteEn}
-                </td>
-              </tr>
-            ))}
-            {contextExamples.map((ex) => (
-              <tr key={ex.id} className="border-t border-border/60 bg-muted/10">
-                <td className="px-2.5 py-2 align-top text-muted-foreground">
-                  {isZh ? ex.categoryZh : ex.categoryEn}
-                </td>
-                <td className="px-2.5 py-2 align-top">
-                  <div className="font-medium">{isZh ? ex.productZh : ex.productEn}</div>
-                  <div className="font-mono text-[10px] text-muted-foreground">{ex.cnCode}</div>
-                </td>
-                <td className="px-2.5 py-2 align-top font-mono text-muted-foreground">
-                  {isZh ? "未直接公布" : "n/a"}
-                </td>
-                <td className="px-2.5 py-2 align-top font-mono text-muted-foreground">—</td>
-                <td className="px-2.5 py-2 align-top text-muted-foreground leading-snug max-w-[220px]">
-                  {isZh ? ex.noteZh : ex.noteEn}
+                  {isZh ? row.noteZh : row.noteEn}
                 </td>
               </tr>
             ))}
@@ -172,31 +143,27 @@ function ResearchBaselineBlock({
           </div>
           <div className="mt-0.5 font-mono font-semibold">75.36 €/tCO₂e</div>
           <div className="mt-1 text-muted-foreground leading-snug">
-            {isZh
-              ? "挂钩欧盟 ETS；近年多在 €60–100 波动。"
-              : "Linked to EU ETS; recently often €60–100."}
+            {isZh ? "挂钩欧盟 ETS 拍卖均价。" : "Linked to EU ETS auction average."}
           </div>
         </div>
         <div className="rounded-lg border border-border/70 bg-surface/40 p-2.5">
           <div className="font-mono text-[9.5px] uppercase text-muted-foreground">
-            {isZh ? "默认值 vs 实际" : "Default vs actual"}
+            {isZh ? "免费配额基准" : "Free-allocation BM"}
           </div>
-          <div className="mt-0.5 font-mono font-semibold">3–7 vs ~1.60</div>
+          <div className="mt-0.5 font-mono font-semibold">1.370 · 路线 C</div>
           <div className="mt-1 text-muted-foreground leading-snug">
-            {isZh
-              ? "中钢协：对华默认值偏高；粗钢实际因子约 1.60 tCO₂/t。"
-              : "CISA: China defaults high; crude-steel actuals ~1.60 tCO₂/t."}
+            {isZh ? "IR 2025/2620 BF/BOF 基准。" : "IR 2025/2620 BF/BOF benchmark."}
           </div>
         </div>
         <div className="rounded-lg border border-border/70 bg-surface/40 p-2.5">
           <div className="font-mono text-[9.5px] uppercase text-muted-foreground">
-            {isZh ? "未来加价" : "Future markup"}
+            {isZh ? "默认值加价" : "Default mark-up"}
           </div>
           <div className="mt-0.5 font-mono font-semibold">+10% → +30%</div>
           <div className="mt-1 text-muted-foreground leading-snug">
             {isZh
-              ? "默认值 2026 加价 10%，计划升至 2028 年 30%；免费配额同步退坡。"
-              : "Default markup 10% in 2026, planned 30% by 2028; free allocation phases out."}
+              ? "2026 年 10%，至 2028 年 30%（附件 I 年列）。"
+              : "10% in 2026 → 30% by 2028 (Annex I year columns)."}
           </div>
         </div>
       </div>
@@ -234,16 +201,6 @@ function ResearchBaselineBlock({
               </p>
             </li>
           ))}
-          <li className="text-[10px] text-muted-foreground px-1">
-            {isZh
-              ? "示例行引用："
-              : "Row citations: "}
-            {steelExamples
-              .flatMap((ex) => ex.sourceIds)
-              .filter((id, idx, arr) => arr.indexOf(id) === idx)
-              .map((id) => sourceById(id)?.labelEn ?? id)
-              .join(" · ")}
-          </li>
         </ol>
       )}
     </motion.div>
@@ -358,8 +315,8 @@ export function CbamOperatorScorePanel({ result: raw }: { result: CbamScoreResul
                 </div>
                 <p className="mt-2 text-[10.5px] text-muted-foreground leading-snug">
                   {isZh
-                    ? "通过率越高，越能锁定下方「折扣价」而非行业默认路径。"
-                    : "Higher approval odds lock in the discounted €/t below — not the industry default."}
+                    ? "通过率越高，越能锁定实测路径而非 Annex I 默认路径。"
+                    : "Higher approval odds lock in the measured €/t below — not the Annex I default."}
                 </p>
               </div>
             </div>
@@ -401,7 +358,7 @@ export function CbamOperatorScorePanel({ result: raw }: { result: CbamScoreResul
                 </div>
                 <div className="mt-2 text-[10.5px] font-mono text-muted-foreground leading-snug space-y-0.5">
                   <div>
-                    {isZh ? "行业默认 SEE" : "Industry default SEE"}{" "}
+                    {isZh ? "Annex I 默认 SEE" : "Annex I default SEE"}{" "}
                     {result.industry_illustration.default_see_tco2e_per_t} tCO₂e/t
                   </div>
                   <div>
@@ -418,7 +375,7 @@ export function CbamOperatorScorePanel({ result: raw }: { result: CbamScoreResul
                   </div>
                 )}
                 <div className="text-[10px] font-mono text-carbon uppercase tracking-wider">
-                  {isZh ? "若通过 · 折扣价" : "If approved · discounted"}
+                  {isZh ? "若通过 · 实测路径" : "If approved · measured path"}
                 </div>
                 <div className="mt-1.5 text-[28px] font-mono font-semibold text-carbon leading-none">
                   €
@@ -428,13 +385,8 @@ export function CbamOperatorScorePanel({ result: raw }: { result: CbamScoreResul
                 </div>
                 <div className="mt-2 text-[10.5px] font-mono text-muted-foreground leading-snug space-y-0.5">
                   <div>
-                    {isZh ? "实际 / 示意 SEE" : "Actual / mock SEE"}{" "}
+                    {isZh ? "实测 SEE" : "Measured SEE"}{" "}
                     {result.industry_illustration.approved_see_tco2e_per_t} tCO₂e/t
-                    {result.industry_illustration.see_source === "mock_china_actual_1.60"
-                      ? isZh
-                        ? " · 示意 1.60"
-                        : " · mock 1.60"
-                      : ""}
                   </div>
                   <div>
                     {isZh ? "约占 FOB" : "~FOB share"}{" "}
@@ -454,8 +406,8 @@ export function CbamOperatorScorePanel({ result: raw }: { result: CbamScoreResul
             {!result.industry_illustration.has_lifecycle_transparency && (
               <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] text-warning leading-snug">
                 {isZh
-                  ? "尚未提供产品碳足迹透明数据 — 暂按行业默认路径计价。补齐排放监测与装置级数据后，即可解锁折扣价。"
-                  : "No transparent product carbon lifecycle yet — priced on the industry default path. Add emissions monitoring + installation data to unlock the discounted rate."}
+                  ? "尚未提供产品碳足迹透明数据 — 暂按 IR 2025/2621 Annex I 默认路径计价。补齐排放监测与装置级数据后，即可走实测路径。"
+                  : "No transparent product carbon lifecycle yet — priced on the IR 2025/2621 Annex I default path. Add emissions monitoring + installation data to unlock the measured path."}
               </div>
             )}
 
@@ -503,7 +455,7 @@ export function CbamOperatorScorePanel({ result: raw }: { result: CbamScoreResul
               </div>
               <div className="rounded-lg border border-carbon/30 bg-carbon/5 p-3">
                 <div className="text-[10px] font-mono text-carbon">
-                  {isZh ? "通过后利润（折扣价）" : "After approval (discounted)"}
+                  {isZh ? "通过后利润（实测路径）" : "After approval (measured path)"}
                 </div>
                 <div className="mt-1 text-[20px] font-mono font-semibold text-carbon">
                   €
