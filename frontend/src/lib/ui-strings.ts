@@ -31,8 +31,8 @@ export const newPage = {
   addMoreSub: { en: "Drop files here or browse — each upload runs OCR separately", zh: "拖入或浏览 — 每个文件单独运行 OCR" },
   browse: { en: "Browse files", zh: "浏览文件" },
   intakeNote: {
-    en: "Stage 1 intake uses PaddleOCR (zh+en) for photos; PDFs extract text and embed with Qwen3-Embedding-8B into Supabase. Missing fields fall back to cited mock invoice templates. Use the chevron on each row to collapse long lists.",
-    zh: "阶段 1 接入：照片走 PaddleOCR（中英）；PDF 提取文本并用 Qwen3-Embedding-8B 写入 Supabase。缺失字段回退至引用模板。长列表可用每行箭头折叠。",
+    en: "Stage 1 intake uses PaddleOCR (zh+en) for photos; PDFs extract text and embed with Qwen3-Embedding-8B into Supabase. After parse, a deterministic cross-check verifies qty×price, totals, and whether digits appear in OCR text. Missing fields fall back to cited mock invoice templates.",
+    zh: "阶段 1 接入：照片走 PaddleOCR（中英）；PDF 提取文本并用 Qwen3-Embedding-8B 写入 Supabase。解析后用确定性交叉校验验算数量×单价、合计与 OCR 原文数字。缺失字段回退至引用模板。",
   },
   sensorOptional: { en: "2 · Sensor data · optional", zh: "2 · 传感器数据 · 可选" },
   esp32: { en: "Include ESP32 kWh feed", zh: "包含 ESP32 用电数据" },
@@ -58,6 +58,10 @@ export const newPage = {
   fixUploadError: { en: "Remove or replace failed uploads before submitting.", zh: "提交前请移除或替换失败的上传。" },
   resumable: { en: "Resumable — a failed stage never re-bills finished work.", zh: "可恢复 — 已完成阶段不会重复计费。" },
   waitingOcr: { en: "Waiting for OCR results…", zh: "等待 OCR 结果…" },
+  verifyBlocked: {
+    en: "Extraction cross-check failed — edit numbers or confirm mismatches below.",
+    zh: "提取交叉校验未通过 — 请改数，或在下方确认不一致项。",
+  },
   authorizedMsg: {
     en: "Encrypted package signed and sent to Baowu/Ansteel.",
     zh: "加密数据包已签名并发送至宝武/鞍钢。",
@@ -309,6 +313,19 @@ export const invoiceCard = {
   calcMethod: { en: "Calculation method selected →", zh: "已选计算方法 →" },
   route: { en: "route", zh: "路线" },
   lineItems: { en: "Line items", zh: "货物明细" },
+  verifyTitle: { en: "Extraction cross-check", zh: "提取交叉校验" },
+  verifyPass: { en: "Pass", zh: "通过" },
+  verifyWarn: { en: "Warn", zh: "告警" },
+  verifyFail: { en: "Fail", zh: "未通过" },
+  verifyReRunning: { en: "Re-checking numbers…", zh: "正在重新验算数字…" },
+  verifyHint: {
+    en: "Deterministic checks: qty×price≈amount · Σ lines≈total · amount+tax≈total with tax · digits in OCR text. Does not invent CBAM € figures.",
+    zh: "确定性验算：数量×单价≈金额 · 明细合计≈合计 · 金额+税额≈价税合计 · 数字是否出现在 OCR 原文。不编造 CBAM 欧元数。",
+  },
+  confirmMismatch: {
+    en: "I reviewed the mismatches and confirm the numbers for submit",
+    zh: "我已复核不一致项，确认按当前数字提交",
+  },
 } as const;
 
 export const authModal = {

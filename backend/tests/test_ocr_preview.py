@@ -23,6 +23,9 @@ def test_ocr_preview_image_returns_invoice_and_classification():
     assert data["classification"]["cnCode"]
     assert data["ocr_source"] in {"mock", "paddleocr", "qwen3-vl"}
     assert "buyer" in data["invoice"]
+    assert data["verification"] is not None
+    assert data["verification"]["status"] in {"pass", "warn", "fail"}
+    assert isinstance(data["verification"]["checks"], list)
 
 
 def test_ocr_preview_pdf_embedding_metadata():

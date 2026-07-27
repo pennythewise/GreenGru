@@ -100,10 +100,11 @@ flowchart LR
 
 #### 1. Multimodal intake
 
-- Invoice PDF/JPEG → OCR  
-- **Authenticity:** **Nuonuo (诺诺)** third-party API validates invoices against the **State Taxation Administration (国家税务总局)** invoice ledger — not a private homemade DB  
-- ESP32 meter → `POST /api/iot/ingest`  
-- Natural-language goals → **Copilot (Agent 0)** routes channels  
+- Invoice PDF/JPEG → OCR (PaddleOCR → Qwen-VL → mock fallback)
+- **Extraction cross-check (New Submission):** deterministic checks — `qty × unitPrice ≈ amount`, `Σ lines ≈ totalAmount`, `amount + tax ≈ totalWithTax`, plus whether extracted digits appear in the OCR text. **Does not invent** CBAM/loan/grant regulated numbers. Failures require edit or operator confirm before submit. APIs: `POST /api/intake/ocr-preview` (includes `verification`), `POST /api/intake/verify-extract` (re-check after edits)
+- **Authenticity:** **Nuonuo (诺诺)** third-party API validates invoices against the **State Taxation Administration (国家税务总局)** invoice ledger — not a private homemade DB
+- ESP32 meter → `POST /api/iot/ingest` (direct HTTP, no MQTT)
+- Natural-language goals → **Copilot (Agent 0)** routes channels 
 
 #### 2. Agentic workflow + human-in-the-loop
 

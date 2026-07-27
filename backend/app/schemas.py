@@ -138,6 +138,35 @@ class PdfEmbeddingOut(BaseModel):
     reason: str | None = None
 
 
+class ExtractionCheckOut(BaseModel):
+    id: str
+    status: str  # pass | warn | fail
+    field: str
+    message_en: str
+    message_zh: str
+    expected: str | None = None
+    actual: str | None = None
+
+
+class ExtractionVerificationOut(BaseModel):
+    """Deterministic OCR/vision number cross-check (arithmetic + OCR presence)."""
+
+    status: str  # pass | warn | fail
+    score_pct: int = 0
+    summary_en: str = ""
+    summary_zh: str = ""
+    checks: list[ExtractionCheckOut] = []
+
+
+class VerifyExtractRequest(BaseModel):
+    """Re-run extraction checks after the operator edits invoice fields."""
+
+    invoice: InvoiceDataOut
+    ocr_text_preview: str = ""
+    mock_fields: list[str] = []
+    ocr_source: str = ""
+
+
 class OcrPreviewOut(BaseModel):
     invoice: InvoiceDataOut
     classification: ClassificationPreviewOut
@@ -146,6 +175,7 @@ class OcrPreviewOut(BaseModel):
     mock_fields: list[str] = []
     production_volume_tonnes: float | None = None
     pdf_embedding: PdfEmbeddingOut | None = None
+    verification: ExtractionVerificationOut | None = None
     sources: list[SourceCitation] = []
 
 

@@ -35,7 +35,7 @@ import {
 } from "@/lib/cisa-grid-ef";
 import { useDashboardSnapshot } from "@/hooks/useDashboardSnapshot";
 import { useLocale } from "@/lib/locale";
-import { crumbs, newPage } from "@/lib/ui-strings";
+import { crumbs, invoiceCard, newPage } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/new")({
@@ -81,6 +81,7 @@ function NewSubmission() {
   const [iotSnapshot, setIotSnapshot] = useState<IotSnapshot | null>(null);
   const [iotSaving, setIotSaving] = useState(false);
   const [iotSaveError, setIotSaveError] = useState<string | null>(null);
+  const [confirmMismatch, setConfirmMismatch] = useState(false);
   const { applyPipelineSnapshot } = useDashboardSnapshot();
 
   const setGreenTradingChoice = useCallback((choice: GreenPowerTradingChoice) => {
@@ -193,8 +194,42 @@ function NewSubmission() {
   const anyLoading = documents.some((d) => d.ocrLoading);
   const readyDocs = documents.filter((d) => d.ocrPreview && !d.ocrError);
   const hasErrors = documents.some((d) => d.ocrError);
+  const primaryVerify = readyDocs[0]?.ocrPreview?.verification ?? null;
+  const verifyBlocked = primaryVerify?.status === "fail" && !confirmMismatch;
   const canSubmit =
-    documents.length > 0 && !anyLoading && readyDocs.length > 0 && !hasErrors && !submitted && !pipelineLoading;
+    documents.length > 0 &&
+    !anyLoading &&
+    readyDocs.length > 0 &&
+    !hasErrors &&
+    !submitted &&
+    !pipelineLoading &&
+    !verifyBlocked;
+
+  const patchDocumentInvoice = useCallback(
+    (
+      id: string,
+      next: {
+        invoice: NonNullable<UploadedDocument["ocrPreview"]>["invoice"];
+        verification: NonNullable<UploadedDocument["ocrPreview"]>["verification"];
+      },
+    ) => {
+      setDocuments((prev) =>
+        prev.map((d) => {
+          if (d.id !== id || !d.ocrPreview) return d;
+          return {
+            ...d,
+            ocrPreview: {
+              ...d.ocrPreview,
+              invoice: next.invoice,
+              verification: next.verification,
+            },
+          };
+        }),
+      );
+      setConfirmMismatch(false);
+    },
+    [],
+  );
 
   const handleSubmit = useCallback(async () => {
     const primary = readyDocs[0]?.ocrPreview;
@@ -230,9 +265,11 @@ function NewSubmission() {
         ? t(newPage.ocrRunning.en, newPage.ocrRunning.zh)
         : hasErrors
           ? t(newPage.fixUploadError.en, newPage.fixUploadError.zh)
-          : readyDocs.length > 0
-            ? t(newPage.resumable.en, newPage.resumable.zh)
-            : t(newPage.waitingOcr.en, newPage.waitingOcr.zh);
+          : verifyBlocked
+            ? t(newPage.verifyBlocked.en, newPage.verifyBlocked.zh)
+            : readyDocs.length > 0
+              ? t(newPage.resumable.en, newPage.resumable.zh)
+              : t(newPage.waitingOcr.en, newPage.waitingOcr.zh);
 
   return (
     <AppShell crumb={t(crumbs.new.en, crumbs.new.zh)}>
@@ -284,6 +321,7 @@ function NewSubmission() {
                     expanded={doc.expanded}
                     onToggleExpand={() => toggleDocument(doc.id)}
                     onRemove={() => removeDocument(doc.id)}
+                    onInvoiceChange={(next) => patchDocumentInvoice(doc.id, next)}
                   />
                 ))}
               </div>
@@ -602,7 +640,25 @@ function NewSubmission() {
                             : "Live · no window saved"
                     }
                   />
+                  {primaryVerify && (
+                    <Row
+                      k={isZh ? "提取校验" : "Extract check"}
+                      v={`${primaryVerify.status} · ${primaryVerify.score_pct}%`}
+                    />
+                  )}
                 </div>
+
+                {primaryVerify?.status === "fail" && !submitted && (
+                  <label className="mt-3 flex items-start gap-2 text-[11.5px] text-muted-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={confirmMismatch}
+                      onChange={(e) => setConfirmMismatch(e.target.checked)}
+                    />
+                    <span>{t(invoiceCard.confirmMismatch.en, invoiceCard.confirmMismatch.zh)}</span>
+                  </label>
+                )}
 
                 <button
                   type="button"

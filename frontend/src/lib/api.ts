@@ -56,6 +56,24 @@ export type PdfEmbeddingInfo = {
   reason: string | null;
 };
 
+export type ExtractionCheck = {
+  id: string;
+  status: "pass" | "warn" | "fail" | string;
+  field: string;
+  message_en: string;
+  message_zh: string;
+  expected: string | null;
+  actual: string | null;
+};
+
+export type ExtractionVerification = {
+  status: "pass" | "warn" | "fail" | string;
+  score_pct: number;
+  summary_en: string;
+  summary_zh: string;
+  checks: ExtractionCheck[];
+};
+
 export type OcrPreviewResponse = {
   invoice: InvoiceData;
   classification: ClassificationPreview;
@@ -64,6 +82,7 @@ export type OcrPreviewResponse = {
   mock_fields: string[];
   production_volume_tonnes: number | null;
   pdf_embedding: PdfEmbeddingInfo | null;
+  verification: ExtractionVerification | null;
   sources: { constant: string; value: string; citation: string }[];
 };
 
@@ -93,6 +112,29 @@ export async function previewOcr(file: File): Promise<OcrPreviewResponse> {
   }
 
   return res.json() as Promise<OcrPreviewResponse>;
+}
+
+export async function verifyExtract(payload: {
+  invoice: InvoiceData;
+  ocr_text_preview?: string;
+  mock_fields?: string[];
+  ocr_source?: string;
+}): Promise<ExtractionVerification> {
+  const res = await fetch(`${API_BASE}/api/intake/verify-extract`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      invoice: payload.invoice,
+      ocr_text_preview: payload.ocr_text_preview ?? "",
+      mock_fields: payload.mock_fields ?? [],
+      ocr_source: payload.ocr_source ?? "",
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Verify extract failed (${res.status})`);
+  }
+  return res.json() as Promise<ExtractionVerification>;
 }
 
 export type PipelineStageDetail = {

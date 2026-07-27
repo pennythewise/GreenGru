@@ -100,9 +100,10 @@ flowchart LR
 
 #### 1. 多模态接入
 
-- 发票 PDF/JPEG → OCR
+- 发票 PDF/JPEG → OCR（PaddleOCR → Qwen-VL → 模板回退）
+- **提取交叉校验（新建提交）：** 确定性验算 `数量×单价≈金额`、`明细合计≈合计`、`金额+税额≈价税合计`，并检查提取数字是否出现在 OCR 原文 — **不编造** CBAM/贷款/补贴监管数字。未通过时需改数或人工确认后才能提交。API：`POST /api/intake/ocr-preview`（响应含 `verification`）、`POST /api/intake/verify-extract`（编辑后重验）
 - **验真：** **诺诺（Nuonuo）第三方 API** 查验发票真伪 —— 对接 **国家税务总局** 发票底账数据（非自建库）
-- ESP32 电表 → `POST /api/iot/ingest`
+- ESP32 电表 → `POST /api/iot/ingest`（直连 HTTP，无 MQTT）
 - 自然语言目标 → **Copilot（Agent 0）** 分流
 
 #### 2. Agentic 工作流 + Human-in-the-loop

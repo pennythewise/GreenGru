@@ -2,7 +2,16 @@ from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
-from app.schemas import IntakeRecordOut, ManualIntakeRequest, OcrPreviewOut, SourceCitation
+from app.schemas import (
+    ExtractionCheckOut,
+    ExtractionVerificationOut,
+    IntakeRecordOut,
+    ManualIntakeRequest,
+    OcrPreviewOut,
+    SourceCitation,
+    VerifyExtractRequest,
+)
+from app.services.extraction_verify import verify_invoice_extraction
 from app.services.intake_agent import (
     IntakeExtraction,
     extract_from_document,
@@ -18,7 +27,8 @@ router = APIRouter(prefix="/api", tags=["intake"])
 @router.post("/intake/ocr-preview", response_model=OcrPreviewOut)
 async def ocr_preview(file: UploadFile):
     """Stage-1 preview for New Submission: PaddleOCR on images, PDF text
-    extraction + Qwen3-Embedding-8B vectors to Supabase, mock fill for gaps."""
+    extraction + Qwen3-Embedding-8B vectors to Supabase, mock fill for gaps.
+    Includes deterministic extraction cross-check on numeric fields."""
     if not file.filename:
         raise HTTPException(status_code=422, detail="Filename is required.")
 
@@ -27,6 +37,40 @@ async def ocr_preview(file: UploadFile):
         raise HTTPException(status_code=422, detail="Empty file upload.")
 
     return await run_ocr_preview(content=content, filename=file.filename)
+
+
+@router.post("/intake/verify-extract", response_model=ExtractionVerificationOut)
+async def verify_extract(payload: VerifyExtractRequest):
+    """Re-verify invoice numbers after operator edits (no re-OCR).
+
+    Checks: qty×unitPrice≈amount, Σ lines≈totalAmount, amount+tax≈totalWithTax,
+    and whether extracted digit sequences appear in the OCR text preview.
+    """
+    invoice = payload.invoice.model_dump()
+    result = verify_invoice_extraction(
+        invoice,
+        ocr_text=payload.ocr_text_preview or "",
+        mock_fields=payload.mock_fields or [],
+        ocr_source=payload.ocr_source or "",
+    )
+    return ExtractionVerificationOut(
+        status=result.status,
+        score_pct=result.score_pct,
+        summary_en=result.summary_en,
+        summary_zh=result.summary_zh,
+        checks=[
+            ExtractionCheckOut(
+                id=c.id,
+                status=c.status,
+                field=c.field,
+                message_en=c.message_en,
+                message_zh=c.message_zh,
+                expected=c.expected,
+                actual=c.actual,
+            )
+            for c in result.checks
+        ],
+    )
 
 
 @router.post("/intake", response_model=IntakeRecordOut)
