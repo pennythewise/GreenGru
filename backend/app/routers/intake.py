@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.schemas import (
-    ExtractionCheckOut,
     ExtractionVerificationOut,
     IntakeRecordOut,
     ManualIntakeRequest,
@@ -11,7 +10,7 @@ from app.schemas import (
     SourceCitation,
     VerifyExtractRequest,
 )
-from app.services.extraction_verify import verify_invoice_extraction
+from app.services.extraction_verify import verification_to_out, verify_invoice_extraction
 from app.services.intake_agent import (
     IntakeExtraction,
     extract_from_document,
@@ -53,24 +52,7 @@ async def verify_extract(payload: VerifyExtractRequest):
         mock_fields=payload.mock_fields or [],
         ocr_source=payload.ocr_source or "",
     )
-    return ExtractionVerificationOut(
-        status=result.status,
-        score_pct=result.score_pct,
-        summary_en=result.summary_en,
-        summary_zh=result.summary_zh,
-        checks=[
-            ExtractionCheckOut(
-                id=c.id,
-                status=c.status,
-                field=c.field,
-                message_en=c.message_en,
-                message_zh=c.message_zh,
-                expected=c.expected,
-                actual=c.actual,
-            )
-            for c in result.checks
-        ],
-    )
+    return verification_to_out(result)
 
 
 @router.post("/intake", response_model=IntakeRecordOut)

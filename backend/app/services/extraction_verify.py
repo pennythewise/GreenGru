@@ -330,22 +330,30 @@ def verify_invoice_extraction(
     )
 
 
-def verification_to_dict(v: ExtractionVerification) -> dict[str, Any]:
-    return {
-        "status": v.status,
-        "score_pct": v.score_pct,
-        "summary_en": v.summary_en,
-        "summary_zh": v.summary_zh,
-        "checks": [
-            {
-                "id": c.id,
-                "status": c.status,
-                "field": c.field,
-                "message_en": c.message_en,
-                "message_zh": c.message_zh,
-                "expected": c.expected,
-                "actual": c.actual,
-            }
+def verification_to_out(v: ExtractionVerification) -> "ExtractionVerificationOut":
+    """Map dataclass → Pydantic response (single place for OCR + re-verify)."""
+    from app.schemas import ExtractionCheckOut, ExtractionVerificationOut
+
+    return ExtractionVerificationOut(
+        status=v.status,
+        score_pct=v.score_pct,
+        summary_en=v.summary_en,
+        summary_zh=v.summary_zh,
+        checks=[
+            ExtractionCheckOut(
+                id=c.id,
+                status=c.status,
+                field=c.field,
+                message_en=c.message_en,
+                message_zh=c.message_zh,
+                expected=c.expected,
+                actual=c.actual,
+            )
             for c in v.checks
         ],
-    }
+    )
+
+
+def verification_to_dict(v: ExtractionVerification) -> dict[str, Any]:
+    """Dict form of :func:`verification_to_out` (tests / local JSON)."""
+    return verification_to_out(v).model_dump()

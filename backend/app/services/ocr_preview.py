@@ -10,8 +10,6 @@ from app.config import get_settings
 from app.data.cn_codes import SUPPORTED_CN_CODES
 from app.schemas import (
     ClassificationPreviewOut,
-    ExtractionCheckOut,
-    ExtractionVerificationOut,
     InvoiceDataOut,
     InvoiceLineItemOut,
     InvoicePartyOut,
@@ -22,7 +20,7 @@ from app.schemas import (
 from app.services.paddleocr_client import ocr_image_bytes
 from app.services.ocr_vision import ocr_image_with_vision
 from app.services.classifier_agent import classify_product
-from app.services.extraction_verify import verify_invoice_extraction
+from app.services.extraction_verify import verify_invoice_extraction, verification_to_out
 from app.services.invoice_parser import (
     parse_invoice_from_text,
     product_description_from_invoice,
@@ -252,24 +250,7 @@ async def run_ocr_preview(*, content: bytes, filename: str) -> OcrPreviewOut:
         mock_fields=mock_fields,
         ocr_source=ocr_source,
     )
-    verification_out = ExtractionVerificationOut(
-        status=verification.status,
-        score_pct=verification.score_pct,
-        summary_en=verification.summary_en,
-        summary_zh=verification.summary_zh,
-        checks=[
-            ExtractionCheckOut(
-                id=c.id,
-                status=c.status,
-                field=c.field,
-                message_en=c.message_en,
-                message_zh=c.message_zh,
-                expected=c.expected,
-                actual=c.actual,
-            )
-            for c in verification.checks
-        ],
-    )
+    verification_out = verification_to_out(verification)
     sources.append(
         SourceCitation(
             constant="Extraction cross-check",
