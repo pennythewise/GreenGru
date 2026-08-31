@@ -1,11 +1,17 @@
 export const shell = {
   smeOperator: { en: "SME operator", zh: "中小企业操作员" },
-  dataResidency: { en: "Agents run on Qwen3.7-Plus; vectors use Qwen3-Embedding-8B.", zh: "智能体使用 Qwen3.7-Plus；向量使用 Qwen3-Embedding-8B。" },
+  dataResidency: {
+    en: "Agents run on Qwen3.7-Plus; vectors use Qwen3-Embedding-8B.",
+    zh: "智能体使用 Qwen3.7-Plus；向量使用 Qwen3-Embedding-8B。",
+  },
   commandCenter: { en: "Command Center", zh: "指挥中心" },
   apiConnected: { en: "API Connected", zh: "API 已连接" },
   accountManager: { en: "Account Manager", zh: "客户经理" },
   cited: { en: "Cited:", zh: "引用：" },
-  copyright: { en: "© GreenGru · Beijing-region infra", zh: "© GreenGru · 北京地区基础设施" },
+  copyright: {
+    en: "© GreenGru · Beijing-region infra",
+    zh: "© GreenGru · 北京地区基础设施",
+  },
 } as const;
 
 export const crumbs = {
@@ -16,25 +22,41 @@ export const crumbs = {
   loan: { en: "Loan", zh: "贷款" },
   grant: { en: "Grant", zh: "补贴" },
   upstream: { en: "Portfolio", zh: "供应商组合" },
+  marketplace: { en: "Marketplace", zh: "市场" },
 } as const;
 
 export const newPage = {
-  title: { en: "Get real data in — with guardrails", zh: "真实数据接入 — 带安全护栏" },
+  title: {
+    en: "Get real data in — with guardrails",
+    zh: "真实数据接入 — 带安全护栏",
+  },
   subtitle: {
     en: "Upload documents — obviously-wrong uploads get rejected before any paid model call runs.",
     zh: "上传文件 — 明显错误的文件会在调用付费模型前被拦截。",
   },
   documents: { en: "1 · Documents", zh: "1 · 文件" },
-  dropTitle: { en: "Drop invoices / photos / PDF", zh: "拖入发票 / 照片 / PDF" },
-  dropSub: { en: "or upload CSV / XLSX — structured files skip the vision model entirely", zh: "或上传 CSV / XLSX — 结构化文件跳过视觉模型" },
+  dropTitle: {
+    en: "Drop invoices / photos / PDF",
+    zh: "拖入发票 / 照片 / PDF",
+  },
+  dropSub: {
+    en: "or upload CSV / XLSX — structured files skip the vision model entirely",
+    zh: "或上传 CSV / XLSX — 结构化文件跳过视觉模型",
+  },
   addMoreTitle: { en: "Add more invoices / PDFs", zh: "继续添加发票 / PDF" },
-  addMoreSub: { en: "Drop files here or browse — each upload runs OCR separately", zh: "拖入或浏览 — 每个文件单独运行 OCR" },
+  addMoreSub: {
+    en: "Drop files here or browse — each upload runs OCR separately",
+    zh: "拖入或浏览 — 每个文件单独运行 OCR",
+  },
   browse: { en: "Browse files", zh: "浏览文件" },
   intakeNote: {
     en: "Stage 1 intake uses PaddleOCR (zh+en) for photos; PDFs extract text and embed with Qwen3-Embedding-8B into Supabase. After parse, a deterministic cross-check verifies qty×price, totals, and whether digits appear in OCR text. Missing fields fall back to cited mock invoice templates.",
     zh: "阶段 1 接入：照片走 PaddleOCR（中英）；PDF 提取文本并用 Qwen3-Embedding-8B 写入 Supabase。解析后用确定性交叉校验验算数量×单价、合计与 OCR 原文数字。缺失字段回退至引用模板。",
   },
-  sensorOptional: { en: "2 · Sensor data · optional", zh: "2 · 传感器数据 · 可选" },
+  sensorOptional: {
+    en: "2 · Sensor data · optional",
+    zh: "2 · 传感器数据 · 可选",
+  },
   esp32: { en: "Include ESP32 kWh feed", zh: "包含 ESP32 用电数据" },
   sensorNote: {
     en: "Decoupled — feeds the grant + loan scores, never the CBAM tariff number.",
@@ -53,10 +75,22 @@ export const newPage = {
   sensor: { en: "Sensor", zh: "传感器" },
   sensorVal: { en: "attached · 30 d", zh: "已接入 · 30 天" },
   submit: { en: "Submit", zh: "提交" },
-  uploadToEnable: { en: "Upload at least one document above to enable submit.", zh: "请至少上传一个文件以启用提交。" },
-  ocrRunning: { en: "Running OCR intake on backend…", zh: "后端正在运行 OCR 接入…" },
-  fixUploadError: { en: "Remove or replace failed uploads before submitting.", zh: "提交前请移除或替换失败的上传。" },
-  resumable: { en: "Resumable — a failed stage never re-bills finished work.", zh: "可恢复 — 已完成阶段不会重复计费。" },
+  uploadToEnable: {
+    en: "Upload at least one document above to enable submit.",
+    zh: "请至少上传一个文件以启用提交。",
+  },
+  ocrRunning: {
+    en: "Running OCR intake on backend…",
+    zh: "后端正在运行 OCR 接入…",
+  },
+  fixUploadError: {
+    en: "Remove or replace failed uploads before submitting.",
+    zh: "提交前请移除或替换失败的上传。",
+  },
+  resumable: {
+    en: "Resumable — a failed stage never re-bills finished work.",
+    zh: "可恢复 — 已完成阶段不会重复计费。",
+  },
   waitingOcr: { en: "Waiting for OCR results…", zh: "等待 OCR 结果…" },
   verifyBlocked: {
     en: "Extraction cross-check failed — edit numbers or confirm mismatches below.",
@@ -66,16 +100,25 @@ export const newPage = {
     en: "Encrypted package signed and sent to Baowu/Ansteel.",
     zh: "加密数据包已签名并发送至宝武/鞍钢。",
   },
-  continueCopilot: { en: "Continue in GreenGru Copilot →", zh: "继续在 GreenGru 副驾中 →" },
+  continueCopilot: {
+    en: "Continue in GreenGru Copilot →",
+    zh: "继续在 GreenGru 副驾中 →",
+  },
 } as const;
 
 export const entryPage = {
-  title: { en: "Ask your GreenGru Copilot what you need", zh: "告诉 GreenGru 副驾您需要什么" },
+  title: {
+    en: "Ask your GreenGru Copilot what you need",
+    zh: "告诉 GreenGru 副驾您需要什么",
+  },
   subtitle: {
     en: "Chat with Copilot about your goal, then finish asking — qwen3.7-plus scores Loan / Grant / CBAM from the conversation. Confirm routes to fill forms in order.",
     zh: "先与副驾对话说明目标，再结束提问 — qwen3.7-plus 根据对话历史为贷款 / 补贴 / CBAM 打分。确认路线后按序填写表单。",
   },
-  routerTitle: { en: "Router output · confirm the route", zh: "路由输出 · 确认路线" },
+  routerTitle: {
+    en: "Router output · confirm the route",
+    zh: "路由输出 · 确认路线",
+  },
   chatPlaceholder: {
     en: "Ask Copilot about your goal first — percentages appear after you finish asking.",
     zh: "请先向副驾说明目标 — 结束提问后才会显示百分比。",
@@ -90,8 +133,14 @@ export const entryPage = {
   },
   finishAsking: { en: "Finish asking questions", zh: "结束提问并计算" },
   recalculateIntent: { en: "Recalculate intent %", zh: "重新计算意图 %" },
-  scoringIntent: { en: "Scoring with qwen3.7-plus…", zh: "正在用 qwen3.7-plus 计分…" },
-  whyConfirm: { en: "Why confirm, not auto-run?", zh: "为何需确认，而非自动运行？" },
+  scoringIntent: {
+    en: "Scoring with qwen3.7-plus…",
+    zh: "正在用 qwen3.7-plus 计分…",
+  },
+  whyConfirm: {
+    en: "Why confirm, not auto-run?",
+    zh: "为何需确认，而非自动运行？",
+  },
   resetRouter: { en: "Reset to router", zh: "恢复路由建议" },
   send: { en: "Send", zh: "发送" },
   describeGoal: { en: "Describe your goal · 描述目标…", zh: "描述您的目标…" },
@@ -103,7 +152,10 @@ export const entryPage = {
     zh: (floor: number) =>
       `意图百分比仅在您结束提问后，由 qwen3.7-plus 根据完整对话计算。达到 ${floor}% 的路线会预选，但您须手动确认。多路线按序填写：欧盟许可 → 贷款 → 补贴。`,
   },
-  confirmRoutes: { en: (n: number) => `Confirm ${n} route${n === 1 ? "" : "s"}`, zh: (n: number) => `确认 ${n} 条路线` },
+  confirmRoutes: {
+    en: (n: number) => `Confirm ${n} route${n === 1 ? "" : "s"}`,
+    zh: (n: number) => `确认 ${n} 条路线`,
+  },
   greeting: {
     en: "You're in GreenGru Copilot routing. Ask about Loan, Grant, or CBAM — when you're done, tap Finish asking questions so the router can score your intent.",
     zh: "您已进入 GreenGru 副驾路由。可先询问贷款、补贴或 CBAM — 提问结束后点「结束提问并计算」，路由再根据对话计分。",
@@ -132,9 +184,18 @@ export const pipeline = {
 
 export const routeFlow = {
   copilotFlow: { en: "Copilot flow ·", zh: "副驾流程 ·" },
-  stepOf: { en: (s: number, t: number) => `Step ${s} of ${t}`, zh: (s: number, t: number) => `第 ${s}/${t} 步` },
-  next: { en: (label: string) => ` — next: ${label}`, zh: (label: string) => ` — 下一步：${label}` },
-  continueTo: { en: (label: string) => `Continue to ${label}`, zh: (label: string) => `继续至${label}` },
+  stepOf: {
+    en: (s: number, t: number) => `Step ${s} of ${t}`,
+    zh: (s: number, t: number) => `第 ${s}/${t} 步`,
+  },
+  next: {
+    en: (label: string) => ` — next: ${label}`,
+    zh: (label: string) => ` — 下一步：${label}`,
+  },
+  continueTo: {
+    en: (label: string) => `Continue to ${label}`,
+    zh: (label: string) => `继续至${label}`,
+  },
   finishFlow: { en: "Finish flow", zh: "完成流程" },
   backDashboard: { en: "← Back to dashboard", zh: "← 返回总览" },
   goNewSubmission: { en: "Go to new submission", zh: "前往新建提交" },
@@ -196,7 +257,10 @@ export const copilotPageLabels: Record<string, { en: string; zh: string }> = {
 
 export const routePage = {
   sectionADoc: { en: "Section A · Document intake", zh: "A 节 · 文件接入" },
-  collected: { en: (d: number, t: number) => `${d} of ${t} collected`, zh: (d: number, t: number) => `已收集 ${d}/${t}` },
+  collected: {
+    en: (d: number, t: number) => `${d} of ${t} collected`,
+    zh: (d: number, t: number) => `已收集 ${d}/${t}`,
+  },
   checklistNote: {
     en: "Attach all files first, then Process PDFs (MinerU→PyMuPDF→embed). Missing or unprocessed rows block Section B.",
     zh: "先附上全部文件，再点「处理 PDF」（MinerU→PyMuPDF→嵌入）。缺失或未处理项将阻塞 B 节。",
@@ -210,26 +274,42 @@ export const routePage = {
   },
   nothingToProcess: { en: "Attach PDF files first", zh: "请先附上 PDF 文件" },
   attachedProgress: {
-    en: (a: number, d: number, t: number) => `${a} attached · ${d}/${t} processed`,
+    en: (a: number, d: number, t: number) =>
+      `${a} attached · ${d}/${t} processed`,
     zh: (a: number, d: number, t: number) => `已附上 ${a} · 已处理 ${d}/${t}`,
   },
   done: { en: "✓ done", zh: "✓ 完成" },
-  sectionBPipeline: { en: "Section B · Route pipeline", zh: "B 节 · 路线流水线" },
-  factoryNote: { en: "Pull factory data reads the same live bus as the Dashboard's factory panel — never a second source.", zh: "工厂数据拉取与总览工厂面板共用同一实时总线 — 非第二数据源。" },
+  sectionBPipeline: {
+    en: "Section B · Route pipeline",
+    zh: "B 节 · 路线流水线",
+  },
+  factoryNote: {
+    en: "Pull factory data reads the same live bus as the Dashboard's factory panel — never a second source.",
+    zh: "工厂数据拉取与总览工厂面板共用同一实时总线 — 非第二数据源。",
+  },
   sectionCPreview: { en: "Section C · Report preview", zh: "C 节 · 报告预览" },
   deterministic: { en: "deterministic", zh: "确定性" },
   gapList: { en: "Gap list", zh: "差距清单" },
   downloadPdf: { en: "Download PDF", zh: "下载 PDF" },
   downloadExcel: { en: "Download Excel", zh: "下载 Excel" },
-  pdfNote: { en: "Available before Advisory finishes.", zh: "建议阶段完成前即可下载。" },
+  pdfNote: {
+    en: "Available before Advisory finishes.",
+    zh: "建议阶段完成前即可下载。",
+  },
   excelNote: {
     en: "Official EU CBAM Communication template (.xlsx), filled from your workbook.",
     zh: "欧盟官方 CBAM 沟通模板（.xlsx），已按工作簿填写。",
   },
   sectionCAdvisory: { en: "Section C · Advisory", zh: "C 节 · 建议" },
-  advisoryNote: { en: "non-blocking · optional follow-up", zh: "非阻塞 · 可选跟进" },
+  advisoryNote: {
+    en: "non-blocking · optional follow-up",
+    zh: "非阻塞 · 可选跟进",
+  },
   why: { en: "Why?", zh: "为何？" },
-  advisoryFooter: { en: "The SME can act on the left panel alone — advisory is optional.", zh: "中小企业可仅依据左侧面板行动 — 建议为可选。" },
+  advisoryFooter: {
+    en: "The SME can act on the left panel alone — advisory is optional.",
+    zh: "中小企业可仅依据左侧面板行动 — 建议为可选。",
+  },
   uploading: { en: "Uploading…", zh: "上传中…" },
   converting: { en: "Converting PDF…", zh: "解析 PDF…" },
   embedding: { en: "Embedding…", zh: "嵌入中…" },
@@ -252,13 +332,19 @@ export const routePage = {
 
 export const dashboardSections = {
   distanceTier: { en: "Distance to next tier", zh: "距下一等级" },
-  tierUnlock: { en: (n: number) => `${n} pts to unlock`, zh: (n: number) => `还差 ${n} 分解锁` },
+  tierUnlock: {
+    en: (n: number) => `${n} pts to unlock`,
+    zh: (n: number) => `还差 ${n} 分解锁`,
+  },
   grantLevers: { en: "Grant rubric levers", zh: "补贴评分杠杆" },
   livePower: { en: "Live shopfloor power", zh: "车间实时功率" },
   liveGridEmissions: { en: "Grid electricity tCO₂e", zh: "电网电力排放" },
   waitingEsp32: { en: "Waiting for ESP32 feed…", zh: "等待 ESP32 数据…" },
   liveSamples: { en: "samples", zh: "个采样点" },
-  sliderNote: { en: "Solid marker = current · thin line = rubric floor. Only two levers stand between C and B.", zh: "实心=当前值 · 细线=规则底线。仅两项杠杆介于 C 与 B 之间。" },
+  sliderNote: {
+    en: "Solid marker = current · thin line = rubric floor. Only two levers stand between C and B.",
+    zh: "实心=当前值 · 细线=规则底线。仅两项杠杆介于 C 与 B 之间。",
+  },
   emissionsSplit: { en: "Emissions source split", zh: "排放来源构成" },
   processMatrix: { en: "Process-stage matrix", zh: "工序阶段矩阵" },
   stage: { en: "Stage", zh: "工序" },
@@ -272,10 +358,16 @@ export const dashboardSections = {
   factoryFloor: { en: "Simulated factory floor", zh: "模拟工厂车间" },
   live: { en: "live", zh: "实时" },
   lastSync: { en: "Last sync", zh: "最近同步" },
-  syncNote: { en: "deterministic threshold-watch, no model call.", zh: "确定性阈值监测，无模型调用。" },
+  syncNote: {
+    en: "deterministic threshold-watch, no model call.",
+    zh: "确定性阈值监测，无模型调用。",
+  },
   feeds: { en: "Feeds →", zh: "输出 →" },
   yourSubmissions: { en: "Your submissions", zh: "您的提交" },
-  onePagePerRoute: { en: "One page per confirmed route", zh: "每条确认路线一页" },
+  onePagePerRoute: {
+    en: "One page per confirmed route",
+    zh: "每条确认路线一页",
+  },
   route: { en: "Route", zh: "路线" },
   descriptor: { en: "Descriptor", zh: "描述" },
   tonnes: { en: "Tonnes", zh: "吨位" },
@@ -288,8 +380,14 @@ export const dashboardSections = {
   firstTime: { en: "First time?", zh: "首次使用？" },
   talkCopilot: { en: "Talk to GreenGru Copilot →", zh: "咨询 GreenGru 副驾 →" },
   startNew: { en: "Start a new submission", zh: "开始新建提交" },
-  distributed: { en: "Distributed via Baowu / Ansteel supplier program", zh: "经宝武 / 鞍钢供应商计划分发" },
-  loadingFactory: { en: "Loading 3D factory floor…", zh: "工厂 3D 场景加载中…" },
+  distributed: {
+    en: "Distributed via Baowu / Ansteel supplier program",
+    zh: "经宝武 / 鞍钢供应商计划分发",
+  },
+  loadingFactory: {
+    en: "Loading 3D factory floor…",
+    zh: "工厂 3D 场景加载中…",
+  },
   copilotBtn: { en: "GreenGru Copilot", zh: "GreenGru 副驾" },
 } as const;
 
@@ -301,13 +399,25 @@ export const invoiceCard = {
   ocrFailed: { en: "OCR failed", zh: "OCR 失败" },
   ready: { en: "Ready", zh: "就绪" },
   runningIntake: { en: "Running OCR intake…", zh: "正在运行 OCR 接入…" },
-  intakeDetail: { en: "PaddleOCR → field parse → CN classify · PDFs also embed via Qwen3-Embedding-8B", zh: "PaddleOCR → 字段解析 → CN 分类 · PDF 亦经 Qwen3-Embedding-8B 嵌入" },
+  intakeDetail: {
+    en: "PaddleOCR → field parse → CN classify · PDFs also embed via Qwen3-Embedding-8B",
+    zh: "PaddleOCR → 字段解析 → CN 分类 · PDF 亦经 Qwen3-Embedding-8B 嵌入",
+  },
   previewFailed: { en: "OCR preview failed", zh: "OCR 预览失败" },
-  extractedTitle: { en: "Extracted info with classified result", zh: "提取信息与分类结果" },
+  extractedTitle: {
+    en: "Extracted info with classified result",
+    zh: "提取信息与分类结果",
+  },
   edit: { en: "Edit", zh: "编辑" },
   done: { en: "Done", zh: "完成" },
-  lockedNote: { en: "Locked — submitted to the pipeline as shown below.", zh: "已锁定 — 按下方所示提交至流水线。" },
-  editNote: { en: "Runs as-is on submit. Click Edit to correct anything the OCR pass misread.", zh: "提交时按原样运行。点编辑可修正 OCR 误读。" },
+  lockedNote: {
+    en: "Locked — submitted to the pipeline as shown below.",
+    zh: "已锁定 — 按下方所示提交至流水线。",
+  },
+  editNote: {
+    en: "Runs as-is on submit. Click Edit to correct anything the OCR pass misread.",
+    zh: "提交时按原样运行。点编辑可修正 OCR 误读。",
+  },
   classified: { en: "Classified result", zh: "分类结果" },
   lowConfidence: { en: "low confidence → escalated →", zh: "低置信 → 升级 →" },
   calcMethod: { en: "Calculation method selected →", zh: "已选计算方法 →" },
@@ -330,7 +440,10 @@ export const invoiceCard = {
 
 export const authModal = {
   title: { en: "Stage 6 · Authorize upload", zh: "阶段 6 · 授权上传" },
-  subtitle: { en: "operator confirm → Baowu/Ansteel API", zh: "操作员确认 → 宝武/鞍钢 API" },
+  subtitle: {
+    en: "operator confirm → Baowu/Ansteel API",
+    zh: "操作员确认 → 宝武/鞍钢 API",
+  },
   encryptBody: {
     en: "Your data will be sent to your supplier (Baowu/Ansteel) in encrypted state — TLS in transit, HMAC-signed package at rest.",
     zh: "数据将以加密状态发送至供应商（宝武/鞍钢）— 传输层 TLS，静态包 HMAC 签名。",
@@ -338,23 +451,117 @@ export const authModal = {
   cryptoSig: { en: "Cryptographic signature", zh: "加密签名" },
   signed: { en: "signed", zh: "已签名" },
   signing: { en: "signing…", zh: "签名中…" },
-  signingDetail: { en: "SHA-256 package hash → HMAC-SHA256 operator seal…", zh: "SHA-256 包哈希 → HMAC-SHA256 操作员签章…" },
+  signingDetail: {
+    en: "SHA-256 package hash → HMAC-SHA256 operator seal…",
+    zh: "SHA-256 包哈希 → HMAC-SHA256 操作员签章…",
+  },
   packageHash: { en: "Package hash · SHA-256", zh: "包哈希 · SHA-256" },
-  operatorSig: { en: "Operator signature · HMAC-SHA256", zh: "操作员签名 · HMAC-SHA256" },
-  nextNote: { en: "Next: GreenGru Copilot — choose Loan, Grant, or EU license route.", zh: "下一步：GreenGru 副驾 — 选择贷款、补贴或欧盟许可路线。" },
+  operatorSig: {
+    en: "Operator signature · HMAC-SHA256",
+    zh: "操作员签名 · HMAC-SHA256",
+  },
+  nextNote: {
+    en: "Next: GreenGru Copilot — choose Loan, Grant, or EU license route.",
+    zh: "下一步：GreenGru 副驾 — 选择贷款、补贴或欧盟许可路线。",
+  },
   continue: { en: "Authorize and Continue", zh: "授权并继续" },
+} as const;
+
+export const marketplacePage = {
+  eyebrow: { en: "MARKETPLACE", zh: "市场推荐" },
+  title: {
+    en: (name: string) => `Ranked for ${name}`,
+    zh: (name: string) => `为${name}排序`,
+  },
+  subtitle: {
+    en: "Procurement matches ranked against your own gap analysis — cost-effectiveness first, raw impact second. Nothing here is sponsored placement.",
+    zh: "采购匹配按您自身的差距分析排序 — 优先考虑成本效益，其次是原始减排量。此处无付费排名。",
+  },
+  openMatches: { en: "open matches", zh: "个待处理匹配" },
+  allCategories: { en: "All", zh: "全部" },
+  rankOf: {
+    en: (n: number, t: number) => `#${n} of ${t}`,
+    zh: (n: number, t: number) => `第${n}／共${t}`,
+  },
+  priorityHigh: { en: "HIGH PRIORITY", zh: "高优先级" },
+  priorityMedium: { en: "MEDIUM PRIORITY", zh: "中优先级" },
+  priorityStrategic: { en: "STRATEGIC", zh: "战略" },
+  priorityData: { en: "DATA COVERAGE", zh: "数据覆盖" },
+  impact: { en: "Impact", zh: "减排影响" },
+  priorityScore: { en: "Priority score", zh: "优先级评分" },
+  payback: { en: "Payback", zh: "回本周期" },
+  leadTime: { en: "Lead time", zh: "交货周期" },
+  belowMarket: {
+    en: (pct: number) => `↓ ${pct}% below market`,
+    zh: (pct: number) => `↓ 低于市场价 ${pct}%`,
+  },
+  marketRef: { en: "market", zh: "市场参考价" },
+  requestQuote: { en: "Request quote", zh: "获取报价" },
+  viewDiagnostic: { en: "View diagnostic & math", zh: "查看诊断与计算" },
+  rankedFooter: {
+    en: "Ranked by priority score = cost-effectiveness (¥/tCO2e) × gap severity · recomputed nightly from your latest audit",
+    zh: "按优先级评分排序 = 成本效益（¥/tCO2e）× 差距严重程度 · 每晚根据最新审计重新计算",
+  },
+  backToMarketplace: { en: "Back to Marketplace", zh: "返回市场" },
+  whyRanked: {
+    en: (n: number) => `Why this is ranked #${n}`,
+    zh: (n: number) => `为何排名第${n}`,
+  },
+  citeNote: {
+    en: "Grid emission factor: no green-power trading · consistent with your CBAM passport calculation engine",
+    zh: "电网排放因子：未参与绿电交易 · 与您的 CBAM 护照计算引擎一致",
+  },
+  verifiedNote: {
+    en: "Verified against supplier quotes",
+    zh: "已核对供应商报价",
+  },
+  downloadSpec: { en: "Download spec sheet", zh: "下载规格书" },
+  financeNote: {
+    en: "Eligible for PBOC 碳减排支持工具 equipment loan · ~1.75% rate, 60% principal covered",
+    zh: "符合人行碳减排支持工具设备贷款资格 · 利率约1.75%，本金覆盖60%",
+  },
+  supplierLabel: { en: "Supplier", zh: "供应商" },
+  contact: { en: "Contact", zh: "联系人" },
+  responseTime: { en: "Response time", zh: "响应时间" },
+  installsOnRecord: { en: "Installs on record", zh: "已装机案例" },
+  productPhotoMissing: {
+    en: "Product photo not yet supplied by supplier",
+    zh: "供应商尚未提供产品照片",
+  },
+  emptyTitle: { en: "No urgent recommendations right now", zh: "暂无紧急推荐" },
+  emptyBody: {
+    en: "Your current gaps don't yet cross the cost-effectiveness threshold for a paid recommendation. We'll surface one here the moment a fix pencils out.",
+    zh: "当前差距尚未达到值得付费改造的成本效益阈值。一旦出现划算的方案，会立即在此显示。",
+  },
+  stillWatching: { en: "Still watching", zh: "持续监测中" },
+  noSponsored: {
+    en: "Recomputed nightly from your latest audit · no sponsored placement",
+    zh: "每晚根据最新审计重新计算 · 无付费排名",
+  },
 } as const;
 
 export const signinPage = {
   signIn: { en: "Sign in", zh: "登录" },
-  headline: { en: "Turn invisible emissions into a CBAM passport, a financing report, and a ranked plan.", zh: "将隐形排放转化为碳护照、融资报告与优先级行动方案。" },
-  sub: { en: "Distributed to Baowu / Ansteel downstream customers as a value-added service. Bilingual EN / 中文, every regulated number cited.", zh: "作为增值服务分发给宝武/鞍钢下游客户。中英双语，每项监管数字均有引用来源。" },
+  headline: {
+    en: "Turn invisible emissions into a CBAM passport, a financing report, and a ranked plan.",
+    zh: "将隐形排放转化为碳护照、融资报告与优先级行动方案。",
+  },
+  sub: {
+    en: "Distributed to Baowu / Ansteel downstream customers as a value-added service. Bilingual EN / 中文, every regulated number cited.",
+    zh: "作为增值服务分发给宝武/鞍钢下游客户。中英双语，每项监管数字均有引用来源。",
+  },
   welcome: { en: "Welcome back", zh: "欢迎回来" },
-  b2b: { en: "B2B access via Baowu / Ansteel referral. No open self-serve signup.", zh: "经宝武/鞍钢推荐的企业访问。不开放自助注册。" },
+  b2b: {
+    en: "B2B access via Baowu / Ansteel referral. No open self-serve signup.",
+    zh: "经宝武/鞍钢推荐的企业访问。不开放自助注册。",
+  },
   workEmail: { en: "Work email", zh: "工作邮箱" },
   password: { en: "Password", zh: "密码" },
   signInBtn: { en: "Sign in", zh: "登录" },
-  residency: { en: "Your data stays on Beijing-region infrastructure. No cross-border export at any pipeline stage.", zh: "数据留存于北京地区基础设施。流水线任何阶段均不出境。" },
+  residency: {
+    en: "Your data stays on Beijing-region infrastructure. No cross-border export at any pipeline stage.",
+    zh: "数据留存于北京地区基础设施。流水线任何阶段均不出境。",
+  },
   demoLink: { en: "Direct link (demo):", zh: "直达链接（演示）：" },
   dashboard: { en: "→ dashboard", zh: "→ 总览" },
 } as const;
