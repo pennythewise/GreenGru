@@ -39,7 +39,14 @@ export function useCopilotChat(page: CopilotPage, greeting: string) {
           promptId,
           history: history.slice(0, -1),
         });
-        setModelLabel(result.mock ? `${result.model} · mock` : result.model);
+        const tags = [
+          result.mock ? "mock" : null,
+          result.graph_rag_attached ? "Graph RAG" : null,
+          result.kb_rag_attached ? "KB" : null,
+        ].filter(Boolean);
+        setModelLabel(
+          tags.length ? `${result.model} · ${tags.join(" · ")}` : result.model,
+        );
         setMessages((prev) => [
           ...prev,
           { id: `a-${Date.now()}`, role: "assistant", text: result.reply },

@@ -395,12 +395,20 @@ class CopilotChatRequest(BaseModel):
     message: str
     prompt_id: str | None = None
     history: list[CopilotHistoryMessage] = []
+    # None = auto (passport/graph-rag or CBAM keywords); True/False force on/off
+    include_graph_rag: bool | None = None
+    # None = auto (loan/grant page or keywords); True/False force on/off
+    include_kb_rag: bool | None = None
 
 
 class CopilotChatResponse(BaseModel):
     reply: str
     model: str
     mock: bool = False
+    graph_rag: dict | None = None
+    graph_rag_attached: bool = False
+    kb_rag: dict | None = None
+    kb_rag_attached: bool = False
 
 
 class RouteIntentRequest(BaseModel):

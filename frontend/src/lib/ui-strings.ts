@@ -16,6 +16,7 @@ export const crumbs = {
   loan: { en: "Loan", zh: "贷款" },
   grant: { en: "Grant", zh: "补贴" },
   upstream: { en: "Portfolio", zh: "供应商组合" },
+  graphRag: { en: "Graph RAG", zh: "图谱检索" },
 } as const;
 
 export const newPage = {
@@ -325,6 +326,41 @@ export const invoiceCard = {
   confirmMismatch: {
     en: "I reviewed the mismatches and confirm the numbers for submit",
     zh: "我已复核不一致项，确认按当前数字提交",
+  },
+} as const;
+
+export const graphRagPage = {
+  eyebrow: { en: "CBAM Advisory · Graph RAG", zh: "CBAM 顾问 · Graph RAG" },
+  title: {
+    en: "Metallurgical & regulatory knowledge graph",
+    zh: "冶金与法规知识图谱",
+  },
+  subtitle: {
+    en: "Multi-hop lineage from Baowu BF-BOF → plate CN 7208 → fastener CN 7318, anchored to §3.16.2 boundaries and 十五五 policy — vectors for clauses, graph for relationships, code for numbers.",
+    zh: "多跳溯源：宝武 BF-BOF → 板材 CN 7208 → 紧固件 CN 7318，锚定 §3.16.2 边界与十五五政策 — 向量检索条款，图谱承载关系，确定性代码算数。",
+  },
+  nodes: { en: "Nodes", zh: "节点" },
+  edges: { en: "Edges", zh: "边" },
+  algo: { en: "View", zh: "视图" },
+  algoShortest: { en: "shortest path", zh: "最短路径" },
+  algoLocal: { en: "local subgraph", zh: "局部子图" },
+  algoFull: { en: "full ontology", zh: "全本体" },
+  canvasHint: {
+    en: "Views differ: shortest = BF→fastener chain only; local = 2-hop neighborhood; full = entire ontology. Drag empty space to orbit, grab spheres to pull nodes.",
+    zh: "三种视图不同：最短路径 = 仅高炉→紧固件链；局部子图 = 2 跳邻域；全本体 = 完整图谱。拖空白旋转，抓球体拉动节点。",
+  },
+  queryLabel: { en: "Compliance question", zh: "合规问题" },
+  run: { en: "Run Graph RAG cycle", zh: "运行 Graph RAG 循环" },
+  advisory: { en: "Advisory agent", zh: "顾问解读" },
+  yourQuery: { en: "Your query", zh: "您的问题" },
+  nextActions: { en: "Suggested next actions", zh: "建议下一步" },
+  answer: { en: "Cycle evidence answer", zh: "循环证据答复" },
+  math: { en: "Deterministic precursor math", zh: "确定性前体倍率" },
+  paths: { en: "Extracted paths", zh: "提取路径" },
+  trace: { en: "Reasoning trajectory", zh: "推理轨迹" },
+  stackNote: {
+    en: "Stack: LangGraph StateGraph (Plan→Route→Execute→Evaluate→Generate, ≤1 back-edge) + NetworkX paths + Qwen embeddings / pgvector + math_bridge — Annex II steel: Scope 2 electricity is not CBAM-priced.",
+    zh: "技术栈：LangGraph 状态图（Plan→Route→Execute→Evaluate→Generate，最多 1 次回边）+ NetworkX 路径 + Qwen 向量 / pgvector + math_bridge — 附件二钢铁：范围二电力不计入 CBAM 计价。",
   },
 } as const;
 

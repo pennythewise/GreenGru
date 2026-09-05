@@ -214,6 +214,10 @@ export type CopilotChatResponse = {
   reply: string;
   model: string;
   mock: boolean;
+  graph_rag?: Record<string, unknown> | null;
+  graph_rag_attached?: boolean;
+  kb_rag?: Record<string, unknown> | null;
+  kb_rag_attached?: boolean;
 };
 
 export async function sendCopilotChat(params: {
@@ -221,6 +225,8 @@ export async function sendCopilotChat(params: {
   message: string;
   promptId?: string | null;
   history?: CopilotHistoryMessage[];
+  includeGraphRag?: boolean | null;
+  includeKbRag?: boolean | null;
 }): Promise<CopilotChatResponse> {
   let res: Response;
   try {
@@ -232,6 +238,8 @@ export async function sendCopilotChat(params: {
         message: params.message,
         prompt_id: params.promptId ?? null,
         history: params.history ?? [],
+        include_graph_rag: params.includeGraphRag ?? null,
+        include_kb_rag: params.includeKbRag ?? null,
       }),
     });
   } catch (err) {
@@ -1187,4 +1195,112 @@ export async function downloadRoutePreviewPdf(payload: RoutePreviewPdfPayload): 
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// —— Graph RAG (metallurgical + regulatory knowledge graph) ——
+
+export type GraphRagNode = {
+  id: string;
+  layer: string;
+  name_en: string;
+  name_zh: string;
+  color: string;
+  x?: number;
+  y?: number;
+  cn_code?: string | null;
+  stage?: string | null;
+  operator?: string | null;
+  tag?: string | null;
+};
+
+export type GraphRagEdge = {
+  source: string;
+  target: string;
+  rel: string;
+  direct_status?: string | null;
+  indirect_status?: string | null;
+  yield_factor_m?: number | null;
+  scrap_pct?: number | null;
+  cite?: string | null;
+  note_en?: string | null;
+  note_zh?: string | null;
+};
+
+export type GraphRagQueryResult = {
+  query: string;
+  locale: string;
+  answer_en: string;
+  answer_zh: string;
+  entities: GraphRagNode[];
+  paths: Array<{
+    node_ids: string[];
+    hops: number;
+    rels: string[];
+    path_en: string;
+    path_zh: string;
+  }>;
+  governance: Array<{
+    process_id: string;
+    process_en: string;
+    process_zh: string;
+    direct_status: string;
+    indirect_status: string;
+    cite?: string | null;
+  }>;
+  precursor: GraphRagEdge | null;
+  math: {
+    formula_en: string;
+    formula_zh: string;
+    see_precursor_tco2e: number;
+    yield_factor_m: number;
+    scrap_pct?: number;
+    precursor_burden_tco2e: number;
+    ae_included_fabrication_tco2e: number;
+    illustrative_total_tco2e: number;
+    note_en: string;
+    note_zh: string;
+  } | null;
+  subgraph: {
+    nodes: GraphRagNode[];
+    edges: GraphRagEdge[];
+    endpoint_ids: string[];
+  };
+  trace: Array<{
+    step: string;
+    detail_en: string;
+    detail_zh: string;
+    tool: string | null;
+  }>;
+};
+
+export async function fetchGraphRagGraph(): Promise<{
+  nodes: GraphRagNode[];
+  edges: GraphRagEdge[];
+  stats: { nodes: number; edges: number; layers: string[] };
+}> {
+  const res = await fetch(`${API_BASE}/api/graph-rag/graph`);
+  await throwIfNotOk(res, "Graph RAG graph");
+  return res.json();
+}
+
+export async function queryGraphRag(payload: {
+  query: string;
+  locale?: "zh" | "en";
+  seePrecursorTco2e?: number;
+  fabricationAeTco2e?: number;
+  includeFullLayout?: boolean;
+}): Promise<GraphRagQueryResult> {
+  const res = await fetch(`${API_BASE}/api/graph-rag/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: payload.query,
+      locale: payload.locale ?? "zh",
+      see_precursor_tco2e: payload.seePrecursorTco2e ?? 2.2,
+      fabrication_ae_tco2e: payload.fabricationAeTco2e ?? 0.08,
+      include_full_layout: payload.includeFullLayout ?? false,
+    }),
+  });
+  await throwIfNotOk(res, "Graph RAG query");
+  return res.json() as Promise<GraphRagQueryResult>;
 }

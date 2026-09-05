@@ -330,6 +330,9 @@ async def run_advisory(session: AsyncSession, score_id: str) -> AdvisoryPlan:
         ranked_paths=ranked,
         cbam_risk_tier=score.cbam_risk_tier,
         gross_vs_net_note=gross_vs_net_note,
+        see_precursor_tco2e=float(calc.intensity_tco2e_per_tonne)
+        if getattr(calc, "intensity_tco2e_per_tonne", None) is not None
+        else None,
     )
 
     # plan_text is stored alongside the structured actions in the same JSON
@@ -337,7 +340,11 @@ async def run_advisory(session: AsyncSession, score_id: str) -> AdvisoryPlan:
     # to this one ranked-actions payload, not an independently queryable field.
     advisory = AdvisoryPlan(
         score_id=score_id,
-        ranked_actions_json={"actions": plan.ranked_actions, "plan_text": plan.text},
+        ranked_actions_json={
+            "actions": plan.ranked_actions,
+            "plan_text": plan.text,
+            "graph_rag": plan.graph_rag,
+        },
     )
     session.add(advisory)
     submission.status = "advisory_generated"
