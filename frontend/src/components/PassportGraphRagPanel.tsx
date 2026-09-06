@@ -88,10 +88,13 @@ export function PassportGraphRagPanel({
   );
 
   const [revealCount, setRevealCount] = useState(0);
+  /** When true, hide everything except the highlighted evidence chain. */
+  const [pathOnly, setPathOnly] = useState(false);
 
   useEffect(() => {
     if (phase === "idle") {
       setRevealCount(0);
+      setPathOnly(false);
       return;
     }
     if (phase === "ready") {
@@ -115,14 +118,17 @@ export function PassportGraphRagPanel({
     return new Set(ids);
   }, [phase, revealOrder, revealCount, nodes]);
 
-  const visibleNodes = useMemo(
-    () => nodes.filter((n) => visibleIdSet.has(n.id)),
-    [nodes, visibleIdSet],
-  );
-  const visibleEdges = useMemo(
-    () => edges.filter((e) => visibleIdSet.has(e.source) && visibleIdSet.has(e.target)),
-    [edges, visibleIdSet],
-  );
+  const visibleNodes = useMemo(() => {
+    const base = nodes.filter((n) => visibleIdSet.has(n.id));
+    if (!pathOnly) return base;
+    return base.filter((n) => highlightIds.has(n.id));
+  }, [nodes, visibleIdSet, pathOnly, highlightIds]);
+
+  const visibleEdges = useMemo(() => {
+    const base = edges.filter((e) => visibleIdSet.has(e.source) && visibleIdSet.has(e.target));
+    if (!pathOnly) return base;
+    return base.filter((e) => highlightIds.has(e.source) && highlightIds.has(e.target));
+  }, [edges, visibleIdSet, pathOnly, highlightIds]);
 
   const progress =
     revealOrder.length === 0 ? 0 : Math.min(100, Math.round((revealCount / revealOrder.length) * 100));
@@ -162,12 +168,34 @@ export function PassportGraphRagPanel({
               ? "C 节 · Graph RAG 证据图"
               : "Section C · Graph RAG evidence map"}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <span className="text-[10.5px] font-mono text-muted-foreground">
-            {visibleNodes.length}/{nodes.length || "—"} {isZh ? "节点" : "nodes"} ·{" "}
-            {visibleEdges.length} {isZh ? "边" : "edges"}
+            {visibleNodes.length}/{pathOnly ? highlightIds.size || "—" : nodes.length || "—"}{" "}
+            {isZh ? "节点" : "nodes"} · {visibleEdges.length} {isZh ? "边" : "edges"}
             {phase === "building" ? ` · ${progress}%` : ""}
+            {pathOnly ? (isZh ? " · 仅路径" : " · path only") : ""}
           </span>
+          {(phase === "ready" || phase === "building") && highlightIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setPathOnly((v) => !v)}
+              aria-pressed={pathOnly}
+              className={cn(
+                "rounded-md border px-2 py-1 text-[10.5px] font-mono transition",
+                pathOnly
+                  ? "border-teal/40 bg-teal/10 text-teal"
+                  : "border-border bg-surface/50 text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {pathOnly
+                ? isZh
+                  ? "显示全图"
+                  : "Show full graph"
+                : isZh
+                  ? "仅看高亮路径"
+                  : "Path only"}
+            </button>
+          )}
           <Link to="/graph-rag" className="text-[10.5px] font-mono text-primary hover:underline">
             {isZh ? "完整页 →" : "Full page →"}
           </Link>
@@ -213,9 +241,13 @@ export function PassportGraphRagPanel({
       </ClientOnly>
 
       <p className="text-[11px] font-mono text-teal/90 leading-snug">
-        {isZh
-          ? "高亮路径 = 证据链（宝武 → 板材 → 紧固件 / 边界 / BAT）。滚轮缩放 · 拖拽旋转。"
-          : "Highlighted path = evidence chain (Baowu → plate → fastener / boundary / BAT). Scroll zoom · drag orbit."}
+        {pathOnly
+          ? isZh
+            ? "仅显示高亮证据链。点「显示全图」可恢复全部节点。"
+            : "Showing evidence path only. Tap “Show full graph” to restore all nodes."
+          : isZh
+            ? "高亮路径 = 证据链（宝武 → 板材 → 紧固件 / 边界 / BAT）。滚轮缩放 · 拖拽旋转。"
+            : "Highlighted path = evidence chain (Baowu → plate → fastener / boundary / BAT). Scroll zoom · drag orbit."}
       </p>
 
       {pathLine && (
