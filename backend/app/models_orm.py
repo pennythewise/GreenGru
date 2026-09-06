@@ -182,7 +182,7 @@ class IotWindowSnapshot(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     company_id: Mapped[str] = mapped_column(String(64), index=True)
-    window_minutes: Mapped[int]  # 10 | 30 | 60
+    window_minutes: Mapped[int]  # 43200 | 129600 | 259200 | 525600 (1/3/6 mo · 1 yr)
     green_trading: Mapped[str] = mapped_column(String(8))  # "yes" | "no"
     emission_factor_t_per_mwh: Mapped[float]
     window_start: Mapped[datetime]

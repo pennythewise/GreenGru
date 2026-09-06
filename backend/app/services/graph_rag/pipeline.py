@@ -162,11 +162,11 @@ def plan_node(state: GraphRagState) -> dict[str, Any]:
             step="plan",
             detail_en=(
                 "Decompose: (a) cutting/welding CBAM boundary (b) Baowu precursor burden "
-                "(c) scrap yield m_i (d) 十五五 alignment."
+                "(c) scrap yield m_i (d) STM BAT plating guidance (e) Stage-3 scoring rubric."
             ),
             detail_zh=(
                 "拆解子问题：(a) 切割/焊接 CBAM 边界 (b) 宝武前体碳负 "
-                "(c) 废料倍率 m_i (d) 十五五对齐。"
+                "(c) 废料倍率 m_i (d) STM BAT 镀层指引 (e) 阶段三评分标尺。"
             ),
         ),
         "back_edge_count": 0,
@@ -496,7 +496,8 @@ def _pick_endpoints(entities: list[dict[str, Any]], query: str) -> list[str]:
         "proc_co2_welding",
         "cn_7318_15_88",
         "rule_3162",
-        "policy_15_5_ch21_s2",
+        "bat_zinc_chromium_plating",
+        "rubric_stage3_threshold_scoring",
     ]
     ids = [e["id"] for e in entities[:5]]
     for d in defaults:
@@ -536,7 +537,12 @@ def _synthesize_answers(
         )
     en_parts.append(f"④ Graph path: {path_line_en}")
     en_parts.append(
-        "⑤ Policy: CN 7318 fasteners align with 十五五 Ch.21 §2 (carbon-footprint mutual recognition)."
+        "⑤ BAT: fastener zinc/chromium plating guided by STM BREF Draft 1 "
+        "(citation KB under knowledge/bat/ — not a regulated-number source)."
+    )
+    en_parts.append(
+        "⑥ Stage-3 rubric: CISA E→A (provisional), CBAM risk tier, de minimis ≤50 t — "
+        "marks come from threshold_scoring.py only."
     )
 
     zh_parts = [
@@ -556,7 +562,13 @@ def _synthesize_answers(
             f"含计入加工 ae 的示意合计 = {math['illustrative_total_tco2e']} tCO₂e/t。"
         )
     zh_parts.append(f"④ 图路径：{path_line_zh}")
-    zh_parts.append("⑤ 政策：CN 7318 紧固件对齐十五五第21章第2节（碳足迹国际互认）。")
+    zh_parts.append(
+        "⑤ BAT：紧固件锌/铬镀层引用 STM BREF 草案1（knowledge/bat/ 引用库 — 非管制数值来源）。"
+    )
+    zh_parts.append(
+        "⑥ 阶段三评分标尺：CISA E→A（暂行）、CBAM 风险档、微量豁免≤50 t — "
+        "档位仅由 threshold_scoring.py 计算。"
+    )
 
     return "\n".join(en_parts), "\n".join(zh_parts)
 

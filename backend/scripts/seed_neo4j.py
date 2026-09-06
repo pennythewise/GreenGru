@@ -52,7 +52,8 @@ async def seed_neo4j(uri: str, user: str, password: str, database: str = "neo4j"
                 "material": "MaterialNode",
                 "customs": "CustomsNode",
                 "boundary": "CBAMBoundaryNode",
-                "policy": "PolicyNode",
+                "bat": "BATNode",
+                "rubric": "RubricNode",
                 "emission": "EmissionSourceNode",
             }
             extra_label = label_map.get(layer, "Entity")

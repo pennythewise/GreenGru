@@ -20,7 +20,8 @@ LAYER_COLORS = {
     "material": "#2563eb",
     "customs": "#ca8a04",
     "boundary": "#dc2626",
-    "policy": "#7c3aed",
+    "bat": "#7c3aed",
+    "rubric": "#c026d3",
     "emission": "#64748b",
 }
 
@@ -52,9 +53,11 @@ def node_payload(nid: str, data: dict[str, Any] | None = None) -> dict[str, Any]
         "operator": d.get("operator"),
         "tag": d.get("tag"),
         "document": d.get("document"),
-        "plan": d.get("plan"),
+        "source_file": d.get("source_file"),
         "section": d.get("section"),
         "emission_tier": d.get("emission_tier"),
+        "marks": d.get("marks"),
+        "is_provisional": d.get("is_provisional"),
     }
 
 
@@ -171,7 +174,17 @@ def match_entities(query: str, *, limit: int = 8) -> list[dict[str, Any]]:
     for nid, data in g.nodes(data=True):
         blob = " ".join(
             str(data.get(k, ""))
-            for k in ("name_en", "name_zh", "cn_code", "tag", "document", "operator", "stage", "id")
+            for k in (
+                "name_en",
+                "name_zh",
+                "cn_code",
+                "tag",
+                "document",
+                "operator",
+                "stage",
+                "id",
+                "source_file",
+            )
         ).lower()
         score = 0.0
         if q in blob:
@@ -193,7 +206,20 @@ def match_entities(query: str, *, limit: int = 8) -> list[dict[str, Any]]:
             "焊接": "proc_co2_welding",
             "镀锌": "proc_hot_dip_galvanizing",
             "galvaniz": "proc_hot_dip_galvanizing",
-            "十五五": "policy_15_5_ch21_s2",
+            "bat": "bat_stm_bref_root",
+            "bref": "bat_stm_bref_root",
+            "电镀": "bat_zinc_chromium_plating",
+            "plating": "bat_zinc_chromium_plating",
+            "酸洗": "bat_pretreatment_pickling",
+            "pickling": "bat_pretreatment_pickling",
+            "六价铬": "bat_cross_cutting_crvi_substitution",
+            "cr(vi)": "bat_cross_cutting_crvi_substitution",
+            "crvi": "bat_cross_cutting_crvi_substitution",
+            "cisa": "rubric_cisa_grade_e_to_a",
+            "评分": "rubric_stage3_threshold_scoring",
+            "rubric": "rubric_stage3_threshold_scoring",
+            "de minimis": "rubric_de_minimis_50t",
+            "微量": "rubric_de_minimis_50t",
             "cbam": "rule_3162",
             "7318": "cn_7318_15_88",
             "7208": "cn_7208_10_00",

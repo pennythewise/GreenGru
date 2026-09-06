@@ -3,8 +3,9 @@ tier + financing tier, writes a plain-language 1-3 item prioritized action
 plan. Never given write access back to calculations/scores (PRD §10 —
 "no self-harm to gap tracking").
 
-Graph RAG injects metallurgical/regulatory *citations* and already-computed
-precursor math. Stage-1 vector RAG remains on the pre-screener; this agent
+Owns Graph RAG for the EU CBAM path (LangGraph cycle): metallurgical /
+regulatory citations and already-computed precursor math. Copilot does not
+run Graph RAG. Stage-1 vector RAG remains on the pre-screener; this agent
 never invents tCO2e / tariff / subsidy numbers.
 """
 
@@ -73,6 +74,13 @@ def generate_advisory_plan(
         + "\n".join(f"{i + 1}. {p.path_name} — {p.cost_per_tco2e_closed_note}" for i, p in enumerate(ranked_paths[:3]))
         + f"\n\nNote: {gross_vs_net_note}"
     )
+    if graph_payload and graph_payload.get("math"):
+        math = graph_payload["math"]
+        mock_text += (
+            f"\n\n[Graph RAG · LangGraph] precursor burden "
+            f"{math.get('precursor_burden_tco2e')} tCO₂e/t "
+            f"(m={math.get('yield_factor_m')} × SEE={math.get('see_precursor_tco2e')}; math_bridge only)."
+        )
 
     text = call_prose(
         model=settings.model_writing,

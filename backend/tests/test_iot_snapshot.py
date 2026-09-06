@@ -8,6 +8,9 @@ from app.db import async_session_factory, init_db
 from app.main import app
 from app.models_orm import IotReading
 
+# 1 month ≈ 30 days
+WINDOW_1_MONTH = 30 * 24 * 60
+
 
 def _seed_readings(n: int = 5) -> None:
     import asyncio
@@ -39,21 +42,35 @@ def test_create_iot_snapshot_and_attach_pipeline():
             "/api/iot/snapshot",
             json={
                 "company_id": "demo-hengfeng",
-                "window_minutes": 30,
+                "window_minutes": WINDOW_1_MONTH,
                 "green_trading": "no",
             },
         )
         assert snap.status_code == 201, snap.text
         body = snap.json()
-        assert body["window_minutes"] == 30
+        assert body["window_minutes"] == WINDOW_1_MONTH
         assert body["sample_count"] >= 1
         assert body["emission_factor_t_per_mwh"] == 0.5568
         assert "id" in body
 
-        hist = client.get("/api/iot/history?window_minutes=30&limit=20")
+        hist = client.get(f"/api/iot/history?window_minutes={WINDOW_1_MONTH}&limit=20")
         assert hist.status_code == 200
         assert len(hist.json()) >= 1
 
         got = client.get(f"/api/iot/snapshot/{body['id']}")
         assert got.status_code == 200
         assert got.json()["id"] == body["id"]
+
+
+def test_iot_snapshot_rejects_legacy_minute_windows():
+    _seed_readings(3)
+    with TestClient(app) as client:
+        snap = client.post(
+            "/api/iot/snapshot",
+            json={
+                "company_id": "demo-hengfeng",
+                "window_minutes": 30,
+                "green_trading": "no",
+            },
+        )
+        assert snap.status_code == 422

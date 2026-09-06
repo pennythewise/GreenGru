@@ -1,7 +1,12 @@
 """Seed ontology for GreenGru industrial metallurgical & regulatory Graph RAG.
 
-Four layers: Physical process lineage → Material/precursor flows →
-CBAM regulatory boundaries → China’s 十五五 policy directives.
+Layers (NetworkX first): process → material → customs → CBAM boundary →
+emission → BAT (STM BREF surface-treatment KB) → Stage-3 scoring rubric.
+
+BAT markdown lives under knowledge/bat/ (STM BREF Draft 1 extract). Nodes
+are citation pointers only — never a regulated-value source. Stage-3 rubric
+nodes describe marking rules (PRD §8.5 / threshold_scoring.py); grades and
+tariffs are still computed only by deterministic code.
 
 CN customs nodes cover PRD §6.1 steel products, supporting both downstream
 fasteners (CN 7318) and fabricated steel structures / EN 1090 beams (CN 7308).
@@ -20,30 +25,155 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 NODES: list[dict[str, Any]] = [
-    # —— Policy (十五五) ——
+    # —— BAT (STM BREF — replaces 十五五 policy layer) ——
     {
-        "id": "policy_15_5_ch21_s2",
-        "layer": "policy",
-        "name_en": "15th FYP Ch.21 §2 — Carbon footprint mutual recognition",
-        "name_zh": "十五五 · 第21章第2节 · 产品碳足迹国际互认",
-        "plan": "15th Five-Year Plan",
-        "section": "Chapter 21 Section 2",
+        "id": "bat_stm_bref_root",
+        "layer": "bat",
+        "name_en": "STM BREF Draft 1 (Feb 2025) — surface treatment of metals",
+        "name_zh": "STM BREF 草案1（2025-02）· 金属表面处理",
+        "document": "EC JRC Best Available Techniques Reference Document for the Surface Treatment of Metals and Plastics (STM BREF), Draft 1, February 2025",
+        "source_file": "knowledge/bat/README.md",
+        "note_en": "Citation KB only — never read into tCO2e / tariff / CISA / subsidy arithmetic.",
+        "note_zh": "仅作引用知识库 — 不得写入 tCO2e / 关税 / CISA / 补贴算术。",
     },
     {
-        "id": "policy_15_5_ch18_s2",
-        "layer": "policy",
-        "name_en": "15th FYP Ch.18 §2 — Large–SME supply-chain synergy",
-        "name_zh": "十五五 · 第18章第2节 · 大中小企业供应链协同",
-        "plan": "15th Five-Year Plan",
-        "section": "Chapter 18 Section 2",
+        "id": "bat_pretreatment_pickling",
+        "layer": "bat",
+        "name_en": "BAT · Pretreatment — pickling, descaling, degreasing, rinsing",
+        "name_zh": "BAT · 前处理 — 酸洗/除鳞/脱脂/漂洗",
+        "document": "STM BREF Draft 1 Ch.2.1.4–2.1.6",
+        "source_file": "knowledge/bat/pretreatment_pickling_descaling/pretreatment-pickling-descaling.md",
+        "steel_relevance": "Universal first step before steel surface treatment",
     },
     {
-        "id": "policy_15_5_ch47_s1",
-        "layer": "policy",
-        "name_en": "15th FYP Ch.47 §1 — Dual control (volume & intensity)",
-        "name_zh": "十五五 · 第47章第1节 · 碳排放双控",
-        "plan": "15th Five-Year Plan",
-        "section": "Chapter 47 Section 1",
+        "id": "bat_zinc_chromium_plating",
+        "layer": "bat",
+        "name_en": "BAT · Zinc / chromium plating & conversion coatings (fasteners)",
+        "name_zh": "BAT · 锌/铬电镀与转化膜（紧固件）",
+        "document": "STM BREF Draft 1 Ch.2.2.1.3–2.2.1.5",
+        "source_file": "knowledge/bat/zinc_chromium_plating_fasteners/zinc-chromium-plating-fasteners.md",
+        "steel_relevance": "Core corrosion protection for bolts/fasteners/structural steel (jig/barrel)",
+    },
+    {
+        "id": "bat_continuous_coil_coating",
+        "layer": "bat",
+        "name_en": "BAT · Continuous steel coil coating (zinc/tin/ECCS)",
+        "name_zh": "BAT · 连续钢卷涂层（锌/锡/ECCS）",
+        "document": "STM BREF Draft 1 Ch.2.4 / Ch.3.3",
+        "source_file": "knowledge/bat/continuous_steel_coil_coating/continuous-steel-coil-coating-processes.md",
+        "steel_relevance": "Anchor-enterprise coil line (Baowu/Ansteel) feeding SME fabrication",
+    },
+    {
+        "id": "bat_steel_enamelling",
+        "layer": "bat",
+        "name_en": "BAT · Porcelain (vitreous) enamelling of steel",
+        "name_zh": "BAT · 钢铁搪瓷（搪瓷釉）",
+        "document": "STM BREF Draft 1 Ch.2.8.3.3.1",
+        "source_file": "knowledge/bat/steel_enamelling/enamelling-of-steel.md",
+    },
+    {
+        "id": "bat_cross_cutting_ems_energy",
+        "layer": "bat",
+        "name_en": "Cross-cutting BAT · EMS, monitoring, energy efficiency",
+        "name_zh": "横断 BAT · 环境管理/监测/能效",
+        "document": "STM BREF Draft 1 Ch.4.1–4.2",
+        "source_file": "knowledge/bat/cross_cutting_bat/01-general-performance-monitoring-energy.md",
+    },
+    {
+        "id": "bat_cross_cutting_decarb_water",
+        "layer": "bat",
+        "name_en": "Cross-cutting BAT · Decarbonisation, water, materials efficiency",
+        "name_zh": "横断 BAT · 脱碳/水/物料效率",
+        "document": "STM BREF Draft 1 Ch.4.2",
+        "source_file": "knowledge/bat/cross_cutting_bat/02-decarbonisation-water-materials-efficiency.md",
+    },
+    {
+        "id": "bat_cross_cutting_crvi_substitution",
+        "layer": "bat",
+        "name_en": "Cross-cutting BAT · Chemicals substitution (Cr(VI) replacement)",
+        "name_zh": "横断 BAT · 化学品替代（六价铬 Cr(VI) 替代）",
+        "document": "STM BREF Draft 1 Ch.4.2.7",
+        "source_file": "knowledge/bat/cross_cutting_bat/03-chemicals-substitution.md",
+        "steel_relevance": "Directly relevant to fastener passivation / conversion coatings",
+    },
+    {
+        "id": "bat_cross_cutting_air_noise",
+        "layer": "bat",
+        "name_en": "Cross-cutting BAT · Emissions to air & noise",
+        "name_zh": "横断 BAT · 废气与噪声",
+        "document": "STM BREF Draft 1 Ch.4.2",
+        "source_file": "knowledge/bat/cross_cutting_bat/04-emissions-to-air-noise.md",
+    },
+    {
+        "id": "bat_cross_cutting_wastewater",
+        "layer": "bat",
+        "name_en": "Cross-cutting BAT · Waste water, residues, industrial symbiosis",
+        "name_zh": "横断 BAT · 废水/残渣/工业共生",
+        "document": "STM BREF Draft 1 Ch.4.2",
+        "source_file": "knowledge/bat/cross_cutting_bat/05-wastewater-residues-industrial-symbiosis.md",
+    },
+    {
+        "id": "bat_electroplating_specific",
+        "layer": "bat",
+        "name_en": "BAT · Electroplating / chemical plating (material efficiency, drag-out, air)",
+        "name_zh": "BAT · 电镀/化学镀（物料效率、拖出、废气）",
+        "document": "STM BREF Draft 1 Ch.4.3.1",
+        "source_file": "knowledge/bat/bat_electroplating_chemical_plating/bat-electroplating-chemical-plating.md",
+    },
+    # —— Stage 3 scoring rubric (PRD §8.5 — marking rules, not computed grades) ——
+    {
+        "id": "rubric_stage3_threshold_scoring",
+        "layer": "rubric",
+        "name_en": "Stage 3 · Threshold scoring (rule-based marking)",
+        "name_zh": "阶段三 · 阈值评分（规则打分）",
+        "document": "PRD §8.5 / backend/app/services/threshold_scoring.py",
+        "stage": "3",
+        "note_en": "Pure comparison logic — no LLM. Outputs CISA grade, CBAM risk tier, de minimis flag.",
+        "note_zh": "纯比较逻辑 — 无 LLM。输出 CISA 等级、CBAM 风险档、微量豁免可能标志。",
+    },
+    {
+        "id": "rubric_cisa_grade_e_to_a",
+        "layer": "rubric",
+        "name_en": "Marking · CISA low-carbon steel grade E→A (provisional)",
+        "name_zh": "评分标尺 · CISA 低碳排放钢等级 E→A（暂行）",
+        "document": "T/CISA 452 draft · app/data/cisa_tiers.py",
+        "stage": "3",
+        "marks": ["E", "D", "C", "B", "A"],
+        "is_provisional": True,
+        "note_en": "Boundaries provisional until finalized T/CISA text is verified — do not invent grades in prose.",
+        "note_zh": "边界值在终稿核验前为暂行 — 顾问文案不得编造等级。",
+    },
+    {
+        "id": "rubric_cbam_risk_tier",
+        "layer": "rubric",
+        "name_en": "Marking · CBAM risk tier (exempt / exposed / high_exposure)",
+        "name_zh": "评分标尺 · CBAM 风险档（豁免 / 暴露 / 高暴露）",
+        "document": "PRD §8.5 · threshold_scoring._cbam_risk_tier",
+        "stage": "3",
+        "marks": ["exempt", "exposed", "high_exposure"],
+        "rule_en": "exempt if taxable intensity ≤ 0; high_exposure if gross tariff ≥ €150/t; else exposed",
+        "rule_zh": "应税强度≤0 → exempt；毛关税≥€150/t → high_exposure；否则 exposed",
+    },
+    {
+        "id": "rubric_de_minimis_50t",
+        "layer": "rubric",
+        "name_en": "Marking · De minimis possible (≤50 t/y export)",
+        "name_zh": "评分标尺 · 微量豁免可能（年出口≤50吨）",
+        "document": "PRD §6.3 / §8.5 · DE_MINIMIS_THRESHOLD_TONNES = 50",
+        "stage": "3",
+        "threshold_tonnes": 50.0,
+        "rule_en": "SME tonnage ≤50t ⇒ de_minimis_possible=True (importer-side, never guaranteed exempt)",
+        "rule_zh": "SME 吨位≤50t ⇒ de_minimis_possible=True（进口商侧判定，不可保证豁免）",
+    },
+    {
+        "id": "rubric_eu_benchmark_gap",
+        "layer": "rubric",
+        "name_en": "Marking · EU benchmark gap (taxable emissions)",
+        "name_zh": "评分标尺 · 欧盟基准差距（应税排放）",
+        "document": "PRD §8.5 · calculation_engine + score_calculation",
+        "stage": "3",
+        "rule_en": "Intensity at/below EU route benchmark ⇒ taxable = 0 (valid exempt-tier outcome)",
+        "rule_zh": "强度≤欧盟路线基准 ⇒ 应税=0（合法豁免档结果，非错误）",
     },
     # —— CBAM boundary / monitoring rule ——
     {
@@ -459,13 +589,129 @@ EDGES: list[dict[str, Any]] = [
     {"source": "proc_punching", "target": "mat_hot_rolled_plate", "rel": "CONSUMES"},
     {"source": "proc_hot_dip_galvanizing", "target": "mat_fastener_bolt", "rel": "PRODUCES"},
     {"source": "proc_hot_dip_galvanizing", "target": "mat_steel_structure", "rel": "PRODUCES"},
-    # Policy alignment
-    {"source": "cn_7318_15_88", "target": "policy_15_5_ch21_s2", "rel": "ALIGNED_WITH_POLICY"},
-    {"source": "cn_7318_15_42", "target": "policy_15_5_ch21_s2", "rel": "ALIGNED_WITH_POLICY"},
-    {"source": "cn_7308", "target": "policy_15_5_ch21_s2", "rel": "ALIGNED_WITH_POLICY"},
-    {"source": "cn_7208_10_00", "target": "policy_15_5_ch18_s2", "rel": "ALIGNED_WITH_POLICY"},
-    {"source": "proc_blast_furnace", "target": "policy_15_5_ch47_s1", "rel": "ALIGNED_WITH_POLICY"},
-    {"source": "proc_bof", "target": "policy_15_5_ch18_s2", "rel": "ALIGNED_WITH_POLICY"},
-    {"source": "mat_fastener_bolt", "target": "policy_15_5_ch21_s2", "rel": "ALIGNED_WITH_POLICY"},
-    {"source": "mat_steel_structure", "target": "policy_15_5_ch21_s2", "rel": "ALIGNED_WITH_POLICY"},
+    # BAT guidance (STM BREF KB — citation only)
+    {"source": "bat_stm_bref_root", "target": "bat_pretreatment_pickling", "rel": "INCLUDES_BAT"},
+    {"source": "bat_stm_bref_root", "target": "bat_zinc_chromium_plating", "rel": "INCLUDES_BAT"},
+    {"source": "bat_stm_bref_root", "target": "bat_continuous_coil_coating", "rel": "INCLUDES_BAT"},
+    {"source": "bat_stm_bref_root", "target": "bat_steel_enamelling", "rel": "INCLUDES_BAT"},
+    {"source": "bat_stm_bref_root", "target": "bat_cross_cutting_ems_energy", "rel": "INCLUDES_BAT"},
+    {"source": "bat_stm_bref_root", "target": "bat_cross_cutting_decarb_water", "rel": "INCLUDES_BAT"},
+    {"source": "bat_stm_bref_root", "target": "bat_cross_cutting_crvi_substitution", "rel": "INCLUDES_BAT"},
+    {"source": "bat_stm_bref_root", "target": "bat_cross_cutting_air_noise", "rel": "INCLUDES_BAT"},
+    {"source": "bat_stm_bref_root", "target": "bat_cross_cutting_wastewater", "rel": "INCLUDES_BAT"},
+    {"source": "bat_stm_bref_root", "target": "bat_electroplating_specific", "rel": "INCLUDES_BAT"},
+    {
+        "source": "proc_hot_dip_galvanizing",
+        "target": "bat_zinc_chromium_plating",
+        "rel": "GUIDED_BY_BAT",
+        "cite": "STM BREF Ch.2.2.1 — zinc/chromium plating & conversion for fasteners",
+    },
+    {
+        "source": "proc_hot_dip_galvanizing",
+        "target": "bat_pretreatment_pickling",
+        "rel": "GUIDED_BY_BAT",
+        "cite": "STM BREF Ch.2.1.4 — pickling/descaling before coating",
+    },
+    {
+        "source": "proc_hot_dip_galvanizing",
+        "target": "bat_electroplating_specific",
+        "rel": "GUIDED_BY_BAT",
+        "cite": "STM BREF Ch.4.3.1 — electroplating BAT (drag-out, material efficiency)",
+    },
+    {
+        "source": "mat_zinc_coating",
+        "target": "bat_zinc_chromium_plating",
+        "rel": "GUIDED_BY_BAT",
+    },
+    {
+        "source": "mat_zinc_coating",
+        "target": "bat_cross_cutting_crvi_substitution",
+        "rel": "GUIDED_BY_BAT",
+        "cite": "Cr(VI) substitution for passivation / conversion coatings",
+    },
+    {
+        "source": "mat_hot_rolled_plate",
+        "target": "bat_continuous_coil_coating",
+        "rel": "GUIDED_BY_BAT",
+        "cite": "Upstream coil may be coated on Baowu/Ansteel continuous lines",
+    },
+    {
+        "source": "mat_fastener_bolt",
+        "target": "bat_zinc_chromium_plating",
+        "rel": "GUIDED_BY_BAT",
+    },
+    {
+        "source": "mat_fastener_bolt",
+        "target": "bat_cross_cutting_crvi_substitution",
+        "rel": "GUIDED_BY_BAT",
+    },
+    {
+        "source": "rule_3162",
+        "target": "bat_zinc_chromium_plating",
+        "rel": "ALIGNED_WITH_BAT",
+        "cite": "§3.16.2 included galvanising/coating ↔ STM plating BAT",
+    },
+    # Stage 3 scoring rubric (marking rules — numbers still from threshold_scoring)
+    {
+        "source": "rubric_stage3_threshold_scoring",
+        "target": "rubric_cisa_grade_e_to_a",
+        "rel": "INCLUDES_RUBRIC",
+    },
+    {
+        "source": "rubric_stage3_threshold_scoring",
+        "target": "rubric_cbam_risk_tier",
+        "rel": "INCLUDES_RUBRIC",
+    },
+    {
+        "source": "rubric_stage3_threshold_scoring",
+        "target": "rubric_de_minimis_50t",
+        "rel": "INCLUDES_RUBRIC",
+    },
+    {
+        "source": "rubric_stage3_threshold_scoring",
+        "target": "rubric_eu_benchmark_gap",
+        "rel": "INCLUDES_RUBRIC",
+    },
+    {
+        "source": "mat_fastener_bolt",
+        "target": "rubric_stage3_threshold_scoring",
+        "rel": "SCORED_BY",
+        "cite": "PRD §8.5 — intensity vs CISA + EU benchmark after calculation engine",
+    },
+    {
+        "source": "mat_steel_structure",
+        "target": "rubric_stage3_threshold_scoring",
+        "rel": "SCORED_BY",
+    },
+    {
+        "source": "cn_7318_15_42",
+        "target": "rubric_stage3_threshold_scoring",
+        "rel": "SCORED_BY",
+    },
+    {
+        "source": "cn_7318_15_88",
+        "target": "rubric_stage3_threshold_scoring",
+        "rel": "SCORED_BY",
+    },
+    {
+        "source": "cn_7208_10_00",
+        "target": "rubric_stage3_threshold_scoring",
+        "rel": "SCORED_BY",
+    },
+    {
+        "source": "cn_7308",
+        "target": "rubric_stage3_threshold_scoring",
+        "rel": "SCORED_BY",
+    },
+    {
+        "source": "mat_hot_rolled_plate",
+        "target": "rubric_eu_benchmark_gap",
+        "rel": "SCORED_BY",
+        "cite": "Precursor intensity feeds Stage-3 EU benchmark gap",
+    },
+    {
+        "source": "bound_included_direct",
+        "target": "rubric_cbam_risk_tier",
+        "rel": "INFORMS_RUBRIC",
+    },
 ]

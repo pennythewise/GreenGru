@@ -3,9 +3,8 @@
 Uses a dedicated API key and qwen3.7-plus. Does NOT compute regulated numbers;
 only explains routes, documents, and process around deterministic pipeline output.
 
-Knowledge attachment:
-- CBAM / metallurgy → Graph RAG (LangGraph) + optional channel=cbam vector KB
-- Loan / Grant → channel-scoped vector KB (绿色金融目录 / GB/T 36132 / 工信部联节)
+Graph RAG lives on the EU CBAM advisory agent (pipeline), not here.
+Copilot is plain LLM (+ optional loan/grant/cbam vector KB when requested).
 """
 
 from __future__ import annotations
@@ -16,7 +15,6 @@ from typing import Any, Literal
 from openai import OpenAI
 
 from app.config import get_settings
-from app.services.graph_rag import format_advisory_graph_context, run_graph_rag
 from app.services.rag.retrieve import format_chunks_for_prompt, retrieve_kb
 
 logger = logging.getLogger(__name__)
@@ -52,16 +50,16 @@ MOCK_REPLIES: dict[str, str] = {
 }
 
 PAGE_FALLBACKS: dict[str, str] = {
-    "passport": "For CBAM questions, check Section A's document checklist and the benchmark gap in Section C.",
+    "passport": "For CBAM questions, check Section A's document checklist and the benchmark gap in Section C. Metallurgical boundary tracing runs in the CBAM advisory stage via Graph RAG — not in this chat.",
     "loan": "For loan questions, focus on Section A missing docs and the PBOC tier gauge.",
     "grant": "For grant questions, GB/T 36132 and the scrap-ratio gap are usually the blockers.",
     "new": "For intake questions, describe the file you're uploading or the field you're filling in.",
     "entry": "Describe what you need (loan, grant, EU export) and I'll explain how the router would classify it.",
     "dashboard": "Tell me whether you're focused on export compliance, green credit, or factory subsidies.",
-    "graph-rag": "Ask about cutting/welding boundaries, Baowu precursor liability, or CN 7318 alignment.",
+    "graph-rag": "Open the Graph RAG page to run the LangGraph cycle; CBAM advisory also attaches Graph RAG after scoring.",
 }
 
-_GRAPH_RAG_KEYWORDS = (
+_CBAM_KEYWORDS = (
     "cbam",
     "cutting",
     "welding",
@@ -168,28 +166,12 @@ _KB_FALLBACK_SNIPPETS: dict[KbChannel, list[dict[str, str]]] = {
             "chunk_text": (
                 "CBAM for iron/steel prices direct emissions (Annex II). "
                 "Fabrication monitoring boundaries (e.g. §3.16.2) distinguish included vs excluded processes. "
-                "Embedded emissions and tariffs are computed by the deterministic pipeline — not by Copilot."
+                "Embedded emissions and tariffs are computed by the deterministic pipeline — not by Copilot. "
+                "Deep metallurgical Graph RAG runs in the CBAM advisory stage."
             ),
         },
     ],
 }
-
-
-def should_attach_graph_rag(
-    *,
-    page: str,
-    message: str,
-    include_graph_rag: bool | None,
-) -> bool:
-    """Passport / Graph RAG pages default on; other pages need CBAM keywords or explicit flag."""
-    if include_graph_rag is False:
-        return False
-    if include_graph_rag is True:
-        return True
-    if page in ("passport", "graph-rag"):
-        return True
-    blob = message.lower()
-    return any(k in blob for k in _GRAPH_RAG_KEYWORDS)
 
 
 def resolve_kb_channels(
@@ -202,7 +184,6 @@ def resolve_kb_channels(
     if include_kb_rag is False:
         return []
     if include_kb_rag is True:
-        # Force: page-primary channels, else all three for entry/dashboard
         if page == "loan":
             return ["loan"]
         if page == "grant":
@@ -224,7 +205,7 @@ def resolve_kb_channels(
         channels.append("loan")
     if any(k in blob for k in _GRANT_KEYWORDS) and "grant" not in channels:
         channels.append("grant")
-    if any(k in blob for k in _GRAPH_RAG_KEYWORDS) and "cbam" not in channels:
+    if any(k in blob for k in _CBAM_KEYWORDS) and "cbam" not in channels:
         channels.append("cbam")
     return channels
 
@@ -247,20 +228,9 @@ def get_copilot_client() -> OpenAI:
     return _copilot_client
 
 
-def _system_prompt(
-    page: str,
-    *,
-    with_graph_rag: bool,
-    with_kb_rag: bool,
-) -> str:
+def _system_prompt(page: str, *, with_kb_rag: bool) -> str:
     label = PAGE_LABELS.get(page, "GreenGru")
     extra = ""
-    if with_graph_rag:
-        extra += """
-GRAPH RAG (when context is attached below the user message):
-- Cite §3.16.2 boundaries, precursor paths, and scrap yield m_i from that block.
-- NEVER invent or override precursor burden, SEE, tariff, or intensity numbers — use only values in the Graph RAG math block.
-"""
     if with_kb_rag:
         extra += """
 CHANNEL KNOWLEDGE BASE (loan / grant / cbam vector RAG when attached):
@@ -278,7 +248,8 @@ You help operators with:
 - Zero-carbon factory grant — GB/T 36132, 工信部联节〔2026〕13号
 
 CRITICAL RULES:
-- NEVER invent or compute regulated numbers (tCO2e, tariff €, CISA grade, subsidy amounts, loan principal). Those are computed deterministically by the pipeline / scorers / math_bridge.
+- NEVER invent or compute regulated numbers (tCO2e, tariff €, CISA grade, subsidy amounts, loan principal). Those are computed deterministically by the pipeline / scorers.
+- Do NOT run or invent Graph RAG paths — metallurgical boundary Graph RAG is owned by the CBAM advisory agent after scoring.
 - Explain process, documents, routing, and what moves a score — cite regulations by name when relevant.
 - Keep answers concise (2–4 short paragraphs max). Use 中文 terms inline where natural.
 - If unsure, say what document or checklist item the operator should upload next.
@@ -295,39 +266,6 @@ def _mock_reply(page: str, prompt_id: str | None, message: str) -> str:
     return PAGE_FALLBACKS.get(page, PAGE_FALLBACKS["entry"])
 
 
-def _mock_reply_with_graph(page: str, prompt_id: str | None, message: str, graph: dict[str, Any]) -> str:
-    """Deterministic mock that surfaces Graph RAG facts (no invented numbers)."""
-    base = _mock_reply(page, prompt_id, message)
-    math = graph.get("math") or {}
-    gov = graph.get("governance") or []
-    path = (graph.get("paths") or [{}])[0]
-    cut = next((g for g in gov if g.get("process_id") == "proc_cnc_cutting"), None)
-    weld = next((g for g in gov if g.get("process_id") == "proc_co2_welding"), None)
-    burden = math.get("precursor_burden_tco2e")
-    lines = [
-        base,
-        "",
-        "[Graph RAG · LangGraph]",
-    ]
-    if cut:
-        lines.append(
-            f"• CNC cutting: direct {cut.get('direct_status')} "
-            f"(cite: {cut.get('cite') or '§3.16.2'})."
-        )
-    if weld:
-        lines.append(f"• CO₂ welding: direct {weld.get('direct_status')}.")
-    if burden is not None:
-        lines.append(
-            f"• Deterministic precursor burden: m={math.get('yield_factor_m')} × "
-            f"SEE={math.get('see_precursor_tco2e')} = {burden} tCO₂e/t "
-            f"(math_bridge only — not invented)."
-        )
-    if path.get("path_en"):
-        lines.append(f"• Evidence path: {path['path_en']}")
-    lines.append("Annex II steel: Scope 2 electricity is not CBAM-priced.")
-    return "\n".join(lines)
-
-
 def _mock_reply_with_kb(page: str, prompt_id: str | None, message: str, kb: dict[str, Any]) -> str:
     base = _mock_reply(page, prompt_id, message)
     lines = [base, "", "[Channel KB · vector RAG]"]
@@ -335,7 +273,6 @@ def _mock_reply_with_kb(page: str, prompt_id: str | None, message: str, kb: dict
         lines.append(f"• Channel: {ch}")
     block = (kb.get("prompt_block") or "").strip()
     if block:
-        # Keep short for chat UX
         excerpt = block if len(block) <= 900 else block[:900] + "…"
         lines.append(excerpt)
     lines.append("提醒：额度/利率/补贴金额与评分档位由确定性引擎或银行/主管部门决定，Copilot 不编造数字。")
@@ -435,74 +372,39 @@ def _run_kb_rag_for_message(message: str, channels: list[KbChannel]) -> dict[str
     }
 
 
-def _run_graph_rag_for_message(message: str, locale: str = "zh") -> dict[str, Any]:
-    q = message.strip() or (
-        "宝武热轧板加工紧固件，数控切割与焊接的 CBAM 边界与前体负债"
-    )
-    return run_graph_rag(q, locale=locale)
-
-
 def run_copilot_chat(
     *,
     page: str,
     message: str,
     prompt_id: str | None = None,
     history: list[dict[str, str]],
-    include_graph_rag: bool | None = None,
     include_kb_rag: bool | None = None,
-) -> tuple[str, bool, dict[str, Any] | None, dict[str, Any] | None]:
-    """Returns (reply_text, is_mock, graph_rag, kb_rag)."""
-    attach_graph = should_attach_graph_rag(
-        page=page,
-        message=message,
-        include_graph_rag=include_graph_rag,
-    )
+) -> tuple[str, bool, dict[str, Any] | None]:
+    """Returns (reply_text, is_mock, kb_rag). Graph RAG is not used here."""
     kb_channels = resolve_kb_channels(
         page=page,
         message=message,
         include_kb_rag=include_kb_rag,
     )
-
-    graph: dict[str, Any] | None = None
-    if attach_graph:
-        graph = _run_graph_rag_for_message(message, locale="zh")
-
     kb: dict[str, Any] | None = _run_kb_rag_for_message(message, kb_channels)
 
     if is_copilot_mock_mode():
-        base = _mock_reply(page, prompt_id, message)
-        parts = [base]
-        if graph is not None:
-            g_full = _mock_reply_with_graph(page, prompt_id, message, graph)
-            parts.append(g_full[len(base) :].lstrip() or g_full)
         if kb is not None:
-            k_full = _mock_reply_with_kb(page, prompt_id, message, kb)
-            parts.append(k_full[len(base) :].lstrip() or k_full)
-        # Deduplicate if only base
-        reply = parts[0] if len(parts) == 1 else "\n\n".join(parts)
-        return reply, True, graph, kb
+            return _mock_reply_with_kb(page, prompt_id, message, kb), True, kb
+        return _mock_reply(page, prompt_id, message), True, kb
 
     messages: list[dict[str, str]] = [
         {
             "role": "system",
-            "content": _system_prompt(
-                page,
-                with_graph_rag=graph is not None,
-                with_kb_rag=kb is not None,
-            ),
+            "content": _system_prompt(page, with_kb_rag=kb is not None),
         }
     ]
     for h in history[-8:]:
         messages.append({"role": h["role"], "content": h["content"]})
 
     user_content = message
-    extras: list[str] = []
-    if graph is not None:
-        extras.append(format_advisory_graph_context(graph))
     if kb is not None:
-        extras.append(format_kb_rag_context(kb))
-    if extras:
-        user_content = message + "\n\n" + "\n\n".join(extras)
+        user_content = message + "\n\n" + format_kb_rag_context(kb)
     messages.append({"role": "user", "content": user_content})
 
     client = get_copilot_client()
@@ -512,4 +414,4 @@ def run_copilot_chat(
         messages=messages,
     )
     reply = response.choices[0].message.content or PAGE_FALLBACKS.get(page, "")
-    return reply.strip(), False, graph, kb
+    return reply.strip(), False, kb
