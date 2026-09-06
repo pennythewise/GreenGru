@@ -18,6 +18,8 @@ import { Route as GraphRagRouteImport } from './routes/graph-rag'
 import { Route as GrantRouteImport } from './routes/grant'
 import { Route as EntryRouteImport } from './routes/entry'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MarketplaceIndexRouteImport } from './routes/marketplace/index'
+import { Route as MarketplaceListingIdRouteImport } from './routes/marketplace/$listingId'
 import { Route as CnArticlesFullApiDocumentationRouteImport } from './routes/cn/articles/full-api-documentation'
 
 const UpstreamRoute = UpstreamRouteImport.update({
@@ -65,6 +67,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarketplaceIndexRoute = MarketplaceIndexRouteImport.update({
+  id: '/marketplace/',
+  path: '/marketplace/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceListingIdRoute = MarketplaceListingIdRouteImport.update({
+  id: '/marketplace/$listingId',
+  path: '/marketplace/$listingId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CnArticlesFullApiDocumentationRoute =
   CnArticlesFullApiDocumentationRouteImport.update({
     id: '/cn/articles/full-api-documentation',
@@ -82,6 +94,8 @@ export interface FileRoutesByFullPath {
   '/passport': typeof PassportRoute
   '/signin': typeof SigninRoute
   '/upstream': typeof UpstreamRoute
+  '/marketplace/$listingId': typeof MarketplaceListingIdRoute
+  '/marketplace/': typeof MarketplaceIndexRoute
   '/cn/articles/full-api-documentation': typeof CnArticlesFullApiDocumentationRoute
 }
 export interface FileRoutesByTo {
@@ -94,6 +108,8 @@ export interface FileRoutesByTo {
   '/passport': typeof PassportRoute
   '/signin': typeof SigninRoute
   '/upstream': typeof UpstreamRoute
+  '/marketplace/$listingId': typeof MarketplaceListingIdRoute
+  '/marketplace': typeof MarketplaceIndexRoute
   '/cn/articles/full-api-documentation': typeof CnArticlesFullApiDocumentationRoute
 }
 export interface FileRoutesById {
@@ -107,6 +123,8 @@ export interface FileRoutesById {
   '/passport': typeof PassportRoute
   '/signin': typeof SigninRoute
   '/upstream': typeof UpstreamRoute
+  '/marketplace/$listingId': typeof MarketplaceListingIdRoute
+  '/marketplace/': typeof MarketplaceIndexRoute
   '/cn/articles/full-api-documentation': typeof CnArticlesFullApiDocumentationRoute
 }
 export interface FileRouteTypes {
@@ -121,6 +139,8 @@ export interface FileRouteTypes {
     | '/passport'
     | '/signin'
     | '/upstream'
+    | '/marketplace/$listingId'
+    | '/marketplace/'
     | '/cn/articles/full-api-documentation'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -133,6 +153,8 @@ export interface FileRouteTypes {
     | '/passport'
     | '/signin'
     | '/upstream'
+    | '/marketplace/$listingId'
+    | '/marketplace'
     | '/cn/articles/full-api-documentation'
   id:
     | '__root__'
@@ -145,6 +167,8 @@ export interface FileRouteTypes {
     | '/passport'
     | '/signin'
     | '/upstream'
+    | '/marketplace/$listingId'
+    | '/marketplace/'
     | '/cn/articles/full-api-documentation'
   fileRoutesById: FileRoutesById
 }
@@ -158,6 +182,8 @@ export interface RootRouteChildren {
   PassportRoute: typeof PassportRoute
   SigninRoute: typeof SigninRoute
   UpstreamRoute: typeof UpstreamRoute
+  MarketplaceListingIdRoute: typeof MarketplaceListingIdRoute
+  MarketplaceIndexRoute: typeof MarketplaceIndexRoute
   CnArticlesFullApiDocumentationRoute: typeof CnArticlesFullApiDocumentationRoute
 }
 
@@ -226,6 +252,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/marketplace/': {
+      id: '/marketplace/'
+      path: '/marketplace'
+      fullPath: '/marketplace/'
+      preLoaderRoute: typeof MarketplaceIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketplace/$listingId': {
+      id: '/marketplace/$listingId'
+      path: '/marketplace/$listingId'
+      fullPath: '/marketplace/$listingId'
+      preLoaderRoute: typeof MarketplaceListingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cn/articles/full-api-documentation': {
       id: '/cn/articles/full-api-documentation'
       path: '/cn/articles/full-api-documentation'
@@ -246,6 +286,8 @@ const rootRouteChildren: RootRouteChildren = {
   PassportRoute: PassportRoute,
   SigninRoute: SigninRoute,
   UpstreamRoute: UpstreamRoute,
+  MarketplaceListingIdRoute: MarketplaceListingIdRoute,
+  MarketplaceIndexRoute: MarketplaceIndexRoute,
   CnArticlesFullApiDocumentationRoute: CnArticlesFullApiDocumentationRoute,
 }
 export const routeTree = rootRouteImport

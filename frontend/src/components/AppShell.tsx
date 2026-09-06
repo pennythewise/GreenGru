@@ -9,6 +9,7 @@ import {
   MessagesSquare,
   Network,
   Radio,
+  ShoppingBag,
   Upload,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -19,17 +20,27 @@ import { shell } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
 
 type NavChild = { to: string; icon: typeof Gauge; label: string; zh: string };
-type NavItem = { to: string; icon: typeof Gauge; label: string; zh: string; children?: NavChild[] };
+type NavItem = {
+  to: string;
+  icon: typeof Gauge;
+  label: string;
+  zh: string;
+  children?: NavChild[];
+};
 
 const nav: NavItem[] = [
-  { to: "/",      icon: Gauge,          label: "Dashboard",      zh: "总览" },
-  { to: "/new",   icon: Upload,         label: "New submission", zh: "新建" },
+  { to: "/", icon: Gauge, label: "Dashboard", zh: "总览" },
+  { to: "/new", icon: Upload, label: "New submission", zh: "新建" },
+  { to: "/marketplace", icon: ShoppingBag, label: "Marketplace", zh: "市场" },
   {
-    to: "/entry", icon: MessagesSquare, label: "GreenGru Copilot", zh: "副驾",
+    to: "/entry",
+    icon: MessagesSquare,
+    label: "GreenGru Copilot",
+    zh: "副驾",
     children: [
       { to: "/passport", icon: FileCheck2, label: "EU license", zh: "碳护照" },
-      { to: "/loan",     icon: Banknote,   label: "Loan",       zh: "贷款" },
-      { to: "/grant",    icon: Leaf,       label: "Grant",      zh: "补贴" },
+      { to: "/loan", icon: Banknote, label: "Loan", zh: "贷款" },
+      { to: "/grant", icon: Leaf, label: "Grant", zh: "补贴" },
     ],
   },
   { to: "/graph-rag", icon: Network, label: "Graph RAG", zh: "图谱检索" },
@@ -44,7 +55,9 @@ export function LangToggle() {
         onClick={() => setLocale("en")}
         className={cn(
           "px-2 py-0.5 rounded-sm transition",
-          locale === "en" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+          locale === "en"
+            ? "bg-foreground text-background"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         EN
@@ -54,7 +67,9 @@ export function LangToggle() {
         onClick={() => setLocale("zh")}
         className={cn(
           "px-2 py-0.5 rounded-sm transition",
-          locale === "zh" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+          locale === "zh"
+            ? "bg-foreground text-background"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         中文
@@ -71,12 +86,20 @@ export function Sidebar() {
       <Link to="/" className="px-5 py-5 border-b border-border block">
         <div className="flex items-center gap-2.5">
           <div className="relative shrink-0">
-            <img src="/greengrulogo.png" alt="GreenGru" className="h-11 w-auto object-contain" />
+            <img
+              src="/greengrulogo.png"
+              alt="GreenGru"
+              className="h-11 w-auto object-contain"
+            />
             <span className="absolute -top-0.5 -right-1.5 h-2 w-2 rounded-full bg-carbon pulse-dot" />
           </div>
           <div>
-            <div className="text-[13px] font-semibold tracking-tight leading-tight">GreenGru</div>
-            <div className="text-[10.5px] text-muted-foreground font-mono tracking-wider">MVP · v1.0</div>
+            <div className="text-[13px] font-semibold tracking-tight leading-tight">
+              GreenGru
+            </div>
+            <div className="text-[10.5px] text-muted-foreground font-mono tracking-wider">
+              MVP · v1.0
+            </div>
           </div>
         </div>
       </Link>
@@ -86,7 +109,8 @@ export function Sidebar() {
           {t(shell.smeOperator.en, shell.smeOperator.zh)}
         </div>
         {nav.map((it) => {
-          const active = it.to === "/" ? pathname === "/" : pathname.startsWith(it.to);
+          const active =
+            it.to === "/" ? pathname === "/" : pathname.startsWith(it.to);
           return (
             <div key={it.to}>
               <Link
@@ -99,8 +123,14 @@ export function Sidebar() {
                 )}
               >
                 <it.icon className="h-4 w-4" strokeWidth={2} />
-                <span className="flex-1 text-left">{isZh ? it.zh : it.label}</span>
-                {!isZh && <span className="text-[10px] font-mono text-muted-foreground/70">{it.zh}</span>}
+                <span className="flex-1 text-left">
+                  {isZh ? it.zh : it.label}
+                </span>
+                {!isZh && (
+                  <span className="text-[10px] font-mono text-muted-foreground/70">
+                    {it.zh}
+                  </span>
+                )}
               </Link>
               {it.children && (
                 <div className="relative mt-0.5 ml-[22px] space-y-0.5 border-l border-border pl-3">
@@ -118,8 +148,14 @@ export function Sidebar() {
                         )}
                       >
                         <c.icon className="h-3.5 w-3.5" strokeWidth={2} />
-                        <span className="flex-1 text-left">{isZh ? c.zh : c.label}</span>
-                        {!isZh && <span className="text-[10px] font-mono text-muted-foreground/70">{c.zh}</span>}
+                        <span className="flex-1 text-left">
+                          {isZh ? c.zh : c.label}
+                        </span>
+                        {!isZh && (
+                          <span className="text-[10px] font-mono text-muted-foreground/70">
+                            {c.zh}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
@@ -154,7 +190,9 @@ export function TopBar({ crumb }: { crumb?: string }) {
           <Building2 className="h-3.5 w-3.5" />
           <span>BAOWU × HENGFENG</span>
           <span className="text-border">/</span>
-          <span className="text-foreground">{crumb ?? t(shell.commandCenter.en, shell.commandCenter.zh)}</span>
+          <span className="text-foreground">
+            {crumb ?? t(shell.commandCenter.en, shell.commandCenter.zh)}
+          </span>
         </div>
       </div>
       <div className="flex items-center gap-2.5">
@@ -179,22 +217,30 @@ export function UpstreamTopBar({ crumb }: { crumb?: string }) {
     <header className="flex items-center justify-between gap-4 px-6 py-3.5 border-b border-border bg-background/70 backdrop-blur-xl sticky top-0 z-20">
       <div className="flex items-center gap-3 min-w-0">
         <Link to="/upstream" className="flex items-center gap-2.5">
-          <img src="/greengrulogo.png" alt="GreenGru" className="h-10 w-auto object-contain shrink-0" />
+          <img
+            src="/greengrulogo.png"
+            alt="GreenGru"
+            className="h-10 w-auto object-contain shrink-0"
+          />
           <div className="hidden md:flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
             <Building2 className="h-3.5 w-3.5" />
             <span>BAOWU</span>
             <span className="text-border">/</span>
-            <span className="text-foreground">{crumb ?? t(shell.accountManager.en, shell.accountManager.zh)}</span>
+            <span className="text-foreground">
+              {crumb ?? t(shell.accountManager.en, shell.accountManager.zh)}
+            </span>
           </div>
         </Link>
       </div>
       <div className="flex items-center gap-2.5">
         <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-surface text-[11px] font-mono text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-carbon pulse-dot" /> {t(shell.apiConnected.en, shell.apiConnected.zh)}
+          <span className="h-1.5 w-1.5 rounded-full bg-carbon pulse-dot" />{" "}
+          {t(shell.apiConnected.en, shell.apiConnected.zh)}
         </div>
         <LangToggle />
         <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-surface text-[11px] font-mono text-muted-foreground">
-          <Radio className="h-3 w-3 text-carbon" /> account-mgr@baowu-partners.cn
+          <Radio className="h-3 w-3 text-carbon" />{" "}
+          account-mgr@baowu-partners.cn
         </div>
         <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-2 transition text-[12px]">
           <LogOut className="h-3.5 w-3.5" />
@@ -208,9 +254,18 @@ export function UpstreamTopBar({ crumb }: { crumb?: string }) {
 // not the SME Sidebar/AppShell, since that nav (New submission, GreenGru
 // Copilot, Loan/Grant) has no meaning for an account manager looking at an
 // aggregate, read-only view across suppliers.
-export function UpstreamShell({ crumb, children }: { crumb?: string; children: ReactNode }) {
+export function UpstreamShell({
+  crumb,
+  children,
+}: {
+  crumb?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="theme-light min-h-screen flex flex-col text-foreground bg-background" style={{ colorScheme: "light" }}>
+    <div
+      className="theme-light min-h-screen flex flex-col text-foreground bg-background"
+      style={{ colorScheme: "light" }}
+    >
       <UpstreamTopBar crumb={crumb} />
       <main className="flex-1 p-4 md:p-8 space-y-6 max-w-[1400px] w-full mx-auto">
         {children}
@@ -257,8 +312,12 @@ export function PageHeader({
             </>
           )}
         </div>
-        <h1 className="mt-1 text-[26px] md:text-[30px] font-semibold tracking-tight leading-[1.1]">{displayTitle}</h1>
-        <p className="mt-1.5 text-[13.5px] text-muted-foreground max-w-2xl italic">{displaySubtitle}</p>
+        <h1 className="mt-1 text-[26px] md:text-[30px] font-semibold tracking-tight leading-[1.1]">
+          {displayTitle}
+        </h1>
+        <p className="mt-1.5 text-[13.5px] text-muted-foreground max-w-2xl italic">
+          {displaySubtitle}
+        </p>
       </div>
       {right}
     </motion.div>
@@ -269,13 +328,23 @@ export function CitationFooter({ extra }: { extra?: string }) {
   const { t } = useLocale();
   return (
     <footer className="pt-2 flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-mono text-muted-foreground border-t border-border/60">
-      <div>{t(shell.cited.en, shell.cited.zh)} IR (EU) 2025/2621 · Reg (EU) 2023/956 · CISA · PBOC · 工信部联节〔2026〕13号{extra ? ` · ${extra}` : ""}</div>
+      <div>
+        {t(shell.cited.en, shell.cited.zh)} IR (EU) 2025/2621 · Reg (EU)
+        2023/956 · CISA · PBOC · 工信部联节〔2026〕13号
+        {extra ? ` · ${extra}` : ""}
+      </div>
       <div>{t(shell.copyright.en, shell.copyright.zh)}</div>
     </footer>
   );
 }
 
-export function AppShell({ crumb, children }: { crumb?: string; children: ReactNode }) {
+export function AppShell({
+  crumb,
+  children,
+}: {
+  crumb?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="min-h-screen flex text-foreground">
       <Sidebar />
