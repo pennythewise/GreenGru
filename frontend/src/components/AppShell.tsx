@@ -7,6 +7,7 @@ import {
   Leaf,
   LogOut,
   MessagesSquare,
+  Network,
   Radio,
   ShoppingBag,
   Upload,
@@ -42,6 +43,7 @@ const nav: NavItem[] = [
       { to: "/grant", icon: Leaf, label: "Grant", zh: "补贴" },
     ],
   },
+  { to: "/graph-rag", icon: Network, label: "Graph RAG", zh: "图谱检索" },
 ];
 
 export function LangToggle() {

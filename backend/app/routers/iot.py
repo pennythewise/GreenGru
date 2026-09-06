@@ -143,6 +143,9 @@ async def latest_iot_reading(
     return _to_reading_out(row)
 
 
+IOT_WINDOW_MINUTES = frozenset({43200, 129600, 259200, 525600})  # 1 / 3 / 6 mo · 1 yr
+
+
 @router.get("/iot/history", response_model=list[IotReadingOut])
 async def iot_reading_history(
     company_id: str = Query(default="demo-hengfeng"),
@@ -151,7 +154,7 @@ async def iot_reading_history(
     session: AsyncSession = Depends(get_session),
 ):
     q = select(IotReading).where(IotReading.company_id == company_id)
-    if window_minutes in (10, 30, 60):
+    if window_minutes in IOT_WINDOW_MINUTES:
         cutoff = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
         q = q.where(IotReading.ingested_at >= cutoff)
     q = q.order_by(IotReading.ingested_at.desc()).limit(limit)
@@ -168,7 +171,7 @@ async def iot_reading_history(
 
 @router.post("/iot/snapshot", response_model=IotSnapshotOut, status_code=201)
 async def create_iot_snapshot(payload: IotSnapshotCreate, session: AsyncSession = Depends(get_session)):
-    """Freeze last 10 / 30 / 60 minutes of ESP32 readings for pipeline attach."""
+    """Freeze last 1 / 3 / 6 months or 1 year of ESP32 readings for pipeline attach."""
     now = datetime.now(timezone.utc)
     window_start = now - timedelta(minutes=payload.window_minutes)
     result = await session.execute(

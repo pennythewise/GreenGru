@@ -11,17 +11,24 @@ settings = get_settings()
 
 @router.post("/chat", response_model=CopilotChatResponse)
 async def copilot_chat(body: CopilotChatRequest):
-    """GreenGru Copilot chat — sidebar panel and /entry page."""
-    reply, is_mock = run_copilot_chat(
+    """GreenGru Copilot chat — sidebar panel and /entry page.
+
+    Plain LLM assistant. Optional loan/grant/cbam vector KB.
+    Graph RAG belongs on the CBAM advisory agent, not Copilot.
+    """
+    reply, is_mock, kb = run_copilot_chat(
         page=body.page,
         message=body.message,
         prompt_id=body.prompt_id,
         history=[{"role": m.role, "content": m.content} for m in body.history],
+        include_kb_rag=body.include_kb_rag,
     )
     return CopilotChatResponse(
         reply=reply,
         model=settings.model_copilot,
         mock=is_mock,
+        kb_rag=kb,
+        kb_rag_attached=kb is not None,
     )
 
 

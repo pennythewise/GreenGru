@@ -137,6 +137,13 @@ class Settings(BaseSettings):
     # --- Baowu/Ansteel integration API (read-only Scope 3 feed) ------------
     integration_api_key: str | None = None  # defaults to greengru-demo-key in router
 
+    # --- Neo4j Graph RAG (Enterprise Knowledge Graph) -----------------------
+    neo4j_uri: str = "bolt://localhost:7687"
+    neo4j_user: str = "neo4j"
+    neo4j_password: str = "greengru_cbam_2026"
+    neo4j_database: str = "neo4j"
+    neo4j_enabled: bool = False
+
     def api_key_for(self, role: str = "default") -> str | None:
         """Resolve OpenRouter (or compatible) key for a role; fall back to LLM_API_KEY."""
         role = (role or "default").lower()

@@ -6,7 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import init_db
-from app.routers import advisory, baowu, calculate, classify, companies, copilot, documents, intake, integration_v1, iot, ocr, pipeline, rag, routes, score, submissions
+from app.routers import advisory, baowu, calculate, classify, companies, copilot, documents, graph_rag, intake, integration_v1, iot, ocr, pipeline, rag, routes, score, submissions
 
 settings = get_settings()
 
@@ -56,6 +56,7 @@ app.include_router(copilot.router)
 app.include_router(routes.router)
 app.include_router(integration_v1.router)
 app.include_router(rag.router)
+app.include_router(graph_rag.router)
 
 
 @app.get("/health")

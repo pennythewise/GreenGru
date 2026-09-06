@@ -1039,7 +1039,17 @@ export function RoutePage({ slug }: { slug: Slug }) {
               <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
                 <Wand2 className="h-3.5 w-3.5 text-gold" /> {t(routePage.sectionCAdvisory.en, routePage.sectionCAdvisory.zh)}
               </div>
-              <span className="text-[10.5px] font-mono text-muted-foreground">{t(routePage.advisoryNote.en, routePage.advisoryNote.zh)}</span>
+              <div className="flex items-center gap-2">
+                {slug === "passport" && (
+                  <Link
+                    to="/graph-rag"
+                    className="text-[10.5px] font-mono text-primary hover:underline"
+                  >
+                    {isZh ? "Graph RAG 边界溯源 →" : "Graph RAG boundaries →"}
+                  </Link>
+                )}
+                <span className="text-[10.5px] font-mono text-muted-foreground">{t(routePage.advisoryNote.en, routePage.advisoryNote.zh)}</span>
+              </div>
             </div>
 
             <ul className="mt-3 space-y-2">

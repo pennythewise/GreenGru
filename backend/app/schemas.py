@@ -349,7 +349,8 @@ class IotReadingOut(BaseModel):
 
 class IotSnapshotCreate(BaseModel):
     company_id: str = "demo-hengfeng"
-    window_minutes: Literal[10, 30, 60]
+    # Month-scale windows (minutes): 1 / 3 / 6 months · 1 year
+    window_minutes: Literal[43200, 129600, 259200, 525600]
     green_trading: Literal["yes", "no"] = "no"
 
 
@@ -395,12 +396,16 @@ class CopilotChatRequest(BaseModel):
     message: str
     prompt_id: str | None = None
     history: list[CopilotHistoryMessage] = []
+    # None = auto (loan/grant page or keywords); True/False force on/off
+    include_kb_rag: bool | None = None
 
 
 class CopilotChatResponse(BaseModel):
     reply: str
     model: str
     mock: bool = False
+    kb_rag: dict | None = None
+    kb_rag_attached: bool = False
 
 
 class RouteIntentRequest(BaseModel):

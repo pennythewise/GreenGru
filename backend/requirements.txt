@@ -28,5 +28,8 @@ numpy>=1.24,<2.4
 pillow>=10.0.0
 # Optional Stage-1 PDF OCR (heavy): pip install -U "mineru[core]"
 # then: python -m mineru.cli.models_download -s huggingface -m pipeline
+langgraph>=0.2.60
+networkx>=3.2
+neo4j>=5.18.0
 pytest==8.3.4
 pytest-asyncio==0.24.0
