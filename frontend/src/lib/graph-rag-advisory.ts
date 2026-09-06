@@ -164,7 +164,7 @@ export function buildViewAdvisory(opts: {
     headlineZh: "本体顾问 — 展开完整 CBAM 叙事",
     bodyEn: [
       `You asked: “${query}”`,
-      `Full seeded ontology (${nodeCount} nodes / ${edgeCount} edges): process → material → CN code → §3.16.2 boundary → 十五五 policy → emission tags.`,
+      `Full seeded ontology (${nodeCount} nodes / ${edgeCount} edges): process → material → CN code → §3.16.2 boundary → STM BAT → Stage-3 rubric → emission tags.`,
       "Advisory read: this is the teaching / audit map. Pick a path (shortest) or neighborhood (local) when writing the operator-facing answer; keep numbers from the deterministic math block only.",
       mathEn ?? "Run Graph RAG so precursor burden is computed before any tariff narrative.",
       result?.answer_en
@@ -175,7 +175,7 @@ export function buildViewAdvisory(opts: {
       .join("\n\n"),
     bodyZh: [
       `您的问题：“${query}”`,
-      `完整种子本体（${nodeCount} 节点 / ${edgeCount} 边）：工艺 → 物料 → 海关编码 → §3.16.2 边界 → 十五五政策 → 排放标签。`,
+      `完整种子本体（${nodeCount} 节点 / ${edgeCount} 边）：工艺 → 物料 → 海关编码 → §3.16.2 边界 → STM BAT → 阶段三评分标尺 → 排放标签。`,
       "顾问解读：这是教学/审计总图。面向操作员答复时改用最短路径或局部子图；数值只取自确定性数学块。",
       mathZh ?? "请先运行 Graph RAG，再叙述任何关税含义。",
       result?.answer_zh

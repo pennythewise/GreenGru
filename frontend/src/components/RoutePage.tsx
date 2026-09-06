@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
@@ -19,6 +19,7 @@ import { AppShell, CitationFooter, PageHeader } from "@/components/AppShell";
 import { CbamWorkbookPanel } from "@/components/CbamWorkbookPanel";
 import { GrantApplicationForm } from "@/components/GrantApplicationForm";
 import { CbamOperatorScorePanel } from "@/components/CbamOperatorScorePanel";
+import { PassportGraphRagPanel } from "@/components/PassportGraphRagPanel";
 import { PrescreenerRagPanel } from "@/components/PrescreenerRagPanel";
 import { GreenFactoryScorePanel } from "@/components/GreenFactoryScorePanel";
 import { LoanApplicationForm } from "@/components/LoanApplicationForm";
@@ -390,9 +391,14 @@ function StageStrip({
   scoreError,
   ragError,
   stage1Open,
+  stage2Open,
   stage3Open,
   onToggleStage1,
+  onToggleStage2,
   onToggleStage3,
+  excelBusy,
+  excelMsg,
+  onDownloadExcel,
 }: {
   kb: string;
   slug: Slug;
@@ -410,18 +416,27 @@ function StageStrip({
   scoreError: string | null;
   ragError: string | null;
   stage1Open: boolean;
+  stage2Open: boolean;
   stage3Open: boolean;
   onToggleStage1: () => void;
+  onToggleStage2: () => void;
   onToggleStage3: () => void;
+  excelBusy: boolean;
+  excelMsg: string | null;
+  onDownloadExcel: () => void;
 }) {
   const { t, isZh } = useLocale();
   const stage1Rag =
     slug === "passport" ? cbamRag : slug === "grant" ? grantRag : slug === "loan" ? loanRag : null;
   const hasStage1Panel = slug === "passport" || slug === "grant" || slug === "loan";
+  const hasStage2Excel = slug === "passport" && complete;
   const hasStage3Panel =
     (slug === "grant" && grantScore != null) ||
     (slug === "loan" && loanScore != null) ||
     (slug === "passport" && cbamScore != null);
+  const stage5 = stages.find((s) => s.n === 5);
+  const showAdvisoryFlow =
+    complete || stage5?.status === "done" || stage5?.status === "loading";
 
   return (
     <div className="panel p-5">
@@ -456,7 +471,8 @@ function StageStrip({
                 : t(routePage.pipelineLocked.en, routePage.pipelineLocked.zh)}
         </button>
       </div>
-      <ol className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="mt-4 relative">
+      <ol className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {stages.map((s) => {
           const done = s.status === "done";
           const loading = s.status === "loading";
@@ -464,27 +480,34 @@ function StageStrip({
           const isGrantScore = slug === "grant" && s.n === 3;
           const isLoanScore = slug === "loan" && s.n === 3;
           const isCbamScore = slug === "passport" && s.n === 3;
+          const isScoreStage = s.n === 3;
+          const isFactoryStage = s.n === 4;
+          const isAdvisoryStage = s.n === 5;
           const isCbamPrescreen = slug === "passport" && s.n === 1;
           const isGrantPrescreen = slug === "grant" && s.n === 1;
           const isLoanPrescreen = slug === "loan" && s.n === 1;
+          const isCbamReport = slug === "passport" && s.n === 2;
           const clickableStage1 =
             (isCbamPrescreen || isGrantPrescreen || isLoanPrescreen) &&
             hasStage1Panel &&
             done;
+          const clickableStage2 = isCbamReport && hasStage2Excel;
           const clickableStage3 =
             (isGrantScore || isLoanScore || isCbamScore) && hasStage3Panel && done;
           return (
             <li
               key={s.n}
-              role={clickableStage1 || clickableStage3 ? "button" : undefined}
-              tabIndex={clickableStage1 || clickableStage3 ? 0 : undefined}
+              role={clickableStage1 || clickableStage2 || clickableStage3 ? "button" : undefined}
+              tabIndex={clickableStage1 || clickableStage2 || clickableStage3 ? 0 : undefined}
               onClick={() => {
                 if (clickableStage1) onToggleStage1();
+                if (clickableStage2) onToggleStage2();
                 if (clickableStage3) onToggleStage3();
               }}
               onKeyDown={(e) => {
                 if (e.key !== "Enter" && e.key !== " ") return;
                 if (clickableStage1) onToggleStage1();
+                if (clickableStage2) onToggleStage2();
                 if (clickableStage3) onToggleStage3();
               }}
               className={cn(
@@ -497,10 +520,12 @@ function StageStrip({
                   isCbamScore ||
                   isCbamPrescreen ||
                   isGrantPrescreen ||
-                  isLoanPrescreen) &&
+                  isLoanPrescreen ||
+                  (isCbamReport && hasStage2Excel)) &&
                   (done || loading) &&
                   "ring-1 ring-primary/30",
-                (clickableStage1 || clickableStage3) && "cursor-pointer hover:brightness-110",
+                (clickableStage1 || clickableStage2 || clickableStage3) &&
+                  "cursor-pointer hover:brightness-110",
                 clickableStage1 &&
                   stage1Open &&
                   (isLoanPrescreen
@@ -508,9 +533,25 @@ function StageStrip({
                     : isGrantPrescreen
                       ? "ring-2 ring-primary/50"
                       : "ring-2 ring-teal/50"),
+                clickableStage2 && stage2Open && "ring-2 ring-teal/50",
                 clickableStage3 && stage3Open && "ring-2 ring-primary/50",
+                showAdvisoryFlow &&
+                  isAdvisoryStage &&
+                  "ring-2 ring-gold/45 border-gold/40 bg-gold/[0.06]",
+                showAdvisoryFlow &&
+                  (isScoreStage || isFactoryStage) &&
+                  done &&
+                  "ring-1 ring-primary/35",
               )}
             >
+              {showAdvisoryFlow && (isScoreStage || isFactoryStage) && done && (
+                <span className="absolute -right-1 top-2 z-10 hidden md:inline-flex items-center gap-0.5 rounded-full border border-primary/40 bg-background px-1.5 py-0.5 text-[9px] font-mono text-primary shadow-sm">
+                  {isScoreStage
+                    ? t(routePage.advisoryFlowFromScore.en, routePage.advisoryFlowFromScore.zh)
+                    : t(routePage.advisoryFlowFromFactory.en, routePage.advisoryFlowFromFactory.zh)}
+                  <ArrowRight className="h-2.5 w-2.5" />
+                </span>
+              )}
               <div className="flex items-baseline justify-between">
                 <span
                   className={cn(
@@ -578,10 +619,98 @@ function StageStrip({
                     : "Per EU CBAM guidance · click show/hide score"}
                 </div>
               )}
+              {isCbamReport && hasStage2Excel && (
+                <div className="mt-1.5 text-[9.5px] font-mono text-teal/90 leading-snug">
+                  {t(routePage.excelStage2Hint.en, routePage.excelStage2Hint.zh)}
+                </div>
+              )}
+              {showAdvisoryFlow && isAdvisoryStage && (
+                <div className="mt-1.5 text-[9.5px] font-mono text-gold leading-snug">
+                  {slug === "passport"
+                    ? isZh
+                      ? "汇入评分 + 工厂数据 · 构建 3D Graph RAG"
+                      : "Receives Score + factory · builds 3D Graph RAG"
+                    : isZh
+                      ? "汇入评分 + 工厂数据"
+                      : "Receives Score + factory data"}
+                </div>
+              )}
             </li>
           );
         })}
       </ol>
+
+      {showAdvisoryFlow && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mt-3"
+          aria-hidden={false}
+        >
+          <p className="mb-1.5 text-[10.5px] font-mono text-muted-foreground md:hidden">
+            {t(routePage.advisoryFlowLabel.en, routePage.advisoryFlowLabel.zh)}
+          </p>
+          <div className="relative hidden md:block h-14">
+            <svg
+              viewBox="0 0 1000 56"
+              className="absolute inset-0 h-full w-full overflow-visible"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                <marker
+                  id="advisory-arrowhead"
+                  markerWidth="8"
+                  markerHeight="8"
+                  refX="6"
+                  refY="4"
+                  orient="auto"
+                >
+                  <path d="M0,0 L8,4 L0,8 Z" fill="var(--color-primary)" />
+                </marker>
+              </defs>
+              {/* Stage 3 (Score) center ≈ 50% → Stage 5 (Advisory) ≈ 90% */}
+              <path
+                d="M 500 4 C 500 36, 780 36, 900 20"
+                fill="none"
+                stroke="var(--color-primary)"
+                strokeWidth="2"
+                strokeDasharray="6 4"
+                markerEnd="url(#advisory-arrowhead)"
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="40"
+                  to="0"
+                  dur="1.2s"
+                  repeatCount="indefinite"
+                />
+              </path>
+              {/* Stage 4 (Pull factory data) center ≈ 70% → Stage 5 */}
+              <path
+                d="M 700 4 C 700 28, 820 28, 900 20"
+                fill="none"
+                stroke="var(--color-primary)"
+                strokeWidth="2"
+                strokeDasharray="6 4"
+                markerEnd="url(#advisory-arrowhead)"
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="40"
+                  to="0"
+                  dur="1.2s"
+                  repeatCount="indefinite"
+                />
+              </path>
+            </svg>
+            <div className="absolute left-1/2 top-8 -translate-x-1/2 whitespace-nowrap rounded-full border border-primary/30 bg-background/95 px-2.5 py-0.5 text-[10px] font-mono text-primary">
+              {t(routePage.advisoryFlowLabel.en, routePage.advisoryFlowLabel.zh)}
+            </div>
+          </div>
+        </motion.div>
+      )}
+      </div>
       {scoreError && (
         <div className="mt-3 rounded-md border border-danger/40 bg-danger/[0.06] p-2 text-[11px] text-danger">
           {scoreError}
@@ -625,6 +754,54 @@ function StageStrip({
             />
           </div>
         </StageDetailShell>
+      )}
+
+      {hasStage2Excel && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        >
+          <StageDetailShell
+            stageN={2}
+            titleEn={routePage.excelStage2Title.en}
+            titleZh={routePage.excelStage2Title.zh}
+            accentClass="border-teal/35"
+            open={stage2Open}
+            onOpenChange={(v) => {
+              if (v !== stage2Open) onToggleStage2();
+            }}
+          >
+            <div className="p-4 pt-3 space-y-3">
+              <p className="text-[12.5px] text-muted-foreground leading-relaxed">
+                {t(routePage.excelStage2Desc.en, routePage.excelStage2Desc.zh)}
+              </p>
+              <p className="text-[11px] font-mono text-muted-foreground">
+                {t(routePage.excelNote.en, routePage.excelNote.zh)}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={excelBusy}
+                  onClick={onDownloadExcel}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-primary text-primary-foreground text-[12.5px] font-medium teal-glow hover:brightness-110 transition disabled:opacity-50"
+                >
+                  {excelBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  {excelBusy
+                    ? t(routePage.generatingExcel.en, routePage.generatingExcel.zh)
+                    : t(routePage.downloadExcel.en, routePage.downloadExcel.zh)}
+                </button>
+              </div>
+              {excelMsg && (
+                <p className="text-[11px] font-mono text-carbon">{excelMsg}</p>
+              )}
+            </div>
+          </StageDetailShell>
+        </motion.div>
       )}
 
       {grantScore && slug === "grant" && (
@@ -770,7 +947,17 @@ function ScoreGauge({
 
 /* ============================================================ */
 
-export function RoutePage({ slug }: { slug: Slug }) {
+export type RouteTab = "form" | "pipeline";
+/** @deprecated Use RouteTab */
+export type PassportTab = RouteTab;
+
+export function RoutePage({
+  slug,
+  routeTab = "form",
+}: {
+  slug: Slug;
+  routeTab?: RouteTab;
+}) {
   const navigate = useNavigate();
   const { t, isZh } = useLocale();
   const cfg = routePages[slug];
@@ -791,15 +978,87 @@ export function RoutePage({ slug }: { slug: Slug }) {
     loanRag,
     scoreError,
     ragError,
+    graphRagPhase,
+    graphRagNodes,
+    graphRagEdges,
+    graphRagResult,
   } = useRoutePipeline(cfg.kb, slug, checklist.uploadSessionId);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
   const [stage1Open, setStage1Open] = useState(true);
+  const [stage2Open, setStage2Open] = useState(true);
   const [stage3Open, setStage3Open] = useState(true);
+  const sectionCRef = useRef<HTMLDivElement>(null);
+
+  const isPassport = slug === "passport";
+  const showFormTab = routeTab === "form";
+  const showPipelineTab = routeTab === "pipeline";
+  const showPassportGraph =
+    isPassport && (graphRagPhase === "building" || graphRagPhase === "ready");
+
+  const formTabLabel =
+    isPassport
+      ? isZh
+        ? "评估表单"
+        : "Evaluation form"
+      : isZh
+        ? "申请表单"
+        : "Application form";
+
+  const tablistLabel = isPassport
+    ? isZh
+      ? "碳护照分栏"
+      : "EU CBAM tabs"
+    : slug === "loan"
+      ? isZh
+        ? "绿贷分栏"
+        : "Loan tabs"
+      : isZh
+        ? "补贴分栏"
+        : "Grant tabs";
+
+  const pipelineReadyHint = isPassport
+    ? isZh
+      ? "文件已齐备 — 打开流水线页运行 5 个阶段（含 Graph RAG）。"
+      : "Documents ready — open the pipeline tab to run all 5 stages (incl. Graph RAG)."
+    : isZh
+      ? "文件与表单已齐备 — 打开流水线页运行 5 个阶段。"
+      : "Documents and form ready — open the pipeline tab to run all 5 stages.";
+
+  function setRouteTab(tab: RouteTab) {
+    // Literal `to` paths are required so TanStack applies validated `search`
+    // (template `/${slug}` was dropping search and leaving loan/grant on form).
+    if (slug === "loan") {
+      void navigate({ to: "/loan", search: { tab }, replace: true });
+      return;
+    }
+    if (slug === "grant") {
+      void navigate({ to: "/grant", search: { tab }, replace: true });
+      return;
+    }
+    void navigate({ to: "/passport", search: { tab }, replace: true });
+  }
+
+  useEffect(() => {
+    if (!isPassport) return;
+    if (graphRagPhase !== "building") return;
+    if (routeTab !== "pipeline") {
+      setRouteTab("pipeline");
+      return;
+    }
+    sectionCRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to phase / tab
+  }, [isPassport, graphRagPhase, routeTab]);
 
   function handleContinueFlow() {
     const next = advanceRouteFlow();
-    if (next) {
+    if (next === "loan") {
+      void navigate({ to: "/loan", search: { tab: "form" } });
+    } else if (next === "grant") {
+      void navigate({ to: "/grant", search: { tab: "form" } });
+    } else if (next === "passport") {
+      void navigate({ to: "/passport", search: { tab: "form" } });
+    } else if (next) {
       void navigate({ to: `/${next}` });
     } else {
       void navigate({ to: "/" });
@@ -897,22 +1156,96 @@ export function RoutePage({ slug }: { slug: Slug }) {
         }
       />
 
-      <Checklist
-        slug={slug}
-        items={checklist.items}
-        doneCount={checklist.doneCount}
-        attachedCount={checklist.attachedCount}
-        queuedPdfCount={checklist.queuedPdfCount}
-        attachFile={checklist.attachFile}
-        markProcessed={checklist.markProcessed}
-        takeQueuedPdfs={checklist.takeQueuedPdfs}
-        takeQueuedNonPdfs={checklist.takeQueuedNonPdfs}
-        uploadSessionId={checklist.uploadSessionId}
-        ragChannel={checklist.ragChannel}
-      />
-      {slug === "passport" && <CbamWorkbookPanel />}
-      {slug === "loan" && <LoanApplicationForm />}
-      {slug === "grant" && <GrantApplicationForm />}
+      <div
+        role="tablist"
+        aria-label={tablistLabel}
+        className="flex flex-wrap gap-1 p-1 rounded-lg border border-border bg-surface/50"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={routeTab === "form"}
+          onClick={() => setRouteTab("form")}
+          className={cn(
+            "inline-flex items-center gap-2 px-3.5 py-2 rounded-md text-[12.5px] font-medium transition",
+            routeTab === "form"
+              ? "bg-primary/15 text-foreground border border-primary/35"
+              : "text-muted-foreground hover:text-foreground border border-transparent",
+          )}
+        >
+          <FileText className="h-3.5 w-3.5 text-teal" />
+          {formTabLabel}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={routeTab === "pipeline"}
+          onClick={() => setRouteTab("pipeline")}
+          className={cn(
+            "inline-flex items-center gap-2 px-3.5 py-2 rounded-md text-[12.5px] font-medium transition",
+            routeTab === "pipeline"
+              ? "bg-primary/15 text-foreground border border-primary/35"
+              : "text-muted-foreground hover:text-foreground border border-transparent",
+          )}
+        >
+          <Radio className="h-3.5 w-3.5 text-teal" />
+          {isZh ? "路线流水线" : "Route pipeline"}
+          {(running || complete) && (
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                running ? "bg-carbon pulse-dot" : "bg-carbon",
+              )}
+            />
+          )}
+        </button>
+      </div>
+
+      {showFormTab && (
+        <>
+          <Checklist
+            slug={slug}
+            items={checklist.items}
+            doneCount={checklist.doneCount}
+            attachedCount={checklist.attachedCount}
+            queuedPdfCount={checklist.queuedPdfCount}
+            attachFile={checklist.attachFile}
+            markProcessed={checklist.markProcessed}
+            takeQueuedPdfs={checklist.takeQueuedPdfs}
+            takeQueuedNonPdfs={checklist.takeQueuedNonPdfs}
+            uploadSessionId={checklist.uploadSessionId}
+            ragChannel={checklist.ragChannel}
+          />
+          {slug === "passport" && <CbamWorkbookPanel />}
+          {slug === "loan" && <LoanApplicationForm />}
+          {slug === "grant" && <GrantApplicationForm />}
+          <div className="rounded-xl border border-border bg-surface/40 px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-medium">
+                {isZh ? "下一步 · 运行路线流水线" : "Next · run the route pipeline"}
+              </p>
+              <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                {checklist.allDone
+                  ? pipelineReadyHint
+                  : isZh
+                    ? "先完成上方文件清单与表单，再切换到流水线页。"
+                    : "Finish the document checklist and form above, then switch to the pipeline tab."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRouteTab("pipeline")}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-primary text-primary-foreground text-[12.5px] font-medium teal-glow hover:brightness-110 transition"
+            >
+              {isZh ? "打开路线流水线" : "Open route pipeline"}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </>
+      )}
+
+      {showPipelineTab && (
+        <>
       <StageStrip
         kb={cfg.kb}
         slug={slug}
@@ -930,27 +1263,126 @@ export function RoutePage({ slug }: { slug: Slug }) {
         scoreError={scoreError}
         ragError={ragError}
         stage1Open={stage1Open}
+        stage2Open={stage2Open}
         stage3Open={stage3Open}
         onToggleStage1={() => setStage1Open((v) => !v)}
+        onToggleStage2={() => setStage2Open((v) => !v)}
         onToggleStage3={() => setStage3Open((v) => !v)}
+        excelBusy={pdfBusy}
+        excelMsg={slug === "passport" ? pdfMsg : null}
+        onDownloadExcel={() => void handleDownloadPdf()}
       />
 
-      {!complete && (
+      {!complete && !showPassportGraph && (
         <div className="rounded-xl border border-dashed border-border bg-surface/20 px-5 py-8 text-center">
           <p className="text-[13px] font-medium text-muted-foreground">
-            {isZh
-              ? "完成上方 5 个阶段流水线后，将弹出预览与建议"
-              : "Run the 5-stage pipeline above — Preview and Advisory will appear next"}
+            {slug === "passport"
+              ? isZh
+                ? "运行流水线至阶段 5 时，将在此构建 3D Graph RAG（BAT + 评分标尺）"
+                : "Run the pipeline through Stage 5 — a 3D Graph RAG (BAT + rubrics) builds here"
+              : isZh
+                ? "完成上方 5 个阶段流水线后，将弹出预览与建议"
+                : "Run the 5-stage pipeline above — Preview and Advisory will appear next"}
           </p>
           <p className="mt-1.5 text-[11px] font-mono text-muted-foreground/80">
-            {isZh
-              ? "Section C · Preview + Advisory 在流水线结束后显示"
-              : "Section C · Preview + Advisory unlock after all stages finish"}
+            {slug === "passport"
+              ? isZh
+                ? "Section C · Graph RAG 证据图"
+                : "Section C · Graph RAG evidence map"
+              : isZh
+                ? "Section C · Preview + Advisory 在流水线结束后显示"
+                : "Section C · Preview + Advisory unlock after all stages finish"}
           </p>
         </div>
       )}
 
-      {complete && (
+      {/* Passport: Graph RAG (left) + advisory advice (right) */}
+      {slug === "passport" && (showPassportGraph || complete) && (
+        <motion.div
+          ref={sectionCRef}
+          id="section-c-graph-rag"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+          className={cn(
+            "scroll-mt-6 gap-4",
+            graphRagPhase === "ready" || complete ? "grid lg:grid-cols-5" : "block",
+          )}
+        >
+          <div
+            className={cn(
+              "panel-lift p-5",
+              graphRagPhase === "ready" || complete ? "lg:col-span-3" : "",
+            )}
+          >
+            <PassportGraphRagPanel
+              phase={graphRagPhase === "idle" && complete ? "ready" : graphRagPhase}
+              nodes={graphRagNodes}
+              edges={graphRagEdges}
+              result={graphRagResult}
+              compact={graphRagPhase === "building"}
+            />
+          </div>
+
+          {(graphRagPhase === "ready" || complete) && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12 }}
+              className="panel p-5 lg:col-span-2"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+                  <Wand2 className="h-3.5 w-3.5 text-gold" />{" "}
+                  {t(routePage.sectionCAdvisory.en, routePage.sectionCAdvisory.zh)}
+                </div>
+                <span className="text-[10.5px] font-mono text-muted-foreground">
+                  {t(routePage.advisoryNote.en, routePage.advisoryNote.zh)}
+                </span>
+              </div>
+
+              <ul className="mt-3 space-y-2">
+                {advice.map((a) => (
+                  <li key={a.title} className="rounded-lg border border-border bg-surface/50 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-[13px] font-medium">{a.title}</div>
+                      <span className="shrink-0 text-[10.5px] font-mono px-1.5 py-0.5 rounded bg-gold/15 text-gold border border-gold/30">
+                        {a.impact} {cfg.advisoryImpactUnit}
+                      </span>
+                    </div>
+                    <details className="mt-1.5">
+                      <summary className="text-[11.5px] font-mono text-muted-foreground cursor-pointer hover:text-foreground">
+                        {t(routePage.why.en, routePage.why.zh)}
+                      </summary>
+                      <p className="mt-1.5 text-[11.5px] text-muted-foreground leading-relaxed">{a.why}</p>
+                    </details>
+                    <div className="mt-2">
+                      <span
+                        className={cn(
+                          "text-[10.5px] font-mono px-1.5 py-0.5 rounded border",
+                          a.status.startsWith("Implemented")
+                            ? "bg-carbon/10 text-carbon border-carbon/30"
+                            : "bg-muted/60 text-muted-foreground border-border",
+                        )}
+                      >
+                        {a.status}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-4 flex items-start gap-2 text-[11px] text-muted-foreground">
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>{t(routePage.advisoryFooter.en, routePage.advisoryFooter.zh)}</span>
+              </div>
+            </motion.div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Loan / Grant: legacy score preview + advisory cards */}
+      {complete && slug !== "passport" && (
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -965,14 +1397,18 @@ export function RoutePage({ slug }: { slug: Slug }) {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-                <FileText className="h-3.5 w-3.5 text-teal" /> {t(routePage.sectionCPreview.en, routePage.sectionCPreview.zh)}
+                <FileText className="h-3.5 w-3.5 text-teal" />{" "}
+                {t(routePage.sectionCPreviewLegacy.en, routePage.sectionCPreviewLegacy.zh)}
               </div>
               <span className="text-[10.5px] font-mono text-carbon inline-flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-carbon" /> {t(routePage.deterministic.en, routePage.deterministic.zh)}
+                <span className="h-1.5 w-1.5 rounded-full bg-carbon" />{" "}
+                {t(routePage.deterministic.en, routePage.deterministic.zh)}
               </span>
             </div>
 
-            <h3 className="mt-2 text-[17px] font-semibold tracking-tight">{isZh ? (cfg.titleZh ?? cfg.title) : cfg.title}</h3>
+            <h3 className="mt-2 text-[17px] font-semibold tracking-tight">
+              {isZh ? (cfg.titleZh ?? cfg.title) : cfg.title}
+            </h3>
             <p className="text-[11.5px] font-mono text-muted-foreground">
               {cfg.scoreLabel} · {isZh ? "百分比 / 阈值 70%" : "Score % · thr 70%"}
             </p>
@@ -984,16 +1420,16 @@ export function RoutePage({ slug }: { slug: Slug }) {
                     ? Math.round(grantScore.total_score)
                     : loanScore && slug === "loan"
                       ? Math.round(loanScore.total_score)
-                      : cbamScore && slug === "passport"
-                        ? Math.round(cbamScore.total_score)
-                        : cfg.gauge
+                      : cfg.gauge
                 }
                 isZh={isZh}
               />
             </div>
 
             <div className="mt-4">
-              <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">{t(routePage.gapList.en, routePage.gapList.zh)}</div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+                {t(routePage.gapList.en, routePage.gapList.zh)}
+              </div>
               <ul className="mt-2 space-y-1.5">
                 {gapList.map((g) => (
                   <li key={g} className="flex items-start gap-2 text-[12.5px]">
@@ -1013,17 +1449,11 @@ export function RoutePage({ slug }: { slug: Slug }) {
               >
                 {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 {pdfBusy
-                  ? slug === "passport"
-                    ? t(routePage.generatingExcel.en, routePage.generatingExcel.zh)
-                    : t(routePage.generatingPdf.en, routePage.generatingPdf.zh)
-                  : slug === "passport"
-                    ? t(routePage.downloadExcel.en, routePage.downloadExcel.zh)
-                    : t(routePage.downloadPdf.en, routePage.downloadPdf.zh)}
+                  ? t(routePage.generatingPdf.en, routePage.generatingPdf.zh)
+                  : t(routePage.downloadPdf.en, routePage.downloadPdf.zh)}
               </button>
               <span className="text-[10.5px] font-mono text-muted-foreground">
-                {slug === "passport"
-                  ? t(routePage.excelNote.en, routePage.excelNote.zh)
-                  : t(routePage.pdfNote.en, routePage.pdfNote.zh)}
+                {t(routePage.pdfNote.en, routePage.pdfNote.zh)}
               </span>
             </div>
             {pdfMsg && <p className="mt-2 text-[11px] font-mono text-carbon">{pdfMsg}</p>}
@@ -1037,19 +1467,12 @@ export function RoutePage({ slug }: { slug: Slug }) {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-                <Wand2 className="h-3.5 w-3.5 text-gold" /> {t(routePage.sectionCAdvisory.en, routePage.sectionCAdvisory.zh)}
+                <Wand2 className="h-3.5 w-3.5 text-gold" />{" "}
+                {t(routePage.sectionCAdvisory.en, routePage.sectionCAdvisory.zh)}
               </div>
-              <div className="flex items-center gap-2">
-                {slug === "passport" && (
-                  <Link
-                    to="/graph-rag"
-                    className="text-[10.5px] font-mono text-primary hover:underline"
-                  >
-                    {isZh ? "Graph RAG 边界溯源 →" : "Graph RAG boundaries →"}
-                  </Link>
-                )}
-                <span className="text-[10.5px] font-mono text-muted-foreground">{t(routePage.advisoryNote.en, routePage.advisoryNote.zh)}</span>
-              </div>
+              <span className="text-[10.5px] font-mono text-muted-foreground">
+                {t(routePage.advisoryNote.en, routePage.advisoryNote.zh)}
+              </span>
             </div>
 
             <ul className="mt-3 space-y-2">
@@ -1089,6 +1512,8 @@ export function RoutePage({ slug }: { slug: Slug }) {
             </div>
           </motion.div>
         </motion.div>
+      )}
+        </>
       )}
 
       <div className="flex items-center justify-between flex-wrap gap-3">

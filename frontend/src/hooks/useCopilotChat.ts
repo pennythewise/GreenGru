@@ -41,7 +41,6 @@ export function useCopilotChat(page: CopilotPage, greeting: string) {
         });
         const tags = [
           result.mock ? "mock" : null,
-          result.graph_rag_attached ? "Graph RAG" : null,
           result.kb_rag_attached ? "KB" : null,
         ].filter(Boolean);
         setModelLabel(

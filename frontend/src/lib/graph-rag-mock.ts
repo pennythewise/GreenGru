@@ -10,7 +10,8 @@ const C = {
   material: "#2563eb",
   customs: "#ca8a04",
   boundary: "#dc2626",
-  policy: "#7c3aed",
+  bat: "#7c3aed",
+  rubric: "#c026d3",
   emission: "#64748b",
 } as const;
 
@@ -30,7 +31,8 @@ export const MOCK_GRAPH_NODES: GraphRagNode[] = [
   { id: "bound_relevant_precursor", layer: "boundary", name_en: "CBAM · Relevant precursor", name_zh: "CBAM 边界 · 相关前体", color: C.boundary, x: -0.05, y: -0.7, tag: "Relevant_Precursor" },
   { id: "emis_scope2_grid", layer: "emission", name_en: "Scope 2 · Grid electricity", name_zh: "范围二 · 电网电力", color: C.emission, x: 0.35, y: 0.55, tag: "Scope2_GridElectricity" },
   { id: "emis_scope1_combustion", layer: "emission", name_en: "Scope 1 · Combustion", name_zh: "范围一 · 燃烧", color: C.emission, x: -0.7, y: 0.75, tag: "Scope1_Combustion" },
-  { id: "policy_15_5_ch21_s2", layer: "policy", name_en: "15th FYP · Carbon footprint mutual recognition", name_zh: "十五五 · 产品碳足迹国际互认", color: C.policy, x: 0.95, y: 0.35 },
+  { id: "bat_zinc_chromium_plating", layer: "bat", name_en: "BAT · Zinc/chromium plating (fasteners)", name_zh: "BAT · 锌/铬镀层（紧固件）", color: C.bat, x: 0.95, y: 0.35 },
+  { id: "rubric_stage3_threshold_scoring", layer: "rubric", name_en: "Stage 3 · Threshold scoring rubric", name_zh: "阶段三 · 阈值评分标尺", color: C.rubric, x: 0.95, y: -0.15 },
 ];
 
 export const MOCK_GRAPH_EDGES: GraphRagEdge[] = [
@@ -48,7 +50,8 @@ export const MOCK_GRAPH_EDGES: GraphRagEdge[] = [
   { source: "mat_hot_rolled_plate", target: "bound_relevant_precursor", rel: "MAPS_TO" },
   { source: "proc_cnc_cutting", target: "emis_scope2_grid", rel: "EMITS" },
   { source: "proc_blast_furnace", target: "emis_scope1_combustion", rel: "EMITS" },
-  { source: "cn_7318_15_42", target: "policy_15_5_ch21_s2", rel: "ALIGNED_WITH" },
+  { source: "mat_fastener_bolt", target: "bat_zinc_chromium_plating", rel: "GUIDED_BY_BAT" },
+  { source: "mat_fastener_bolt", target: "rubric_stage3_threshold_scoring", rel: "SCORED_BY" },
 ];
 
 export const MOCK_GRAPH_PAYLOAD = {
@@ -57,7 +60,7 @@ export const MOCK_GRAPH_PAYLOAD = {
   stats: {
     nodes: MOCK_GRAPH_NODES.length,
     edges: MOCK_GRAPH_EDGES.length,
-    layers: ["process", "material", "customs", "boundary", "policy", "emission"],
+    layers: ["process", "material", "customs", "boundary", "bat", "rubric", "emission"],
   },
 };
 

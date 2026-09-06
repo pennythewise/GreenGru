@@ -11,7 +11,7 @@ export const Route = createFileRoute("/graph-rag")({
       {
         name: "description",
         content:
-          "Industrial metallurgical & regulatory Graph RAG for CBAM advisory — Baowu lineage, §3.16.2 boundaries, 十五五 policy.",
+          "Industrial metallurgical & regulatory Graph RAG for CBAM advisory — Baowu lineage, §3.16.2 boundaries, STM BAT plating, Stage-3 scoring rubric.",
       },
     ],
   }),

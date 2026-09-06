@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
 import { motion } from "motion/react";
-import { BookOpen, FileText, Library, Loader2, Sparkles, Upload } from "lucide-react";
+import { BookOpen, FileText, Sparkles, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/lib/locale";
-import { ingestKbPdfs, type RagChannel, type RagChunk, type RagQueryResult } from "@/lib/api";
+import type { RagChannel, RagChunk, RagQueryResult } from "@/lib/api";
 
 function simPct(sim: number) {
   return `${Math.round(Math.max(0, Math.min(1, sim)) * 100)}%`;
@@ -73,8 +72,8 @@ const COPY: Record<
     emptyZh: string;
     agentEn: string;
     agentZh: string;
-    kbHintEn: string;
-    kbHintZh: string;
+    kbReadyEn: string;
+    kbReadyZh: string;
     border: string;
     gradient: string;
     text: string;
@@ -90,13 +89,12 @@ const COPY: Record<
     blurbEn:
       "Section A uploads vs regulatory KB · cosine ≥ 70% · top 3 by relevancy · confidence score.",
     blurbZh: "Section A 上传 ↔ 法规库余弦 ≥ 70% · 取 Top 3 · 输出置信度。",
-    emptyEn:
-      "No ranked chunks yet. Upload a KB PDF below, process Section A, then re-run Stage 1.",
-    emptyZh: "暂无检索结果。请先上传法规库 PDF、处理 Section A，再运行 Stage 1。",
+    emptyEn: "No ranked chunks yet. Process Section A, then re-run Stage 1.",
+    emptyZh: "暂无检索结果。请先处理 Section A，再运行 Stage 1。",
     agentEn: "upload↔KB cosine · thr 70% · top 3 · confidence",
     agentZh: "上传↔法规库余弦 · 阈值 70% · Top 3 · 置信度",
-    kbHintEn: "Upload CBAM KB PDF · PyMuPDF→pypdf → Qwen3-Embedding-8B → Supabase",
-    kbHintZh: "上传 CBAM 法规库 PDF · PyMuPDF→pypdf → Qwen3-Embedding-8B → Supabase",
+    kbReadyEn: "CBAM regulatory KB is pre-loaded (IR / guidance · embedded in Supabase).",
+    kbReadyZh: "CBAM 法规知识库已预置（实施细则 / 指南 · 已嵌入 Supabase）。",
     border: "border-teal/30",
     gradient: "from-teal/[0.08] via-surface/40 to-primary/[0.04]",
     text: "text-teal",
@@ -111,13 +109,12 @@ const COPY: Record<
     blurbEn:
       "Application form + Section A uploads vs GB/T 36132 KB · cosine ≥ 70% · top 3 · confidence.",
     blurbZh: "申请表 + Section A 上传 ↔ GB/T 36132 库余弦 ≥ 70% · Top 3 · 置信度。",
-    emptyEn:
-      "No ranked chunks yet. Upload GB/T 36132 KB PDF below, then re-run Stage 1.",
-    emptyZh: "暂无检索结果。请先上传 GB/T 36132 法规库 PDF，再运行 Stage 1。",
+    emptyEn: "No ranked chunks yet. Process Section A, then re-run Stage 1.",
+    emptyZh: "暂无检索结果。请先处理 Section A，再运行 Stage 1。",
     agentEn: "upload↔KB cosine · thr 70% · top 3 · confidence",
     agentZh: "上传↔法规库余弦 · 阈值 70% · Top 3 · 置信度",
-    kbHintEn: "Upload grant KB PDF · PyMuPDF→pypdf → Qwen3-Embedding-8B → Supabase",
-    kbHintZh: "上传补贴法规库 PDF · PyMuPDF→pypdf → Qwen3-Embedding-8B → Supabase",
+    kbReadyEn: "Green-factory KB is pre-loaded (GB/T 36132 · embedded in Supabase).",
+    kbReadyZh: "绿色工厂知识库已预置（GB/T 36132 · 已嵌入 Supabase）。",
     border: "border-primary/30",
     gradient: "from-primary/[0.08] via-surface/40 to-carbon/[0.04]",
     text: "text-primary",
@@ -132,114 +129,18 @@ const COPY: Record<
     blurbEn:
       "Application form + Section A uploads vs KB · cosine ≥ 70% · top 3 · confidence.",
     blurbZh: "申请表 + Section A 上传 ↔ 法规库余弦 ≥ 70% · Top 3 · 置信度。",
-    emptyEn:
-      "No ranked chunks yet. Upload green-finance / GB/T KB PDF below, then re-run Stage 1.",
-    emptyZh: "暂无检索结果。请先上传绿金目录 / GB/T 法规库 PDF，再运行 Stage 1。",
+    emptyEn: "No ranked chunks yet. Process Section A, then re-run Stage 1.",
+    emptyZh: "暂无检索结果。请先处理 Section A，再运行 Stage 1。",
     agentEn: "upload↔KB cosine · thr 70% · top 3 · confidence",
     agentZh: "上传↔法规库余弦 · 阈值 70% · Top 3 · 置信度",
-    kbHintEn: "Upload loan KB PDF · PyMuPDF→pypdf → Qwen3-Embedding-8B → Supabase",
-    kbHintZh: "上传绿贷法规库 PDF · PyMuPDF→pypdf → Qwen3-Embedding-8B → Supabase",
+    kbReadyEn: "Green-finance KB is pre-loaded (PBOC 2025 catalogue · embedded in Supabase).",
+    kbReadyZh: "绿金知识库已预置（人民银行 2025 目录 · 已嵌入 Supabase）。",
     border: "border-gold/30",
     gradient: "from-gold/[0.08] via-surface/40 to-primary/[0.04]",
     text: "text-gold",
     chip: "border-gold/30 bg-gold/10 text-gold",
   },
 };
-
-function KbUploadBar({ channel }: { channel: RagChannel }) {
-  const { isZh } = useLocale();
-  const copy = COPY[channel];
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function onFiles(list: FileList | null) {
-    if (!list?.length || busy) return;
-    const files = Array.from(list).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
-    if (!files.length) {
-      setErr(isZh ? "仅支持 PDF" : "PDF only");
-      return;
-    }
-    setBusy(true);
-    setErr(null);
-    setStatus(
-      isZh
-        ? `解析并嵌入 ${files.length} 个法规库 PDF…`
-        : `Extracting & embedding ${files.length} KB PDF(s)…`,
-    );
-    try {
-      const batch = await ingestKbPdfs({
-        files,
-        channel,
-        language: channel === "cbam" ? "en" : "zh",
-      });
-      const failed = batch.results.filter((r) => !r.stored);
-      const cacheHits = batch.cache_hits ?? batch.results.filter((r) => r.cached).length;
-      setStatus(
-        isZh
-          ? `已写入 ${batch.stored_count}/${batch.file_count} 个文件 · ${batch.embedded_chunks} 片段` +
-              (cacheHits ? ` · ${cacheHits} 个命中缓存（跳过重处理）` : "") +
-              ` → Supabase`
-          : `Stored ${batch.stored_count}/${batch.file_count} file(s) · ${batch.embedded_chunks} chunks` +
-              (cacheHits ? ` · ${cacheHits} cache hit(s) (skipped reprocess)` : "") +
-              ` → Supabase`,
-      );
-      if (failed.length) {
-        setErr(
-          failed
-            .map((r) => `${r.source_file || "pdf"}: ${r.reason || "failed"}`)
-            .join("; "),
-        );
-      }
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-      setStatus(null);
-    } finally {
-      setBusy(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-dashed border-border/80 bg-surface/50 px-3 py-3 space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="application/pdf,.pdf"
-          multiple
-          className="sr-only"
-          onChange={(e) => void onFiles(e.target.files)}
-        />
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => inputRef.current?.click()}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] font-mono transition-colors",
-            copy.chip,
-            busy ? "opacity-60 cursor-wait" : "hover:bg-surface",
-          )}
-        >
-          {busy ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Library className="h-3.5 w-3.5" />
-          )}
-          {isZh ? "上传法规库 PDF" : "Upload KB PDF"}
-        </button>
-        <span className="text-[10.5px] text-muted-foreground">
-          {isZh ? copy.kbHintZh : copy.kbHintEn}
-        </span>
-      </div>
-      {status ? (
-        <p className={cn("text-[11px] font-mono", copy.text)}>{status}</p>
-      ) : null}
-      {err ? <p className="text-[11px] text-danger">{err}</p> : null}
-    </div>
-  );
-}
 
 export function PrescreenerRagPanel({
   channel,
@@ -268,7 +169,12 @@ export function PrescreenerRagPanel({
         copy.gradient,
       )}
     >
-      <KbUploadBar channel={channel} />
+      <div className="rounded-lg border border-border/80 bg-surface/50 px-3 py-2.5 flex items-start gap-2">
+        <BookOpen className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", copy.text)} />
+        <p className="text-[11.5px] text-muted-foreground leading-relaxed">
+          {isZh ? copy.kbReadyZh : copy.kbReadyEn}
+        </p>
+      </div>
 
       {error ? (
         <div className="rounded-lg border border-danger/40 bg-danger/[0.06] p-3 text-[12px] text-danger">
@@ -279,8 +185,8 @@ export function PrescreenerRagPanel({
       {!result && !error ? (
         <div className="rounded-lg border border-dashed border-border bg-surface/40 p-4 text-[12px] text-muted-foreground">
           {isZh
-            ? "运行流水线 Stage 1 后显示 Top 3 检索结果。可先上传法规库 PDF。"
-            : "Run pipeline Stage 1 to see top-3 hits. You can upload KB PDFs first."}
+            ? "运行流水线 Stage 1 后显示 Top 3 检索结果。"
+            : "Run pipeline Stage 1 to see top-3 hits."}
         </div>
       ) : null}
 

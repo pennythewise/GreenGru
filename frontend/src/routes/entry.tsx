@@ -93,7 +93,16 @@ function Entry() {
     const confirmed = buildConfirmedRoutes(selected);
     if (confirmed.length === 0) return;
     startRouteFlow(confirmed);
-    void navigate({ to: `/${confirmed[0]}` });
+    const first = confirmed[0];
+    if (first === "loan") {
+      void navigate({ to: "/loan", search: { tab: "form" } });
+    } else if (first === "grant") {
+      void navigate({ to: "/grant", search: { tab: "form" } });
+    } else if (first === "passport") {
+      void navigate({ to: "/passport", search: { tab: "form" } });
+    } else {
+      void navigate({ to: `/${first}` });
+    }
   }
 
   function routeReason(r: RouterRoute): string {
@@ -271,11 +280,6 @@ function Entry() {
               );
             })}
           </ul>
-
-          <div className="mt-4 rounded-lg border border-border bg-surface/40 p-3 text-[11.5px] text-muted-foreground">
-            <span className="text-foreground font-medium">{t(entryPage.whyConfirm.en, entryPage.whyConfirm.zh)}</span>{" "}
-            {isZh ? entryPage.whyConfirmBody.zh(floorPct) : entryPage.whyConfirmBody.en(floorPct)}
-          </div>
 
           <div className="mt-auto pt-4">
             <div className="flex items-center justify-between gap-2 flex-wrap">

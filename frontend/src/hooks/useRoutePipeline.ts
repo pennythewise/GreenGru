@@ -2,16 +2,22 @@ import { useCallback, useRef, useState } from "react";
 import { routeStrip } from "@/lib/dashboard-data";
 import {
   assertCarbonPassportBackend,
+  fetchGraphRagGraph,
+  queryGraphRag,
   queryRag,
   runCbamScore,
   runGrantScore,
   runLoanScore,
   type CbamScoreResult,
   type GrantScoreResult,
+  type GraphRagEdge,
+  type GraphRagNode,
+  type GraphRagQueryResult,
   type LoanScoreResult,
   type RagChannel,
   type RagQueryResult,
 } from "@/lib/api";
+import { MOCK_GRAPH_PAYLOAD, MOCK_QUERY_RESULT } from "@/lib/graph-rag-mock";
 import { collectCbamScoreInputs } from "@/lib/cbam-score-inputs";
 import { collectGrantScoreInputs } from "@/lib/grant-score-inputs";
 import { collectLoanScoreInputs } from "@/lib/loan-score-inputs";
@@ -27,7 +33,7 @@ export type PipelineStage = {
   elapsed: string | null;
 };
 
-const STAGE_DURATIONS_MS = [400, 1200, 650, 900, 1800];
+const STAGE_DURATIONS_MS = [400, 1200, 650, 900, 4200];
 
 const CBAM_PRESREEN_QUERY =
   "CBAM installation operator obligations monitoring methodology default values iron and steel reporting to EU importer";
@@ -37,6 +43,9 @@ const GRANT_PRESREEN_QUERY =
 
 const LOAN_PRESREEN_QUERY =
   "绿色金融支持项目目录 钢铁 废钢 绿色工厂 贷款用途 项目类别 申报材料 计量";
+
+const GRAPH_RAG_ADVISORY_QUERY =
+  "我们用宝武热轧板加工紧固件。数控切割和焊接需要核算哪些排放？最大的 CBAM 负债在哪里？镀锌如何对齐 STM BAT？";
 
 function emptyRag(channel: RagChannel, query: string): RagQueryResult {
   return {
@@ -95,6 +104,10 @@ export function useRoutePipeline(
   const [loanRag, setLoanRag] = useState<RagQueryResult | null>(null);
   const [scoreError, setScoreError] = useState<string | null>(null);
   const [ragError, setRagError] = useState<string | null>(null);
+  const [graphRagPhase, setGraphRagPhase] = useState<"idle" | "building" | "ready">("idle");
+  const [graphRagNodes, setGraphRagNodes] = useState<GraphRagNode[]>([]);
+  const [graphRagEdges, setGraphRagEdges] = useState<GraphRagEdge[]>([]);
+  const [graphRagResult, setGraphRagResult] = useState<GraphRagQueryResult | null>(null);
   const abortRef = useRef(false);
 
   const reset = useCallback(() => {
@@ -119,6 +132,10 @@ export function useRoutePipeline(
     setLoanRag(null);
     setScoreError(null);
     setRagError(null);
+    setGraphRagPhase("idle");
+    setGraphRagNodes([]);
+    setGraphRagEdges([]);
+    setGraphRagResult(null);
   }, [kb, slug]);
 
   const runPipeline = useCallback(async (): Promise<PipelineStage[]> => {
@@ -134,6 +151,10 @@ export function useRoutePipeline(
     setLoanRag(null);
     setScoreError(null);
     setRagError(null);
+    setGraphRagPhase("idle");
+    setGraphRagNodes([]);
+    setGraphRagEdges([]);
+    setGraphRagResult(null);
 
     try {
       await assertCarbonPassportBackend();
@@ -258,6 +279,29 @@ export function useRoutePipeline(
           setScoreError(err instanceof Error ? err.message : "CBAM score failed");
         }
         await new Promise((r) => setTimeout(r, Math.max(duration, 600)));
+      } else if (slug === "passport" && meta[idx]?.n === 5) {
+        setGraphRagPhase("building");
+        try {
+          const [graph, query] = await Promise.all([
+            fetchGraphRagGraph(),
+            queryGraphRag({
+              query: GRAPH_RAG_ADVISORY_QUERY,
+              locale: "zh",
+              includeFullLayout: true,
+            }),
+          ]);
+          setGraphRagNodes(query.full_graph?.nodes?.length ? query.full_graph.nodes : graph.nodes);
+          setGraphRagEdges(query.full_graph?.edges?.length ? query.full_graph.edges : graph.edges);
+          setGraphRagResult(query);
+        } catch (err) {
+          setRagError(err instanceof Error ? err.message : "Graph RAG failed");
+          setGraphRagNodes(MOCK_GRAPH_PAYLOAD.nodes);
+          setGraphRagEdges(MOCK_GRAPH_PAYLOAD.edges);
+          setGraphRagResult(MOCK_QUERY_RESULT);
+        }
+        // Let the 3D reveal finish (~revealOrder * REVEAL_MS)
+        await new Promise((r) => setTimeout(r, Math.max(duration, 3200)));
+        if (!abortRef.current) setGraphRagPhase("ready");
       } else {
         await new Promise((r) => setTimeout(r, duration));
       }
@@ -293,5 +337,9 @@ export function useRoutePipeline(
     loanRag,
     scoreError,
     ragError,
+    graphRagPhase,
+    graphRagNodes,
+    graphRagEdges,
+    graphRagResult,
   };
 }

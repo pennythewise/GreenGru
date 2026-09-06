@@ -35,7 +35,8 @@ const LAYER_LEGEND = [
   { layer: "material", en: "Material", zh: "物料", color: "#2563eb" },
   { layer: "customs", en: "CN code", zh: "海关编码", color: "#ca8a04" },
   { layer: "boundary", en: "CBAM boundary", zh: "CBAM 边界", color: "#dc2626" },
-  { layer: "policy", en: "十五五 policy", zh: "十五五政策", color: "#7c3aed" },
+  { layer: "bat", en: "STM BAT", zh: "BAT 最佳技术", color: "#7c3aed" },
+  { layer: "rubric", en: "Stage-3 rubric", zh: "阶段三评分标尺", color: "#c026d3" },
   { layer: "emission", en: "Emission", zh: "排放源", color: "#64748b" },
 ] as const;
 

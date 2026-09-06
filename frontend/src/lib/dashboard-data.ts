@@ -209,7 +209,9 @@ export function routeStrip(kb: string, slug?: "loan" | "grant" | "passport") {
     { n: 2, key: "Report",           zh: "报告",       method: "python · rule-based",              status: "done",    elapsed: "1.4 s" },
     { n: 3, key: "Score",            zh: "评分",       method: scoreMethod,                      status: "active",  elapsed: "0.6 s" },
     { n: 4, key: "Pull factory data",zh: "工厂数据",   method: "deterministic · dashboard bus",    status: "pending", elapsed: null },
-    { n: 5, key: "Advisory",         zh: "建议",       method: "qwen3.7-plus · EN / 中文",             status: "pending", elapsed: null },
+    { n: 5, key: "Advisory",         zh: "建议",       method: slug === "passport"
+        ? "Graph RAG · LangGraph · STM BAT + Stage-3 rubric"
+        : "qwen3.7-plus · EN / 中文",             status: "pending", elapsed: null },
   ];
 }
 
@@ -290,18 +292,18 @@ export const routePages = {
   passport: {
     slug: "passport" as const,
     label: "EU license", zh: "碳护照", n: "05",
-    title: "CBAM Readiness Preview",
-    titleZh: "CBAM 就绪预览",
-    subtitle: "Operator readiness scored against the EU installation-operator CBAM guidance.",
-    subtitleZh: "依据欧委会非欧盟装置运营方 CBAM 实施指南的就绪评分。",
-    kb: "CBAM Operator Guidance · DG TAXUD 21 Nov 2023",
-    scoreLabel: "CBAM readiness",
-    scoreValue: "Score % · thr 70%",
-    scoreGrade: "41%",
-    gauge: 41,
+    title: "CBAM Graph RAG Advisory",
+    titleZh: "CBAM Graph RAG 顾问",
+    subtitle: "Stage-5 builds a 3D metallurgical Graph RAG (STM BAT + Stage-3 rubric) and highlights the evidence path.",
+    subtitleZh: "阶段 5 构建 3D 冶金 Graph RAG（STM BAT + 阶段三评分标尺），并高亮证据路径。",
+    kb: "CBAM Operator Guidance · STM BREF BAT · Stage-3 threshold scoring",
+    scoreLabel: "Graph RAG evidence",
+    scoreValue: "path + math_bridge",
+    scoreGrade: "—",
+    gauge: 0,
     gapUnit: "€ / t exposure",
     advisoryImpactUnit: "€/t saved",
-    citations: "CBAM Operator Guidance · Reg (EU) 2023/956 · IR (EU) 2025/2621",
+    citations: "CBAM Operator Guidance · Reg (EU) 2023/956 · STM BREF Draft 1 · PRD §8.5",
   },
 };
 

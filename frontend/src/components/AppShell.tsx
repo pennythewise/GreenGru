@@ -3,6 +3,7 @@ import {
   Banknote,
   Building2,
   FileCheck2,
+  FileText,
   Gauge,
   Leaf,
   LogOut,
@@ -18,18 +19,100 @@ import { useLocale } from "@/lib/locale";
 import { shell } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
 
-type NavChild = { to: string; icon: typeof Gauge; label: string; zh: string };
-type NavItem = { to: string; icon: typeof Gauge; label: string; zh: string; children?: NavChild[] };
+type NavChild = {
+  to: string;
+  icon: typeof Gauge;
+  label: string;
+  zh: string;
+  search?: Record<string, string>;
+  children?: NavChild[];
+};
+type NavItem = {
+  to: string;
+  icon: typeof Gauge;
+  label: string;
+  zh: string;
+  children?: NavChild[];
+};
 
 const nav: NavItem[] = [
-  { to: "/",      icon: Gauge,          label: "Dashboard",      zh: "总览" },
-  { to: "/new",   icon: Upload,         label: "New submission", zh: "新建" },
+  { to: "/", icon: Gauge, label: "Dashboard", zh: "总览" },
+  { to: "/new", icon: Upload, label: "New submission", zh: "新建" },
   {
-    to: "/entry", icon: MessagesSquare, label: "GreenGru Copilot", zh: "副驾",
+    to: "/entry",
+    icon: MessagesSquare,
+    label: "GreenGru Copilot",
+    zh: "副驾",
     children: [
-      { to: "/passport", icon: FileCheck2, label: "EU license", zh: "碳护照" },
-      { to: "/loan",     icon: Banknote,   label: "Loan",       zh: "贷款" },
-      { to: "/grant",    icon: Leaf,       label: "Grant",      zh: "补贴" },
+      {
+        to: "/passport",
+        icon: FileCheck2,
+        label: "EU license",
+        zh: "碳护照",
+        search: { tab: "form" },
+        children: [
+          {
+            to: "/passport",
+            icon: FileText,
+            label: "Evaluation form",
+            zh: "评估表单",
+            search: { tab: "form" },
+          },
+          {
+            to: "/passport",
+            icon: Radio,
+            label: "Route pipeline",
+            zh: "路线流水线",
+            search: { tab: "pipeline" },
+          },
+        ],
+      },
+      {
+        to: "/loan",
+        icon: Banknote,
+        label: "Loan",
+        zh: "贷款",
+        search: { tab: "form" },
+        children: [
+          {
+            to: "/loan",
+            icon: FileText,
+            label: "Application form",
+            zh: "申请表单",
+            search: { tab: "form" },
+          },
+          {
+            to: "/loan",
+            icon: Radio,
+            label: "Route pipeline",
+            zh: "路线流水线",
+            search: { tab: "pipeline" },
+          },
+        ],
+      },
+      {
+        to: "/grant",
+        icon: Leaf,
+        label: "Grant",
+        zh: "补贴",
+        search: { tab: "form" },
+        children: [
+          {
+            to: "/grant",
+            icon: FileText,
+            label: "Application form",
+            zh: "申请表单",
+            search: { tab: "form" },
+          },
+          {
+            to: "/grant",
+            icon: Radio,
+            label: "Route pipeline",
+            zh: "路线流水线",
+            search: { tab: "pipeline" },
+          },
+        ],
+      },
     ],
   },
   { to: "/graph-rag", icon: Network, label: "Graph RAG", zh: "图谱检索" },
@@ -65,7 +148,22 @@ export function LangToggle() {
 
 export function Sidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const search = useRouterState({ select: (s) => s.location.search as Record<string, unknown> });
   const { isZh, t } = useLocale();
+
+  function childActive(c: NavChild): boolean {
+    if (!pathname.startsWith(c.to)) return false;
+    // Parent with sub-tabs: active for any tab on that path
+    if (c.children?.length) {
+      return true;
+    }
+    if (c.search?.tab) {
+      const tab = typeof search.tab === "string" ? search.tab : "form";
+      return tab === c.search.tab;
+    }
+    return true;
+  }
+
   return (
     <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border bg-surface/60 backdrop-blur-xl">
       <Link to="/" className="px-5 py-5 border-b border-border block">
@@ -105,22 +203,52 @@ export function Sidebar() {
               {it.children && (
                 <div className="relative mt-0.5 ml-[22px] space-y-0.5 border-l border-border pl-3">
                   {it.children.map((c) => {
-                    const cActive = pathname.startsWith(c.to);
+                    const cActive = childActive(c);
                     return (
-                      <Link
-                        key={c.to}
-                        to={c.to}
-                        className={cn(
-                          "flex items-center gap-2 px-2 py-1.5 rounded-md text-[12.5px] transition-colors",
-                          cActive
-                            ? "bg-primary/10 text-foreground border border-primary/30"
-                            : "text-muted-foreground hover:text-foreground hover:bg-surface-2 border border-transparent",
+                      <div key={`${c.to}-${c.label}`}>
+                        <Link
+                          to={c.to}
+                          search={c.search}
+                          className={cn(
+                            "flex items-center gap-2 px-2 py-1.5 rounded-md text-[12.5px] transition-colors",
+                            cActive && !c.children
+                              ? "bg-primary/10 text-foreground border border-primary/30"
+                              : cActive && c.children
+                                ? "text-foreground"
+                                : "text-muted-foreground hover:text-foreground hover:bg-surface-2 border border-transparent",
+                            c.children ? "border-transparent" : "",
+                          )}
+                        >
+                          <c.icon className="h-3.5 w-3.5" strokeWidth={2} />
+                          <span className="flex-1 text-left">{isZh ? c.zh : c.label}</span>
+                          {!isZh && (
+                            <span className="text-[10px] font-mono text-muted-foreground/70">{c.zh}</span>
+                          )}
+                        </Link>
+                        {c.children && pathname.startsWith(c.to) && (
+                          <div className="relative mt-0.5 ml-3 space-y-0.5 border-l border-border/80 pl-2.5">
+                            {c.children.map((gc) => {
+                              const gcActive = childActive(gc);
+                              return (
+                                <Link
+                                  key={`${gc.to}-${gc.search?.tab ?? gc.label}`}
+                                  to={gc.to}
+                                  search={gc.search}
+                                  className={cn(
+                                    "flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] transition-colors",
+                                    gcActive
+                                      ? "bg-primary/10 text-foreground border border-primary/30"
+                                      : "text-muted-foreground hover:text-foreground hover:bg-surface-2 border border-transparent",
+                                  )}
+                                >
+                                  <gc.icon className="h-3 w-3" strokeWidth={2} />
+                                  <span className="flex-1 text-left">{isZh ? gc.zh : gc.label}</span>
+                                </Link>
+                              );
+                            })}
+                          </div>
                         )}
-                      >
-                        <c.icon className="h-3.5 w-3.5" strokeWidth={2} />
-                        <span className="flex-1 text-left">{isZh ? c.zh : c.label}</span>
-                        {!isZh && <span className="text-[10px] font-mono text-muted-foreground/70">{c.zh}</span>}
-                      </Link>
+                      </div>
                     );
                   })}
                 </div>
@@ -231,7 +359,7 @@ export function PageHeader({
   n: string;
   title: string;
   zh?: string;
-  subtitle: string;
+  subtitle?: string;
   titleZh?: string;
   subtitleZh?: string;
   right?: ReactNode;
@@ -258,7 +386,9 @@ export function PageHeader({
           )}
         </div>
         <h1 className="mt-1 text-[26px] md:text-[30px] font-semibold tracking-tight leading-[1.1]">{displayTitle}</h1>
-        <p className="mt-1.5 text-[13.5px] text-muted-foreground max-w-2xl italic">{displaySubtitle}</p>
+        {displaySubtitle ? (
+          <p className="mt-1.5 text-[13.5px] text-muted-foreground max-w-2xl italic">{displaySubtitle}</p>
+        ) : null}
       </div>
       {right}
     </motion.div>

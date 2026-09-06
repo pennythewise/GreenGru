@@ -4,7 +4,6 @@ import {
   ArrowRight,
   CheckCircle2,
   FileUp,
-  Info,
   Plus,
   Radio,
   Upload,
@@ -17,10 +16,13 @@ import { UpstreamAuthorizationModal } from "@/components/UpstreamAuthorizationMo
 import {
   createIotSnapshot,
   fetchLatestIotReading,
+  iotWindowLabel,
+  IOT_WINDOW_OPTIONS,
   previewOcr,
   runPipeline,
   type IotReading,
   type IotSnapshot,
+  type IotWindowMinutes,
   type OcrPreviewResponse,
   type PipelineRunResponse,
 } from "@/lib/api";
@@ -77,7 +79,7 @@ function NewSubmission() {
   const [greenTrading, setGreenTrading] = useState<GreenPowerTradingChoice>(() =>
     typeof window !== "undefined" ? loadGreenPowerTradingChoice() : "no",
   );
-  const [iotWindow, setIotWindow] = useState<10 | 30 | 60>(30);
+  const [iotWindow, setIotWindow] = useState<IotWindowMinutes>(43200);
   const [iotSnapshot, setIotSnapshot] = useState<IotSnapshot | null>(null);
   const [iotSaving, setIotSaving] = useState(false);
   const [iotSaveError, setIotSaveError] = useState<string | null>(null);
@@ -260,7 +262,7 @@ function NewSubmission() {
 
   const submitHint =
     documents.length === 0
-      ? t(newPage.uploadToEnable.en, newPage.uploadToEnable.zh)
+      ? null
       : anyLoading
         ? t(newPage.ocrRunning.en, newPage.ocrRunning.zh)
         : hasErrors
@@ -278,8 +280,6 @@ function NewSubmission() {
         zh="新建"
         title={newPage.title.en}
         titleZh={newPage.title.zh}
-        subtitle={newPage.subtitle.en}
-        subtitleZh={newPage.subtitle.zh}
       />
 
       <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5">
@@ -352,7 +352,6 @@ function NewSubmission() {
                 <>
                   <Upload className="h-8 w-8 text-primary mx-auto" strokeWidth={1.6} />
                   <div className="mt-3 text-[14px] font-medium">{t(newPage.dropTitle.en, newPage.dropTitle.zh)}</div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">{t(newPage.dropSub.en, newPage.dropSub.zh)}</div>
                 </>
               )}
               <button
@@ -362,11 +361,6 @@ function NewSubmission() {
               >
                 {t(newPage.browse.en, newPage.browse.zh)}
               </button>
-            </div>
-
-            <div className="mt-3 flex items-start gap-2 text-[11.5px] text-muted-foreground">
-              <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              <span>{t(newPage.intakeNote.en, newPage.intakeNote.zh)}</span>
             </div>
           </motion.div>
 
@@ -388,15 +382,9 @@ function NewSubmission() {
                 <span className="text-[12px] font-mono">{t(newPage.esp32.en, newPage.esp32.zh)}</span>
               </label>
             </div>
-            <p className="mt-2 text-[12px] text-muted-foreground">
-              {t(newPage.sensorNote.en, newPage.sensorNote.zh)}
-            </p>
             {esp32Enabled && (
               <>
                 <div className="mt-3 rounded-md border border-border bg-surface/60 p-3 space-y-2">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                    {isZh ? "市场化绿电交易（CISA 附录 B.3）" : "Market green-power trading (CISA App. B.3)"}
-                  </div>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -513,29 +501,17 @@ function NewSubmission() {
                   <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                     {isZh ? "保存时间窗 · 供流水线引用" : "Save time window · attach to pipeline"}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {([10, 30, 60] as const).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setIotWindow(m)}
-                        className={cn(
-                          "px-3 py-1.5 rounded-md border text-[12px] font-medium transition",
-                          iotWindow === m
-                            ? "border-teal/40 bg-teal/10 text-teal"
-                            : "border-border bg-surface text-muted-foreground hover:bg-surface-2",
-                        )}
-                      >
-                        {isZh
-                          ? m === 60
-                            ? "最近 1 小时"
-                            : `最近 ${m} 分钟`
-                          : m === 60
-                            ? "Last 1 hour"
-                            : `Last ${m} min`}
-                      </button>
+                  <select
+                    value={iotWindow}
+                    onChange={(e) => setIotWindow(Number(e.target.value) as IotWindowMinutes)}
+                    className="w-full h-9 rounded-md border border-border bg-surface px-3 text-[12.5px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    {IOT_WINDOW_OPTIONS.map((opt) => (
+                      <option key={opt.minutes} value={opt.minutes}>
+                        {isZh ? opt.labelZh : opt.labelEn}
+                      </option>
                     ))}
-                  </div>
+                  </select>
                   <button
                     type="button"
                     disabled={iotSaving || !esp32Enabled}
@@ -547,8 +523,8 @@ function NewSubmission() {
                         ? "保存中…"
                         : "Saving…"
                       : isZh
-                        ? `保存最近 ${iotWindow === 60 ? "1 小时" : `${iotWindow} 分钟`} 读数`
-                        : `Save last ${iotWindow === 60 ? "1 hour" : `${iotWindow} min`} readings`}
+                        ? `保存${iotWindowLabel(iotWindow, true)}读数`
+                        : `Save ${iotWindowLabel(iotWindow, false).toLowerCase()} readings`}
                   </button>
                   {iotSaveError && (
                     <div className="text-[11px] text-warning leading-snug">{iotSaveError}</div>
@@ -556,7 +532,8 @@ function NewSubmission() {
                   {iotSnapshot && (
                     <div className="rounded-md border border-carbon/30 bg-carbon/[0.06] p-2.5 text-[11px] font-mono space-y-1">
                       <div className="text-carbon font-medium">
-                        {isZh ? "已保存窗口" : "Window saved"} · {iotSnapshot.window_minutes} min ·{" "}
+                        {isZh ? "已保存窗口" : "Window saved"} ·{" "}
+                        {iotWindowLabel(iotSnapshot.window_minutes, isZh)} ·{" "}
                         {iotSnapshot.sample_count} samples
                       </div>
                       <div>
@@ -589,11 +566,6 @@ function NewSubmission() {
             <h3 className="mt-1 text-lg font-semibold tracking-tight">
               {submitted ? t(newPage.pipelineLive.en, newPage.pipelineLive.zh) : t(newPage.pipelinePreview.en, newPage.pipelinePreview.zh)}
             </h3>
-            {!submitted && (
-              <p className="mt-1 text-[12px] text-muted-foreground">
-                {t(newPage.pipelinePreviewSub.en, newPage.pipelinePreviewSub.zh)}
-              </p>
-            )}
 
             <div className="mt-4">
               <PipelineTracker
@@ -633,8 +605,8 @@ function NewSubmission() {
                           : "Off"
                         : iotSnapshot
                           ? isZh
-                            ? `${iotSnapshot.window_minutes}分钟窗 · 已保存`
-                            : `${iotSnapshot.window_minutes}m window · saved`
+                            ? `${iotWindowLabel(iotSnapshot.window_minutes, true)} · 已保存`
+                            : `${iotWindowLabel(iotSnapshot.window_minutes, false)} · saved`
                           : isZh
                             ? "实时 · 未保存窗"
                             : "Live · no window saved"
@@ -673,10 +645,12 @@ function NewSubmission() {
                 >
                   {t(newPage.submit.en, newPage.submit.zh)} <ArrowRight className="h-4 w-4" />
                 </button>
-                <div className="mt-2.5 flex items-start gap-1.5 text-[11px] text-muted-foreground">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-carbon shrink-0 mt-0.5" />
-                  <span>{submitHint}</span>
-                </div>
+                {submitHint ? (
+                  <div className="mt-2.5 flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-carbon shrink-0 mt-0.5" />
+                    <span>{submitHint}</span>
+                  </div>
+                ) : null}
               </>
             )}
 

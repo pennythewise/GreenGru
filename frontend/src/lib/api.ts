@@ -214,8 +214,6 @@ export type CopilotChatResponse = {
   reply: string;
   model: string;
   mock: boolean;
-  graph_rag?: Record<string, unknown> | null;
-  graph_rag_attached?: boolean;
   kb_rag?: Record<string, unknown> | null;
   kb_rag_attached?: boolean;
 };
@@ -225,7 +223,6 @@ export async function sendCopilotChat(params: {
   message: string;
   promptId?: string | null;
   history?: CopilotHistoryMessage[];
-  includeGraphRag?: boolean | null;
   includeKbRag?: boolean | null;
 }): Promise<CopilotChatResponse> {
   let res: Response;
@@ -238,7 +235,6 @@ export async function sendCopilotChat(params: {
         message: params.message,
         prompt_id: params.promptId ?? null,
         history: params.history ?? [],
-        include_graph_rag: params.includeGraphRag ?? null,
         include_kb_rag: params.includeKbRag ?? null,
       }),
     });
@@ -1003,9 +999,29 @@ export type IotSnapshot = {
   note_zh: string;
 };
 
+export type IotWindowMinutes = 43200 | 129600 | 259200 | 525600;
+
+/** Month-scale IoT save windows (minutes ≈ 30-day months; 1 year = 365 days). */
+export const IOT_WINDOW_OPTIONS: {
+  minutes: IotWindowMinutes;
+  labelEn: string;
+  labelZh: string;
+}[] = [
+  { minutes: 43200, labelEn: "Last 1 month", labelZh: "最近 1 个月" },
+  { minutes: 129600, labelEn: "Last 3 months", labelZh: "最近 3 个月" },
+  { minutes: 259200, labelEn: "Last 6 months", labelZh: "最近 6 个月" },
+  { minutes: 525600, labelEn: "Last 1 year", labelZh: "最近 1 年" },
+];
+
+export function iotWindowLabel(minutes: number, isZh: boolean): string {
+  const hit = IOT_WINDOW_OPTIONS.find((o) => o.minutes === minutes);
+  if (hit) return isZh ? hit.labelZh : hit.labelEn;
+  return isZh ? `${minutes} 分钟` : `${minutes} min`;
+}
+
 export async function createIotSnapshot(payload: {
   company_id?: string;
-  window_minutes: 10 | 30 | 60;
+  window_minutes: IotWindowMinutes;
   green_trading: "yes" | "no";
 }): Promise<IotSnapshot> {
   const res = await fetch(`${API_BASE}/api/iot/snapshot`, {
@@ -1264,6 +1280,11 @@ export type GraphRagQueryResult = {
     nodes: GraphRagNode[];
     edges: GraphRagEdge[];
     endpoint_ids: string[];
+  };
+  full_graph?: {
+    nodes: GraphRagNode[];
+    edges: GraphRagEdge[];
+    stats?: { nodes: number; edges: number; layers: string[] };
   };
   trace: Array<{
     step: string;

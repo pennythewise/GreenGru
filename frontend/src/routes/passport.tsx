@@ -1,12 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { RoutePage } from "@/components/RoutePage";
+import { RoutePage, type RouteTab } from "@/components/RoutePage";
+
+function parseRouteTab(raw: unknown): RouteTab {
+  if (raw === "pipeline") return "pipeline";
+  return "form";
+}
 
 export const Route = createFileRoute("/passport")({
+  validateSearch: (search: Record<string, unknown>): { tab: RouteTab } => ({
+    tab: parseRouteTab(search.tab),
+  }),
   head: () => ({
     meta: [
       { title: "EU license (CBAM) · GreenGru" },
-      { name: "description", content: "CBAM readiness — benchmark gap, gap list, and PDF preview built on Reg (EU) 2023/956." },
+      {
+        name: "description",
+        content:
+          "CBAM EU license — evaluation form tab and route pipeline / Graph RAG tab.",
+      },
     ],
   }),
-  component: () => <RoutePage slug="passport" />,
+  component: PassportPage,
 });
+
+function PassportPage() {
+  const { tab } = Route.useSearch();
+  return <RoutePage slug="passport" routeTab={tab} />;
+}

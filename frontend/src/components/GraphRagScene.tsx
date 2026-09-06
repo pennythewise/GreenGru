@@ -18,6 +18,8 @@ const LAYER_HEIGHT: Record<string, number> = {
   customs: 1.45,
   boundary: 2.1,
   policy: 2.7,
+  bat: 2.7,
+  rubric: 2.9,
 };
 
 type Vec3 = [number, number, number];
