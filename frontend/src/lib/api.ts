@@ -1325,3 +1325,50 @@ export async function queryGraphRag(payload: {
   await throwIfNotOk(res, "Graph RAG query");
   return res.json() as Promise<GraphRagQueryResult>;
 }
+
+export type GraphRagChatMessage = {
+  role: "user" | "assistant" | "system";
+  content: string;
+};
+
+export type GraphRagChatResponse = {
+  reply: string;
+  model: string;
+  mock?: boolean;
+};
+
+/** Compact context sent to Section C chat — matches on-screen Graph RAG result. */
+export type GraphRagChatContext = Partial<GraphRagQueryResult> & {
+  nodes?: GraphRagNode[];
+  edges?: GraphRagEdge[];
+};
+
+export async function sendGraphRagChat(params: {
+  messages: GraphRagChatMessage[];
+  locale?: "zh" | "en";
+  graphContext: GraphRagChatContext;
+}): Promise<GraphRagChatResponse> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/graph-rag/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: params.messages,
+        locale: params.locale ?? "zh",
+        graph_context: params.graphContext,
+      }),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      throw new Error(
+        "Cannot reach backend. Start it: cd backend && python -m uvicorn app.main:app --reload --port 8000",
+      );
+    }
+    throw err;
+  }
+
+  await throwIfNotOk(res, "Graph RAG chat");
+  return res.json() as Promise<GraphRagChatResponse>;
+}

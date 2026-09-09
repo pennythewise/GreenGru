@@ -8,6 +8,7 @@ import { ClientOnly, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { Loader2, Network } from "lucide-react";
 import type { GraphRagEdge, GraphRagNode, GraphRagQueryResult } from "@/lib/api";
+import { GraphRagChat } from "@/components/GraphRagChat";
 import { useLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
@@ -279,6 +280,16 @@ export function PassportGraphRagPanel({
             {answer}
           </pre>
         </details>
+      )}
+
+      {phase === "ready" && result && (
+        <GraphRagChat
+          graphContext={{
+            ...result,
+            nodes,
+            edges,
+          }}
+        />
       )}
     </div>
   );

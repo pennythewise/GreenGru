@@ -1,9 +1,10 @@
 """Graph RAG API — metallurgical / regulatory knowledge graph for CBAM advisory."""
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.services.graph_rag import DEMO_QUERY_EN, DEMO_QUERY_ZH, run_graph_rag, serialize_full_graph
+from app.services.graph_rag.chat import chat_graph_rag
 from app.services.graph_rag.store import local_neighborhood, match_entities, paths_between
 
 router = APIRouter(prefix="/api/graph-rag", tags=["graph-rag"])
@@ -23,6 +24,20 @@ class GraphRagQueryRequest(BaseModel):
         description="Included fabrication direct ae only (e.g. galvanizing) — not Scope 2 for steel CBAM",
     )
     include_full_layout: bool = False
+
+
+class GraphRagChatMessage(BaseModel):
+    role: str = Field(pattern="^(user|assistant|system)$")
+    content: str = Field(min_length=1)
+
+
+class GraphRagChatRequest(BaseModel):
+    messages: list[GraphRagChatMessage] = Field(min_length=1)
+    locale: str = Field(default="zh", pattern="^(zh|en)$")
+    graph_context: dict = Field(
+        default_factory=dict,
+        description="On-screen Graph RAG result (live or mock) — numbers already computed",
+    )
 
 
 @router.get("/graph")
@@ -52,6 +67,19 @@ async def query_graph_rag(payload: GraphRagQueryRequest):
         fabrication_ae_tco2e=payload.fabrication_ae_tco2e,
         include_full_layout=payload.include_full_layout,
     )
+
+
+@router.post("/chat")
+async def chat_with_graph_rag(payload: GraphRagChatRequest):
+    """Section C follow-up chat — Qwen explains injected Graph RAG context only."""
+    try:
+        return chat_graph_rag(
+            messages=[m.model_dump() for m in payload.messages],
+            graph_context=payload.graph_context or {},
+            locale=payload.locale,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/paths")
