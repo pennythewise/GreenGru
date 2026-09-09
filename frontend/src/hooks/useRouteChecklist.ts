@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { docChecklists } from "@/lib/dashboard-data";
+import { fillMissingChecklistWithDemo } from "@/lib/route-demo-seed";
 import type { RagChannel } from "@/lib/api";
 
 export type ChecklistUpload = {
@@ -93,7 +94,9 @@ export function useRouteChecklist(slug: Slug) {
   const [uploadSessionId, setUploadSessionId] = useState("");
 
   useEffect(() => {
-    setUploads(loadUploads(slug));
+    const loaded = loadUploads(slug);
+    const seeded = fillMissingChecklistWithDemo(slug, loaded);
+    setUploads(seeded);
     setQueued({});
     setUploadSessionId(ensureSessionId(slug));
     setHydrated(true);

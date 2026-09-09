@@ -18,6 +18,7 @@ import {
   type RagQueryResult,
 } from "@/lib/api";
 import { MOCK_GRAPH_PAYLOAD, MOCK_QUERY_RESULT } from "@/lib/graph-rag-mock";
+import { demoPrescreenerRag } from "@/lib/route-demo-seed";
 import { collectCbamScoreInputs } from "@/lib/cbam-score-inputs";
 import { collectGrantScoreInputs } from "@/lib/grant-score-inputs";
 import { collectLoanScoreInputs } from "@/lib/loan-score-inputs";
@@ -48,18 +49,7 @@ const GRAPH_RAG_ADVISORY_QUERY =
   "我们用宝武热轧板加工紧固件。数控切割和焊接需要核算哪些排放？最大的 CBAM 负债在哪里？镀锌如何对齐 STM BAT？";
 
 function emptyRag(channel: RagChannel, query: string): RagQueryResult {
-  return {
-    channel,
-    query,
-    hit_count: 0,
-    chunks: [],
-    prompt_block: "",
-    confidence_score: 0,
-    threshold: 0.7,
-    passes_threshold: false,
-    form_chunks_scored: 0,
-    upload_chunks_scored: 0,
-  };
+  return demoPrescreenerRag(channel, query);
 }
 
 function readApplicationForm(slug: "loan" | "grant"): unknown | null {
@@ -78,8 +68,8 @@ function initialStages(kb: string, slug?: "loan" | "grant" | "passport"): Pipeli
     key: s.key,
     zh: s.zh,
     method: s.method,
-    status: (s.status === "done" ? "done" : "pending") as PipelineStageStatus,
-    elapsed: s.elapsed,
+    status: "pending" as const,
+    elapsed: null,
   }));
 }
 
@@ -200,7 +190,7 @@ export function useRoutePipeline(
             source: "hybrid",
             timeoutMs: 45_000,
           });
-          setCbamRag(rag);
+          setCbamRag(rag.hit_count > 0 ? rag : demoPrescreenerRag("cbam", CBAM_PRESREEN_QUERY));
         } catch (err) {
           setRagError(err instanceof Error ? err.message : "CBAM RAG failed");
           setCbamRag(emptyRag("cbam", CBAM_PRESREEN_QUERY));
@@ -218,7 +208,7 @@ export function useRoutePipeline(
             applicationForm: readApplicationForm("grant"),
             timeoutMs: 90_000,
           });
-          setGrantRag(rag);
+          setGrantRag(rag.hit_count > 0 ? rag : demoPrescreenerRag("grant", GRANT_PRESREEN_QUERY));
         } catch (err) {
           setRagError(err instanceof Error ? err.message : "Grant RAG failed");
           setGrantRag(emptyRag("grant", GRANT_PRESREEN_QUERY));
@@ -236,7 +226,7 @@ export function useRoutePipeline(
             applicationForm: readApplicationForm("loan"),
             timeoutMs: 90_000,
           });
-          setLoanRag(rag);
+          setLoanRag(rag.hit_count > 0 ? rag : demoPrescreenerRag("loan", LOAN_PRESREEN_QUERY));
         } catch (err) {
           setRagError(err instanceof Error ? err.message : "Loan RAG failed");
           setLoanRag(emptyRag("loan", LOAN_PRESREEN_QUERY));

@@ -20,7 +20,6 @@ import { CbamWorkbookPanel } from "@/components/CbamWorkbookPanel";
 import { GrantApplicationForm } from "@/components/GrantApplicationForm";
 import { CbamOperatorScorePanel } from "@/components/CbamOperatorScorePanel";
 import { PassportGraphRagPanel } from "@/components/PassportGraphRagPanel";
-import { PrescreenerRagPanel } from "@/components/PrescreenerRagPanel";
 import { GreenFactoryScorePanel } from "@/components/GreenFactoryScorePanel";
 import { LoanApplicationForm } from "@/components/LoanApplicationForm";
 import { LoanGreenFinanceScorePanel } from "@/components/LoanGreenFinanceScorePanel";
@@ -40,10 +39,10 @@ import {
   type CbamScoreResult,
   type GrantScoreResult,
   type LoanScoreResult,
-  type RagQueryResult,
 } from "@/lib/api";
 import { defaultGrantApplication } from "@/lib/application-forms/grant-template";
 import { defaultLoanApplication } from "@/lib/application-forms/loan-template";
+import { ensureDemoApplicationForm } from "@/lib/application-forms/demo-seed";
 import { CBAM_WORKBOOK_DEMO } from "@/lib/cbam-workbook";
 import { advanceRouteFlow, getFlowProgress, getRouteLabel } from "@/lib/route-flow";
 import { useLocale } from "@/lib/locale";
@@ -385,15 +384,10 @@ function StageStrip({
   grantScore,
   loanScore,
   cbamScore,
-  cbamRag,
-  grantRag,
-  loanRag,
   scoreError,
   ragError,
-  stage1Open,
   stage2Open,
   stage3Open,
-  onToggleStage1,
   onToggleStage2,
   onToggleStage3,
   excelBusy,
@@ -410,15 +404,10 @@ function StageStrip({
   grantScore: GrantScoreResult | null;
   loanScore: LoanScoreResult | null;
   cbamScore: CbamScoreResult | null;
-  cbamRag: RagQueryResult | null;
-  grantRag: RagQueryResult | null;
-  loanRag: RagQueryResult | null;
   scoreError: string | null;
   ragError: string | null;
-  stage1Open: boolean;
   stage2Open: boolean;
   stage3Open: boolean;
-  onToggleStage1: () => void;
   onToggleStage2: () => void;
   onToggleStage3: () => void;
   excelBusy: boolean;
@@ -426,9 +415,6 @@ function StageStrip({
   onDownloadExcel: () => void;
 }) {
   const { t, isZh } = useLocale();
-  const stage1Rag =
-    slug === "passport" ? cbamRag : slug === "grant" ? grantRag : slug === "loan" ? loanRag : null;
-  const hasStage1Panel = slug === "passport" || slug === "grant" || slug === "loan";
   const hasStage2Excel = slug === "passport" && complete;
   const hasStage3Panel =
     (slug === "grant" && grantScore != null) ||
@@ -487,26 +473,20 @@ function StageStrip({
           const isGrantPrescreen = slug === "grant" && s.n === 1;
           const isLoanPrescreen = slug === "loan" && s.n === 1;
           const isCbamReport = slug === "passport" && s.n === 2;
-          const clickableStage1 =
-            (isCbamPrescreen || isGrantPrescreen || isLoanPrescreen) &&
-            hasStage1Panel &&
-            done;
           const clickableStage2 = isCbamReport && hasStage2Excel;
           const clickableStage3 =
             (isGrantScore || isLoanScore || isCbamScore) && hasStage3Panel && done;
           return (
             <li
               key={s.n}
-              role={clickableStage1 || clickableStage2 || clickableStage3 ? "button" : undefined}
-              tabIndex={clickableStage1 || clickableStage2 || clickableStage3 ? 0 : undefined}
+              role={clickableStage2 || clickableStage3 ? "button" : undefined}
+              tabIndex={clickableStage2 || clickableStage3 ? 0 : undefined}
               onClick={() => {
-                if (clickableStage1) onToggleStage1();
                 if (clickableStage2) onToggleStage2();
                 if (clickableStage3) onToggleStage3();
               }}
               onKeyDown={(e) => {
                 if (e.key !== "Enter" && e.key !== " ") return;
-                if (clickableStage1) onToggleStage1();
                 if (clickableStage2) onToggleStage2();
                 if (clickableStage3) onToggleStage3();
               }}
@@ -518,21 +498,11 @@ function StageStrip({
                 (isGrantScore ||
                   isLoanScore ||
                   isCbamScore ||
-                  isCbamPrescreen ||
-                  isGrantPrescreen ||
-                  isLoanPrescreen ||
                   (isCbamReport && hasStage2Excel)) &&
                   (done || loading) &&
                   "ring-1 ring-primary/30",
-                (clickableStage1 || clickableStage2 || clickableStage3) &&
+                (clickableStage2 || clickableStage3) &&
                   "cursor-pointer hover:brightness-110",
-                clickableStage1 &&
-                  stage1Open &&
-                  (isLoanPrescreen
-                    ? "ring-2 ring-gold/50"
-                    : isGrantPrescreen
-                      ? "ring-2 ring-primary/50"
-                      : "ring-2 ring-teal/50"),
                 clickableStage2 && stage2Open && "ring-2 ring-teal/50",
                 clickableStage3 && stage3Open && "ring-2 ring-primary/50",
                 showAdvisoryFlow &&
@@ -579,23 +549,19 @@ function StageStrip({
               </div>
               {isCbamPrescreen && (
                 <div className="mt-1.5 text-[9.5px] font-mono text-teal/90 leading-snug">
-                  {isZh
-                    ? "RAG 检索 CBAM 指南 · 点击展开/收起"
-                    : "RAG · CBAM guidance · click show/hide"}
+                  {isZh ? "RAG · CBAM 指南（内置 KB）" : "RAG · CBAM guidance (built-in KB)"}
                 </div>
               )}
               {isGrantPrescreen && (
                 <div className="mt-1.5 text-[9.5px] font-mono text-primary/80 leading-snug">
-                  {isZh
-                    ? "RAG 检索 GB/T 36132 通则 · 点击展开/收起"
-                    : "RAG · GB/T 36132 · click show/hide"}
+                  {isZh ? "RAG · GB/T 36132（内置 KB）" : "RAG · GB/T 36132 (built-in KB)"}
                 </div>
               )}
               {isLoanPrescreen && (
                 <div className="mt-1.5 text-[9.5px] font-mono text-gold/90 leading-snug">
                   {isZh
-                    ? "RAG 检索绿金目录 + 通则 · 点击展开/收起"
-                    : "RAG · catalogue + GB/T 36132 · click show/hide"}
+                    ? "RAG · 绿金目录 + 通则（内置 KB）"
+                    : "RAG · catalogue + GB/T 36132 (built-in KB)"}
                 </div>
               )}
               {isGrantScore && (
@@ -711,49 +677,10 @@ function StageStrip({
         </motion.div>
       )}
       </div>
-      {scoreError && (
+      {(scoreError || ragError) && (
         <div className="mt-3 rounded-md border border-danger/40 bg-danger/[0.06] p-2 text-[11px] text-danger">
-          {scoreError}
+          {scoreError || ragError}
         </div>
-      )}
-
-      {hasStage1Panel && (
-        <StageDetailShell
-          stageN={1}
-          titleEn={
-            slug === "loan"
-              ? "Pre-screener · green finance retrieve"
-              : slug === "grant"
-                ? "Pre-screener · GB/T 36132 retrieve"
-                : "Pre-screener · CBAM knowledge retrieve"
-          }
-          titleZh={
-            slug === "loan"
-              ? "预筛 · 绿金目录 + 通则检索"
-              : slug === "grant"
-                ? "预筛 · 绿色工厂通则检索"
-                : "预筛 · CBAM 知识库检索"
-          }
-          accentClass={
-            slug === "loan"
-              ? "border-gold/35"
-              : slug === "grant"
-                ? "border-primary/35"
-                : "border-teal/35"
-          }
-          open={stage1Open}
-          onOpenChange={(v) => {
-            if (v !== stage1Open) onToggleStage1();
-          }}
-        >
-          <div className="p-3 pt-0">
-            <PrescreenerRagPanel
-              channel={slug === "loan" ? "loan" : slug === "grant" ? "grant" : "cbam"}
-              result={stage1Rag}
-              error={ragError}
-            />
-          </div>
-        </StageDetailShell>
       )}
 
       {hasStage2Excel && (
@@ -973,9 +900,6 @@ export function RoutePage({
     grantScore,
     loanScore,
     cbamScore,
-    cbamRag,
-    grantRag,
-    loanRag,
     scoreError,
     ragError,
     graphRagPhase,
@@ -985,10 +909,14 @@ export function RoutePage({
   } = useRoutePipeline(cfg.kb, slug, checklist.uploadSessionId);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
-  const [stage1Open, setStage1Open] = useState(true);
   const [stage2Open, setStage2Open] = useState(true);
   const [stage3Open, setStage3Open] = useState(true);
   const sectionCRef = useRef<HTMLDivElement>(null);
+
+  // Seed loan/grant forms even when user lands on pipeline tab first.
+  useEffect(() => {
+    if (slug === "loan" || slug === "grant") ensureDemoApplicationForm(slug);
+  }, [slug]);
 
   const isPassport = slug === "passport";
   const showFormTab = routeTab === "form";
@@ -1019,11 +947,11 @@ export function RoutePage({
 
   const pipelineReadyHint = isPassport
     ? isZh
-      ? "文件已齐备 — 打开流水线页运行 5 个阶段（含 Graph RAG）。"
-      : "Documents ready — open the pipeline tab to run all 5 stages (incl. Graph RAG)."
+      ? "演示文件已预填 — 打开流水线页即可运行 5 个阶段（含 Graph RAG）。"
+      : "Demo documents pre-filled — open the pipeline tab and run all 5 stages (incl. Graph RAG)."
     : isZh
-      ? "文件与表单已齐备 — 打开流水线页运行 5 个阶段。"
-      : "Documents and form ready — open the pipeline tab to run all 5 stages.";
+      ? "演示文件已预填 — 打开流水线页即可运行 5 个阶段。"
+      : "Demo documents pre-filled — open the pipeline tab and run all 5 stages.";
 
   function setRouteTab(tab: RouteTab) {
     // Literal `to` paths are required so TanStack applies validated `search`
@@ -1257,15 +1185,10 @@ export function RoutePage({
         grantScore={grantScore}
         loanScore={loanScore}
         cbamScore={cbamScore}
-        cbamRag={cbamRag}
-        grantRag={grantRag}
-        loanRag={loanRag}
         scoreError={scoreError}
         ragError={ragError}
-        stage1Open={stage1Open}
         stage2Open={stage2Open}
         stage3Open={stage3Open}
-        onToggleStage1={() => setStage1Open((v) => !v)}
         onToggleStage2={() => setStage2Open((v) => !v)}
         onToggleStage3={() => setStage3Open((v) => !v)}
         excelBusy={pdfBusy}

@@ -13,6 +13,7 @@ import {
   scrollToSection,
 } from "@/components/application-form-ui";
 import { useApplicationForm } from "@/hooks/useApplicationForm";
+import { demoLoanApplication } from "@/lib/application-forms/demo-seed";
 import { defaultLoanApplication, type LoanApplicationForm } from "@/lib/application-forms/loan-template";
 import { useLocale } from "@/lib/locale";
 
@@ -30,7 +31,11 @@ const SECTIONS = [
 
 export function LoanApplicationForm() {
   const { isZh } = useLocale();
-  const { data, set, replace, reset, completionPct } = useApplicationForm("loan", defaultLoanApplication);
+  const { data, set, replace, reset, completionPct } = useApplicationForm(
+    "loan",
+    defaultLoanApplication,
+    demoLoanApplication,
+  );
   const [activeId, setActiveId] = useState<string>("company");
 
   function selectSection(id: string) {

@@ -4,14 +4,19 @@ function storageKey(slug: string) {
   return `greengru-application-${slug}`;
 }
 
-function loadForm<T>(slug: string, factory: () => T): T {
+function loadForm<T>(slug: string, factory: () => T, demoFactory?: () => T): T {
   try {
     const raw = localStorage.getItem(storageKey(slug));
-    if (raw) return JSON.parse(raw) as T;
+    if (raw) {
+      const parsed = JSON.parse(raw) as T;
+      // Sparse / blank forms get demo seed so Stage 1–3 pipeline can run.
+      if (demoFactory && completionPct(parsed) < 12) return demoFactory();
+      return parsed;
+    }
   } catch {
     /* ignore */
   }
-  return factory();
+  return demoFactory ? demoFactory() : factory();
 }
 
 function isFilled(value: unknown): boolean {
@@ -32,8 +37,12 @@ function completionPct(data: unknown): number {
   return Math.round((filled / vals.length) * 100);
 }
 
-export function useApplicationForm<T extends object>(slug: string, factory: () => T) {
-  const [data, setData] = useState<T>(() => loadForm(slug, factory));
+export function useApplicationForm<T extends object>(
+  slug: string,
+  factory: () => T,
+  demoFactory?: () => T,
+) {
+  const [data, setData] = useState<T>(() => loadForm(slug, factory, demoFactory));
 
   useEffect(() => {
     try {
@@ -52,8 +61,8 @@ export function useApplicationForm<T extends object>(slug: string, factory: () =
   }, []);
 
   const reset = useCallback(() => {
-    setData(factory());
-  }, [factory]);
+    setData(demoFactory ? demoFactory() : factory());
+  }, [factory, demoFactory]);
 
   const pct = useMemo(() => completionPct(data), [data]);
 

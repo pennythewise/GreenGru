@@ -10,6 +10,7 @@ import {
   scrollToSection,
 } from "@/components/application-form-ui";
 import { useApplicationForm } from "@/hooks/useApplicationForm";
+import { demoGrantApplication } from "@/lib/application-forms/demo-seed";
 import { defaultGrantApplication, type GrantApplicationForm } from "@/lib/application-forms/grant-template";
 import { useLocale } from "@/lib/locale";
 
@@ -44,7 +45,11 @@ function weightedTotal(scoring: GrantApplicationForm["indicator_scoring_self_eva
 
 export function GrantApplicationForm() {
   const { isZh } = useLocale();
-  const { data, set, replace, reset, completionPct } = useApplicationForm("grant", defaultGrantApplication);
+  const { data, set, replace, reset, completionPct } = useApplicationForm(
+    "grant",
+    defaultGrantApplication,
+    demoGrantApplication,
+  );
   const [activeId, setActiveId] = useState<string>("factory");
 
   function selectSection(id: string) {
