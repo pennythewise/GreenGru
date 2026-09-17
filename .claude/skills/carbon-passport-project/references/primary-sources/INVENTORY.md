@@ -194,8 +194,19 @@ without at least the ✅ items in context.
 - **Why it matters**: every default-path passport number must cite Annex I
   (or measured data). Domestic Chinese factor DBs are not Art. 7(2)(b)
   defaults. Route-level 3.506 also understates fastener CN codes.
-- **Where to get it**: EUR-Lex CELEX 32025R2621; Commission Excel annex on
-  taxation-customs.ec.europa.eu (information purposes).
+- **Re-verified 2026-09-17 against the CORRECTED annex — IR (EU) 2026/1740
+  (CELEX 32026R1740, OJ 31 Jul 2026, retroactive to 1 Jan 2026):** all eight
+  China cells the engine uses are unchanged — 7207 (11 14 / 12 10 / 19 12,
+  rolled/CC) 3.169; 7208 heading 3.187; 7213 3.169; 7214 20 00 3.169;
+  7301 2.275; 7302 6.205; 7318 15 6.375; 7326 90 98 3.076. Note the forged
+  sub-codes 7207 xx 90 / 7214 10 00 are 3.314 — the engine's heading-level
+  fallback is correct only for rolled/continuously-cast product. 2026/1740
+  also **deleted** the "including mark-up" year columns; the registry now
+  applies the 10/20/30 % mark-up to the total-emissions cell, matching what
+  the engine does.
+- **Where to get it**: EUR-Lex CELEX 32025R2621 as corrected by 32026R1740;
+  Commission Excel annex on taxation-customs.ec.europa.eu (information
+  purposes).
 - **Assign to**: whoever owns the calculation engine (§8.4) — next step is
   CN-code×country lookup + stop double-applying mark-up when intensity is
   already an "including mark-up" cell.

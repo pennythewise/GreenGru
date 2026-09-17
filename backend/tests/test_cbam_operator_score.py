@@ -76,8 +76,8 @@ def test_default_values_path_when_no_emissions_evidence():
     assert result.tariff.data_source == "china_default"
     assert result.tariff.markup_applied == 0.10
     assert result.tariff.certificate_price_eur_per_tco2e == 75.36
-    # Annex I China×7208: (3.187×1.10 − 1.370)×75.36×0.025 ≈ €4.02/t (mark-up once)
-    assert 3.0 < result.tariff.tariff_eur_per_tonne < 5.0
+    # Annex I China×7208: (3.187×1.10 − 0.975×1.370)×75.36 ≈ €163.53/t (mark-up once, FA deduction)
+    assert 160.0 < result.tariff.tariff_eur_per_tonne < 167.0
     assert result.tariff_if_denied.tariff_eur_per_tonne == result.tariff.tariff_eur_per_tonne
     assert result.export_margin.margin_eur_after_denied < result.export_margin.margin_eur_per_tonne_before
     ill = result.industry_illustration

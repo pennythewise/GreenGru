@@ -15,13 +15,42 @@ config. It is NOT a substitute for real output-quality review before launch.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, Literal
 
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 
 from app.config import get_settings
 
 settings = get_settings()
+log = logging.getLogger("app.llm")
+
+
+class LlmCallError(RuntimeError):
+    """Raised when the model endpoint fails or returns unusable output.
+
+    Callers must NOT fall back to inventing a value — this surfaces to the
+    API layer as a 503 so the operator can retry the stage (PRD §18 resume
+    policy) instead of silently persisting a partial pipeline state.
+    """
+
+    def __init__(self, role: str, model: str, reason: str):
+        super().__init__(f"LLM call failed (role={role}, model={model}): {reason}")
+        self.role, self.model, self.reason = role, model, reason
+
+
+def _parse_json_object(content: str) -> dict[str, Any]:
+    """Tolerate a ```json fence around an otherwise valid object; reject anything else."""
+    text = content.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.lower().startswith("json"):
+            text = text[4:]
+        text = text.strip()
+    parsed = json.loads(text)
+    if not isinstance(parsed, dict):
+        raise ValueError(f"expected a JSON object, got {type(parsed).__name__}")
+    return parsed
 
 LlmRole = Literal[
     "default",
@@ -81,17 +110,25 @@ def call_structured(
         return {**mock_response, "_mock": True}
 
     client = get_client(role=role, timeout=timeout)
-    response = client.chat.completions.create(
-        model=model,
-        temperature=temperature,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            temperature=temperature,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+    except OpenAIError as exc:
+        log.warning("structured call failed role=%s model=%s: %s", role, model, exc)
+        raise LlmCallError(str(role), model, f"{type(exc).__name__}: {exc}") from exc
     content = response.choices[0].message.content or "{}"
-    return json.loads(content)
+    try:
+        return _parse_json_object(content)
+    except (json.JSONDecodeError, ValueError) as exc:
+        log.warning("structured call returned non-JSON role=%s model=%s: %.200s", role, model, content)
+        raise LlmCallError(str(role), model, f"non-JSON response: {exc}") from exc
 
 
 def call_prose(
@@ -110,12 +147,19 @@ def call_prose(
         return mock_response
 
     client = get_client(role=role)
-    response = client.chat.completions.create(
-        model=model,
-        temperature=temperature,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
-    return response.choices[0].message.content or ""
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            temperature=temperature,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+    except OpenAIError as exc:
+        log.warning("prose call failed role=%s model=%s: %s", role, model, exc)
+        raise LlmCallError(str(role), model, f"{type(exc).__name__}: {exc}") from exc
+    content = response.choices[0].message.content or ""
+    if not content.strip():
+        raise LlmCallError(str(role), model, "empty completion")
+    return content

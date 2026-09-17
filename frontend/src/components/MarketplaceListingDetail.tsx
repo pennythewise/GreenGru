@@ -12,6 +12,7 @@ import { AppShell, CitationFooter } from "@/components/AppShell";
 import {
   discountPct,
   marketplaceCategories,
+  marketplaceRank,
   type MarketplaceListing,
 } from "@/lib/marketplace-data";
 import { useLocale } from "@/lib/locale";
@@ -25,15 +26,7 @@ export function MarketplaceListingDetail({
   const { isZh, t } = useLocale();
   const cat = marketplaceCategories.find((c) => c.key === listing.category);
   const pct = discountPct(listing);
-  const total = 5;
-  const rank =
-    [
-      "jn-500-waste-heat",
-      "vfd-90-compressor",
-      "igbt-rectifier-ep1",
-      "sungrow-rooftop-pv-300kw",
-      "wasion-ws9800-submetering",
-    ].indexOf(listing.id) + 1;
+  const { rank, total } = marketplaceRank(listing.id);
 
   return (
     <AppShell
@@ -191,7 +184,10 @@ export function MarketplaceListingDetail({
             <div className="my-3.5 h-px bg-border" />
             <button
               type="button"
-              className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-md bg-primary text-primary-foreground text-[13px] font-medium hover:bg-primary/90 transition"
+              disabled
+              aria-disabled="true"
+              title={t(marketplacePage.comingSoon.en, marketplacePage.comingSoon.zh)}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-md bg-primary text-primary-foreground text-[13px] font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t(
                 marketplacePage.requestQuote.en,
@@ -201,7 +197,10 @@ export function MarketplaceListingDetail({
             </button>
             <button
               type="button"
-              className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-md border border-border text-foreground text-[13px] font-medium hover:bg-surface-2 transition"
+              disabled
+              aria-disabled="true"
+              title={t(marketplacePage.comingSoon.en, marketplacePage.comingSoon.zh)}
+              className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-md border border-border text-foreground text-[13px] font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t(
                 marketplacePage.downloadSpec.en,
@@ -209,6 +208,9 @@ export function MarketplaceListingDetail({
               )}
               <Download className="h-3.5 w-3.5" />
             </button>
+            <div className="mt-1.5 text-[10.5px] text-muted-foreground font-mono">
+              {t(marketplacePage.comingSoon.en, marketplacePage.comingSoon.zh)}
+            </div>
             <div className="mt-3.5 flex gap-2 p-3 rounded-lg border border-primary/20 bg-primary/[0.06] text-[11.5px] leading-relaxed">
               <Banknote className="h-3.5 w-3.5 shrink-0 mt-0.5 text-teal" />
               <span>

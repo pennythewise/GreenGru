@@ -30,7 +30,7 @@ Chinese steel-downstream SMEs face:
 
 | Pressure | Impact |
 |----------|--------|
-| **EU CBAM** (definitive phase from 2026) | Default embedded-emission values can ~2× actual; certificate obligation phases in 2.5% (2026) → 100% (2034) |
+| **EU CBAM** (definitive phase from 2026) | Default embedded-emission values can ~2× actual; free allocation deducted from the obligation shrinks 97.5% of benchmark (2026) → 0 (2034), so China-default steel already pays most of the full cost in year one |
 | **Domestic dual-control** (总量+强度) | Anchor-enterprise ESG pass-through eliminates non-compliant suppliers |
 | **Green finance gap** | Banks use ESG / green-factory rubrics SMEs cannot map to their own data |
 | **No path from number → action** | Calculators stop at a score; SMEs need gaps, fixes, and bank-ready evidence |
@@ -176,11 +176,13 @@ Port of `backend/app/calculation_engine.py` (also in skill reference):
 |--------|-------------|
 | `intensity_tco2e_per_tonne` | Measured or China-default by route |
 | `benchmark_tco2e_per_tonne` | EU IR 2025/2621 route benchmark |
-| `tariff_cost_eur_per_tonne` | **Net**, phase-in adjusted (current year) |
-| `gross_tariff_cost_eur_per_tonne` | **2034 steady-state** (fully phased-in) |
+| `free_allocation_tco2e_per_tonne` | CBAM_factor × CSCF × benchmark (IR 2025/2620 Eq. 2) |
+| `taxable_emissions_tco2e_per_tonne` | max(0, intensity − free allocation) = certificates owed per tonne |
+| `tariff_cost_eur_per_tonne` | **Net**, current year = taxable × certificate price |
+| `gross_tariff_cost_eur_per_tonne` | **2034 steady-state** (no free allocation) = intensity × price |
 | `annual_exposure_eur` | Export tonnes × net tariff |
 
-**Phase-in schedule** (Regulation EU 2023/956 Art. 31(3)): 2.5% (2026) → 100% (2034).
+**CBAM factor schedule** (Directive 2003/87/EC Art. 10a(1a); IR (EU) 2025/2620): 97.5% (2026) → 0% (2034) of the benchmark is deducted. It is a shrinking *deduction*, not a 2.5% multiplier on the liability. Worked example, China×7208 BF-BOF 2026: (3.506 − 0.975×1.370) × €75.36 ≈ €163.5/t; 2034: 3.506 × €75.36 ≈ €264/t.
 
 ### 7.2 CISA grading
 

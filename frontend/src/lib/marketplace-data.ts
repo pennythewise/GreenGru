@@ -1,6 +1,11 @@
-// Mock procurement catalog for the Marketplace tab. Ranking is deterministic —
-// no LLM call is involved in scoring, pricing, or the emissions-impact numbers,
-// consistent with the calculation-engine rule the rest of the app follows.
+// DEMO procurement catalog for the Marketplace tab. Listings, prices, payback
+// and priority scores are hand-authored illustrative data for the Hengfeng demo
+// tenant — they are NOT read from the pipeline's computed gap list yet. Ranking
+// is a deterministic sort; no LLM call is involved in scoring, pricing, or the
+// emissions-impact numbers. The only derived figure (MWh × grid EF) uses the
+// same CISA Appendix B.3 constant as the shop-floor dashboard.
+
+import { CISA_GRID_EF_NO_GREEN_TRADING_T_PER_MWH } from "@/lib/cisa-grid-ef";
 
 export type MarketplaceCategory =
   | "energy-monitoring"
@@ -120,7 +125,7 @@ export const marketplaceListings: MarketplaceListing[] = [
       afterSubEn: "610 MWh/yr recovered to preheat",
       afterSubZh: "年回收约610 MWh用于预热",
     },
-    gridEfTPerMwh: 0.5568,
+    gridEfTPerMwh: CISA_GRID_EF_NO_GREEN_TRADING_T_PER_MWH,
     mwhPerYear: 610,
     contact: {
       nameEn: "Mr. Lin",
@@ -165,7 +170,7 @@ export const marketplaceListings: MarketplaceListing[] = [
       afterSubEn: "matches part-load benchmark",
       afterSubZh: "达到同类负载基准",
     },
-    gridEfTPerMwh: 0.5568,
+    gridEfTPerMwh: CISA_GRID_EF_NO_GREEN_TRADING_T_PER_MWH,
     mwhPerYear: 154,
     contact: {
       nameEn: "Ms. Zhou",
@@ -211,7 +216,7 @@ export const marketplaceListings: MarketplaceListing[] = [
       afterSubEn: "95%+ conversion efficiency",
       afterSubZh: "转换效率提升至95%以上",
     },
-    gridEfTPerMwh: 0.5568,
+    gridEfTPerMwh: CISA_GRID_EF_NO_GREEN_TRADING_T_PER_MWH,
     mwhPerYear: 115,
     contact: {
       nameEn: "Mr. Xu",
@@ -260,7 +265,7 @@ export const marketplaceListings: MarketplaceListing[] = [
       afterSubEn: "offsets grid electricity",
       afterSubZh: "抵消电网购电",
     },
-    gridEfTPerMwh: 0.5568,
+    gridEfTPerMwh: CISA_GRID_EF_NO_GREEN_TRADING_T_PER_MWH,
     mwhPerYear: 916,
     contact: {
       nameEn: "Ms. Pan",
@@ -316,7 +321,7 @@ export const marketplaceListings: MarketplaceListing[] = [
       afterSubEn: "full stage-level metering coverage",
       afterSubZh: "实现工序级全覆盖计量",
     },
-    gridEfTPerMwh: 0.5568,
+    gridEfTPerMwh: CISA_GRID_EF_NO_GREEN_TRADING_T_PER_MWH,
     mwhPerYear: null,
     contact: {
       nameEn: "Mr. Chen",
@@ -341,4 +346,10 @@ export function getMarketplaceListing(
   id: string,
 ): MarketplaceListing | undefined {
   return marketplaceListings.find((l) => l.id === id);
+}
+
+/** 1-based position of a listing in the overall ranking (0 if not found). */
+export function marketplaceRank(id: string): { rank: number; total: number } {
+  const ranked = rankedMarketplaceListings();
+  return { rank: ranked.findIndex((l) => l.id === id) + 1, total: ranked.length };
 }

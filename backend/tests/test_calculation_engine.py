@@ -4,12 +4,18 @@ Tests for the deterministic CBAM calculation engine.
 Anchor: CN 7208 10 00 HRC, China origin, BF-BOF, 2026 — Annex I China×7208
 base 3.187 tCO2e/t × 10% mark-up = 3.5057 SEE; BM 1.370 from IR 2025/2620.
 Mark-up is applied once to SEE, never again to the tariff.
+
+Free allocation adjustment (IR 2025/2620 Eq. 2, Guidance No. 4 Table 2-1):
+certificates/t = SEE − CBAM_factor × CSCF × BM, with CBAM factor 97.5% in
+2026 falling to 0 in 2034. The phase-in shrinks the DEDUCTION; it is not a
+2.5% multiplier on the liability.
 """
 
 import pytest
 
 from app.calculation_engine import (
     ANNEX_I_CHINA_DEFAULT_SEE_TCO2E_PER_TONNE,
+    CBAM_FACTOR_FREE_ALLOCATION_BY_YEAR,
     CBAM_PHASE_IN_FACTOR_BY_YEAR,
     CBAMInput,
     ProductionRoute,
@@ -22,7 +28,7 @@ Q1_2026_CERT_PRICE = 75.36  # EUR/tCO2e
 
 
 def test_worked_example_hrc_bf_bof_2026():
-    """Annex I China×7208 @2026 — single mark-up on SEE."""
+    """Annex I China×7208 @2026 — single mark-up on SEE, 97.5% of BM deducted."""
     inp = CBAMInput(
         cn_code="7208 10 00",
         route=ProductionRoute.BF_BOF,
@@ -34,18 +40,40 @@ def test_worked_example_hrc_bf_bof_2026():
     assert result.annex_i_base_see_tco2e_per_tonne == pytest.approx(3.187)
     assert result.intensity_tco2e_per_tonne == pytest.approx(3.187 * 1.10)
     assert result.markup_applied == 0.10
-    # (3.187×1.10 − 1.370) × 75.36 — no second ×1.10
-    taxable = 3.187 * 1.10 - 1.370
+    assert result.cbam_factor == 0.975
+    assert result.cscf == 1.0
+    assert result.free_allocation_tco2e_per_tonne == pytest.approx(0.975 * 1.370)
+    # (3.187×1.10 − 0.975×1.370) × 75.36 — no second ×1.10, no ×0.025
+    taxable = 3.187 * 1.10 - 0.975 * 1.370
     assert result.taxable_emissions_tco2e_per_tonne == pytest.approx(taxable)
-    assert result.gross_tariff_cost_eur_per_tonne == pytest.approx(taxable * Q1_2026_CERT_PRICE, abs=0.01)
-    assert result.phase_in_factor == 0.025
-    assert result.tariff_cost_eur_per_tonne == pytest.approx(
-        taxable * Q1_2026_CERT_PRICE * 0.025, abs=0.01
-    )
+    assert result.tariff_cost_eur_per_tonne == pytest.approx(taxable * Q1_2026_CERT_PRICE, abs=0.01)
+    assert result.tariff_cost_eur_per_tonne == pytest.approx(163.53, abs=0.05)
+    # 2034 steady state: no free allocation at all
+    assert result.gross_tariff_cost_eur_per_tonne == pytest.approx(3.187 * 1.10 * Q1_2026_CERT_PRICE, abs=0.01)
+    assert result.phase_in_factor == 0.025  # informational only
     assert result.annual_exposure_eur == pytest.approx(
         result.tariff_cost_eur_per_tonne * 5000, rel=1e-3
     )
     assert result.data_source == "china_default"
+
+
+def test_phase_in_is_not_a_multiplier_on_liability():
+    """Regression guard: the old (SEE − BM) × 2.5% formula understates 2026 ~40×."""
+    inp = CBAMInput(cn_code="7208 10 00", route=ProductionRoute.BF_BOF, annual_export_tonnes=1, year=2026)
+    result = calculate_cbam_exposure(inp, Q1_2026_CERT_PRICE)
+    wrong = (3.187 * 1.10 - 1.370) * Q1_2026_CERT_PRICE * 0.025
+    assert result.tariff_cost_eur_per_tonne > 30 * wrong
+
+
+@pytest.mark.parametrize("year,factor", list(CBAM_FACTOR_FREE_ALLOCATION_BY_YEAR.items()) + [(2034, 0.0), (2040, 0.0)])
+def test_free_allocation_shrinks_with_cbam_factor(year, factor):
+    inp = CBAMInput(cn_code="72081000", route=ProductionRoute.BF_BOF, annual_export_tonnes=1, year=year)
+    result = calculate_cbam_exposure(inp, Q1_2026_CERT_PRICE)
+    assert result.cbam_factor == factor
+    assert result.free_allocation_tco2e_per_tonne == pytest.approx(factor * 1.370)
+    assert result.taxable_emissions_tco2e_per_tonne == pytest.approx(result.intensity_tco2e_per_tonne - factor * 1.370)
+    if year >= 2034:
+        assert result.tariff_cost_eur_per_tonne == pytest.approx(result.gross_tariff_cost_eur_per_tonne)
 
 
 def test_fastener_7318_15_uses_higher_annex_cell():
@@ -81,17 +109,17 @@ def test_measured_data_overrides_default_and_gets_no_markup():
     assert result.data_source == "measured"
     assert result.markup_applied == 0.0
     assert result.annex_i_base_see_tco2e_per_tonne is None
-    assert result.gross_tariff_cost_eur_per_tonne == pytest.approx(0.43 * 75.36, rel=1e-4)
-    assert result.tariff_cost_eur_per_tonne == pytest.approx(0.43 * 75.36 * 0.025, rel=1e-4)
+    assert result.gross_tariff_cost_eur_per_tonne == pytest.approx(1.8 * 75.36, rel=1e-4)
+    assert result.tariff_cost_eur_per_tonne == pytest.approx((1.8 - 0.975 * 1.370) * 75.36, rel=1e-4)
 
 
-def test_intensity_below_benchmark_owes_nothing():
+def test_intensity_below_free_allocation_owes_nothing():
     inp = CBAMInput(
         cn_code="72131000",
         route=ProductionRoute.SCRAP_EAF,
         annual_export_tonnes=1000,
         year=2026,
-        measured_intensity_tco2e_per_tonne=0.05,
+        measured_intensity_tco2e_per_tonne=0.05,  # < 0.975 × 0.072
     )
     result = calculate_cbam_exposure(inp, Q1_2026_CERT_PRICE)
 

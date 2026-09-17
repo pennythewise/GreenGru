@@ -126,7 +126,7 @@ class IndustryCostIllustration:
     approved_see_tco2e_per_t: float
     see_source: str
     benchmark_tco2e_per_t: float
-    free_allocation_pct: float  # CBAM phase-in φ for the estimate year (not ETS free %)
+    free_allocation_pct: float  # 1 − CBAM factor (share of BM no longer free); deduction itself = (1−this) × BM
     carbon_price_eur: float
     default_path_eur_per_tonne: float
     approved_path_eur_per_tonne: float
@@ -283,14 +283,14 @@ def _industry_cost_illustration(
         regulated_denied_eur_per_tonne=regulated_denied.tariff_eur_per_tonne,
         note_en=(
             f"Engine-only Stage-3 comparison for CN {cn} (IR 2025/2621 Annex I China×CN "
-            f"vs measured). Default path €{default_eur}/t (SEE {default_see:.3f}, φ={phi}); "
+            f"vs measured). Default path €{default_eur}/t (SEE {default_see:.3f}, free allocation {1 - phi:.1%} of BM); "
             f"approved path €{approved_eur}/t (SEE {approved_see:.3f}). "
             f"BM {bm} tCO₂e/t (IR 2025/2620); cert {price} €/tCO₂e. "
             "No literature walkthrough €/t."
         ),
         note_zh=(
             f"阶段 3 对比仅来自核算引擎（CN {cn} · IR 2025/2621 Annex I 中国×税则号 vs 实测）。"
-            f"默认路径 €{default_eur}/t（SEE {default_see:.3f}，φ={phi}）；"
+            f"默认路径 €{default_eur}/t（SEE {default_see:.3f}，免费配额抵扣 {1 - phi:.1%} × 基准）；"
             f"通过路径 €{approved_eur}/t（SEE {approved_see:.3f}）。"
             f"基准 {bm} tCO₂e/t（IR 2025/2620）；证书价 {price} €/tCO₂e。"
             "不含文献算例 €/t。"
@@ -418,7 +418,7 @@ def _tariff_estimate(
     path_label: str,
     path_label_zh: str,
 ) -> TariffEstimate:
-    """CBAM Cost ≈ (Embedded − Benchmark) × cert price × (1+markup) × φ_year."""
+    """CBAM cost/t = max(0, SEE − CBAM_factor_year × CSCF × BM) × cert price (IR 2025/2620 Eq. 2)."""
     settings = get_settings()
     quarter = settings.cbam_certificate_price_quarter
     price_entry = get_certificate_price(quarter)
@@ -458,12 +458,14 @@ def _tariff_estimate(
         annual_exposure_eur=round(cbam.annual_exposure_eur, 2),
         export_tonnes=tonnes,
         formula_en=(
-            f"tariff €/t = max(0, SEE−benchmark) × {cbam.certificate_price_eur_per_tco2e} €/tCO2e "
-            f"× (1+markup) × φ_{CBAM_YEAR}={cbam.phase_in_factor}"
+            f"tariff €/t = max(0, SEE − CBAM_factor_{CBAM_YEAR}={cbam.cbam_factor} × CSCF={cbam.cscf} × BM) "
+            f"× {cbam.certificate_price_eur_per_tco2e} €/tCO2e "
+            f"(mark-up {cbam.markup_applied:.0%} already inside SEE on the default path; IR 2025/2620 Eq. 2)"
         ),
         formula_zh=(
-            f"关税 €/t = max(0, SEE−基准) × {cbam.certificate_price_eur_per_tco2e} €/tCO2e "
-            f"× (1+加价) × φ_{CBAM_YEAR}={cbam.phase_in_factor}"
+            f"关税 €/t = max(0, SEE − CBAM系数_{CBAM_YEAR}={cbam.cbam_factor} × CSCF={cbam.cscf} × 基准) "
+            f"× {cbam.certificate_price_eur_per_tco2e} €/tCO2e"
+            f"（默认值路径的 {cbam.markup_applied:.0%} 加价已计入 SEE；IR 2025/2620 式2）"
         ),
     )
 
@@ -1002,7 +1004,7 @@ def compute_cbam_operator_score(
             "eq": "Annex I / Art. 31",
             "label": "Default (Annex I) vs measured CBAM €/t — calculation_engine",
             "latex": (
-                f"(SEE − BM) × cert × φ → "
+                f"(SEE − CBAM_factor × CSCF × BM) × cert → "
                 f"default €{industry_illustration.default_path_eur_per_tonne}/t · "
                 f"approved €{industry_illustration.approved_path_eur_per_tonne}/t "
                 f"(−{industry_illustration.discount_pct}%)"

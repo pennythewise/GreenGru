@@ -415,7 +415,9 @@ export function CbamOperatorScorePanel({ result: raw }: { result: CbamScoreResul
               {isZh ? result.industry_illustration.note_zh : result.industry_illustration.note_en}
             </p>
             <div className="text-[10px] font-mono text-muted-foreground border-t border-border/60 pt-2">
-              {isZh ? "护照管制估算（φ=2.5% · 引擎）" : "Passport regulated estimate (φ=2.5% · engine)"}
+              {isZh
+                ? "护照管制估算（2026 免费配额抵扣 97.5%×基准 · 引擎）"
+                : "Passport regulated estimate (2026 free allocation 97.5%×BM deducted · engine)"}
               {" · "}
               {isZh ? "通过" : "approved"} €
               {result.industry_illustration.regulated_approved_eur_per_tonne}/t ·{" "}

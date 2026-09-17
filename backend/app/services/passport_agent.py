@@ -17,9 +17,10 @@ PASSPORT_SYSTEM_PROMPT = """You are writing a bilingual (English primary, Chines
 passport for a Chinese steel SME. You may ONLY restate the numeric values given to you — never compute,
 round differently, or estimate a new number. Every EUR and tCO2e figure you write must appear verbatim
 (at the stated rounding) in the input. Include: company/product info, production route, intensity and its
-data source (measured vs China default), taxable emissions, BOTH the net (phase-in adjusted, current-year)
-and gross (fully phased-in, 2034 steady-state) tariff estimates per-tonne and annual, the CBAM phase-in
-factor for the current year, certificate price and quarter, de minimis status worded as "possible" not
+data source (measured vs China default), the free-allocation deduction (CBAM factor × EU benchmark) and the
+resulting certificates owed per tonne, BOTH the net (current-year, after free-allocation deduction) and gross
+(2034 steady-state, no free allocation) tariff estimates per-tonne and annual, the CBAM factor for the
+current year, certificate price and quarter, de minimis status worded as "possible" not
 "exempt", a note that the EU importer (not the SME) must hold Authorized CBAM Declarant status, and the
 mandatory disclaimer verbatim: "Generated using published default values and public regulatory benchmarks.
 Not a substitute for a licensed customs broker, tax advisor, or financial advisor." """
@@ -45,7 +46,8 @@ def generate_passport(
         calc.benchmark_tco2e_per_tonne,
         calc.taxable_emissions_tco2e_per_tonne,
         calc.certificate_price_eur_per_tco2e,
-        calc.phase_in_factor,
+        calc.cbam_factor,
+        calc.free_allocation_tco2e_per_tonne,
         calc.tariff_cost_eur_per_tonne,
         calc.gross_tariff_cost_eur_per_tonne,
         calc.annual_exposure_eur,
@@ -55,13 +57,14 @@ def generate_passport(
         f"Company: {company_name}\nCN code: {cn_code}\nProduction route: {production_route}\nYear: {year}\n\n"
         f"Intensity: {calc.intensity_tco2e_per_tonne} tCO2e/t (source: {calc.data_source})\n"
         f"EU benchmark: {calc.benchmark_tco2e_per_tonne} tCO2e/t\n"
-        f"Taxable emissions: {calc.taxable_emissions_tco2e_per_tonne} tCO2e/t\n"
+        f"CBAM factor for {year} (share of benchmark still free): {calc.cbam_factor * 100:.1f}%\n"
+        f"Free-allocation deduction: {calc.free_allocation_tco2e_per_tonne:.4f} tCO2e/t\n"
+        f"Certificates owed (taxable emissions): {calc.taxable_emissions_tco2e_per_tonne} tCO2e/t\n"
         f"Certificate price: EUR {calc.certificate_price_eur_per_tco2e} per tCO2e\n"
         f"Default-value markup applied: {calc.markup_applied * 100:.0f}%\n"
-        f"CBAM phase-in factor for {year}: {calc.phase_in_factor * 100:.1f}%\n"
         f"Net tariff cost (this year): EUR {calc.tariff_cost_eur_per_tonne:.2f} per tonne, "
         f"EUR {calc.annual_exposure_eur:,.2f} annual\n"
-        f"Gross tariff cost (2034 steady-state): EUR {calc.gross_tariff_cost_eur_per_tonne:.2f} per tonne\n"
+        f"Gross tariff cost (2034 steady-state, no free allocation): EUR {calc.gross_tariff_cost_eur_per_tonne:.2f} per tonne\n"
         f"CISA grade: {score.cisa_grade} (provisional: {score.cisa_grade_is_provisional})\n"
         f"CBAM risk tier: {score.cbam_risk_tier}\n"
         f"De minimis possible: {score.de_minimis_possible}\n"
@@ -75,8 +78,9 @@ def generate_passport(
         f"Embedded emissions intensity / 隐含碳排放强度: {calc.intensity_tco2e_per_tonne} tCO2e/t "
         f"(source / 数据来源: {calc.data_source})\n"
         f"EU benchmark / 欧盟基准值: {calc.benchmark_tco2e_per_tonne} tCO2e/t\n"
-        f"Taxable emissions / 应税排放: {calc.taxable_emissions_tco2e_per_tonne:.4f} tCO2e/t\n"
-        f"CBAM phase-in factor for {year} / {year}年分阶段系数: {calc.phase_in_factor * 100:.1f}%\n"
+        f"CBAM factor {year} (free allocation) / {year}年CBAM系数（免费配额比例）: {calc.cbam_factor * 100:.1f}%\n"
+        f"Free-allocation deduction / 免费配额抵扣: {calc.free_allocation_tco2e_per_tonne:.4f} tCO2e/t\n"
+        f"Certificates owed / 应缴证书量: {calc.taxable_emissions_tco2e_per_tonne:.4f} tCO2e/t\n"
         f"Net tariff cost (this year) / 本年度净关税成本: EUR {calc.tariff_cost_eur_per_tonne:.2f}/t "
         f"(annual / 年度: EUR {calc.annual_exposure_eur:,.2f})\n"
         f"Gross tariff cost (2034 steady-state) / 2034年满负荷成本: EUR {calc.gross_tariff_cost_eur_per_tonne:.2f}/t\n"

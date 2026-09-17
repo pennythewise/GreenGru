@@ -191,7 +191,10 @@ export function MarketplaceListingCard({
           </span>
           <button
             type="button"
-            className="mt-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md bg-primary text-primary-foreground text-[12.5px] font-medium hover:bg-primary/90 transition"
+            disabled
+            aria-disabled="true"
+            title={t(marketplacePage.comingSoon.en, marketplacePage.comingSoon.zh)}
+            className="mt-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md bg-primary text-primary-foreground text-[12.5px] font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t(
               marketplacePage.requestQuote.en,

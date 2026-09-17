@@ -516,9 +516,10 @@ export const marketplacePage = {
   requestQuote: { en: "Request quote", zh: "获取报价" },
   viewDiagnostic: { en: "View diagnostic & math", zh: "查看诊断与计算" },
   rankedFooter: {
-    en: "Ranked by priority score = cost-effectiveness (¥/tCO2e) × gap severity · recomputed nightly from your latest audit",
-    zh: "按优先级评分排序 = 成本效益（¥/tCO2e）× 差距严重程度 · 每晚根据最新审计重新计算",
+    en: "Demo catalog · ranked by a fixed priority score (cost-effectiveness ¥/tCO2e × gap severity) · not yet linked to your live audit gaps",
+    zh: "演示目录 · 按固定优先级评分排序（成本效益 ¥/tCO2e × 差距严重程度）· 尚未与实时审计差距联动",
   },
+  comingSoon: { en: "Supplier quoting not yet live (demo)", zh: "供应商报价功能尚未上线（演示）" },
   backToMarketplace: { en: "Back to Marketplace", zh: "返回市场" },
   whyRanked: {
     en: (n: number) => `Why this is ranked #${n}`,
@@ -549,11 +550,6 @@ export const marketplacePage = {
   emptyBody: {
     en: "Your current gaps don't yet cross the cost-effectiveness threshold for a paid recommendation. We'll surface one here the moment a fix pencils out.",
     zh: "当前差距尚未达到值得付费改造的成本效益阈值。一旦出现划算的方案，会立即在此显示。",
-  },
-  stillWatching: { en: "Still watching", zh: "持续监测中" },
-  noSponsored: {
-    en: "Recomputed nightly from your latest audit · no sponsored placement",
-    zh: "每晚根据最新审计重新计算 · 无付费排名",
   },
 } as const;
 

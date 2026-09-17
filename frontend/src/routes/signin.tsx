@@ -51,7 +51,7 @@ function SignIn() {
             {[
               { k: "8", l: "supported CN codes", zh: "税则号" },
               { k: "6", l: "stage pipeline", zh: "流水线" },
-              { k: "40×", l: "phase-in escalation", zh: "阶段递增" },
+              { k: "97.5%→0", l: "free allocation 2026→2034", zh: "免费配额递减" },
             ].map((s) => (
               <div key={s.l} className="panel p-3">
                 <div className="font-mono text-2xl font-semibold text-primary">{s.k}</div>

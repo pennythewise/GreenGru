@@ -29,6 +29,7 @@ export function buildMockIndustryIllustration(
   const discount = Math.round(Math.max(0, defaultEur - approvedEur) * 100) / 100;
   const discountPct = defaultEur > 0 ? Math.round((discount / defaultEur) * 1000) / 10 : 0;
   const bm = denied?.benchmark_tco2e_per_tonne ?? 1.37;
+  // 1 − CBAM factor (2.5% in 2026): display only — the engine deducts CBAM_factor × BM, it never multiplies by φ.
   const phi = denied?.phase_in_factor ?? 0.025;
   const price = denied?.certificate_price_eur_per_tco2e ?? 75.36;
 

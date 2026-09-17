@@ -14,7 +14,7 @@ import { crumbs, marketplacePage } from "@/lib/ui-strings";
 import { cn } from "@/lib/utils";
 
 export function MarketplaceDashboard() {
-  const { isZh, t } = useLocale();
+  const { t } = useLocale();
   const [category, setCategory] = useState<MarketplaceCategory | null>(null);
 
   const listings = useMemo(
@@ -28,9 +28,7 @@ export function MarketplaceDashboard() {
       <PageHeader
         n={marketplacePage.eyebrow.en}
         zh={marketplacePage.eyebrow.zh}
-        title={marketplacePage.title.en(
-          company.nameEn.split(" ")[1] ?? "your factory",
-        )}
+        title={marketplacePage.title.en(company.nameEn.replace(/\s*Co\.,?\s*Ltd\.?$/i, ""))}
         titleZh={marketplacePage.title.zh(company.name)}
         subtitle={marketplacePage.subtitle.en}
         subtitleZh={marketplacePage.subtitle.zh}
@@ -60,11 +58,7 @@ export function MarketplaceDashboard() {
               : "border-border bg-surface text-muted-foreground hover:text-foreground",
           )}
         >
-          {t(
-            marketplacePage.allCategories.en,
-            marketplacePage.allCategories.zh,
-          )}{" "}
-          · 全部
+          {marketplacePage.allCategories.en} · {marketplacePage.allCategories.zh}
         </button>
         {marketplaceCategories.map((c) => (
           <button

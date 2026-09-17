@@ -36,10 +36,14 @@ EU_BENCHMARK_TCO2E_PER_TONNE = {
 }
 
 # Source: IR (EU) 2025/2621 Annex I — China table, "Default Value (total
-# emissions)" column (direct; indirect N/A for iron & steel Annex II goods).
-# Verified against EUR-Lex CELEX 32025R2621 (European decimal comma → float).
-# Year columns already publish "including mark-up"; this engine stores the
-# *pre-mark-up* total and applies MARKUP_BY_YEAR once — never twice.
+# emissions)" column (direct; indirect N/A for iron & steel Annex II goods),
+# AS CORRECTED by IR (EU) 2026/1740 (OJ L, 31 Jul 2026; applies retroactively
+# from 1 Jan 2026). All eight China cells below were re-read from the
+# corrected annex (CELEX 32026R1740) on 2026-09-17 — values unchanged.
+# 2026/1740 also DELETED the pre-computed "including mark-up" year columns;
+# the mark-up is now applied by the declarant/registry on the total-emissions
+# cell, which is exactly what this engine does via MARKUP_BY_YEAR — once,
+# never twice.
 #
 # Locked CN scope (PRD §6.1) → China cells used here:
 ANNEX_I_CHINA_DEFAULT_SEE_TCO2E_PER_TONNE: dict[str, float] = {
@@ -72,19 +76,43 @@ CHINA_DEFAULT_INTENSITY_TCO2E_PER_TONNE = {
 # the tariff by (1 + markup).
 MARKUP_BY_YEAR = {2026: 0.10, 2027: 0.20, 2028: 0.30}
 
-# Source: Regulation (EU) 2023/956 Article 31(3) + Directive 2003/87/EC
-# Article 10a(1a) — CBAM certificate phase-in factor. Distinct from mark-up.
-CBAM_PHASE_IN_FACTOR_BY_YEAR = {
-    2026: 0.025,
-    2027: 0.05,
-    2028: 0.10,
-    2029: 0.225,
-    2030: 0.485,
-    2031: 0.61,
-    2032: 0.735,
-    2033: 0.86,
+# Source: Directive 2003/87/EC Article 10a(1a) (as amended by 2023/959) —
+# the "CBAM factor": the share of the EU ETS benchmark that EU producers
+# STILL receive as free allocation in year y. Regulation (EU) 2023/956
+# Art. 31(1) + IR (EU) 2025/2620 (free allocation adjustment act) mirror it
+# on imports: the declarant deducts CBAM_factor × CSCF × benchmark from the
+# embedded emissions, and surrenders certificates for the remainder.
+#
+#   certificates/t = max(0, SEE − CBAM_factor_y × CSCF_y × BM)
+#
+# It is NOT a multiplier on the whole liability — (SEE − BM) × 2.5% would
+# understate the 2026 obligation for Chinese BF-BOF steel by ~40×. See
+# Commission Guidance No. 4 (Aug 2026) §2.2.1.1 Eq. 1–2 and Table 2-1.
+CBAM_FACTOR_FREE_ALLOCATION_BY_YEAR = {
+    2026: 0.975,
+    2027: 0.95,
+    2028: 0.90,
+    2029: 0.775,
+    2030: 0.515,
+    2031: 0.39,
+    2032: 0.265,
+    2033: 0.14,
 }
-CBAM_PHASE_IN_FACTOR_FULL_FROM_YEAR = 2034
+CBAM_FACTOR_ZERO_FROM_YEAR = 2034  # no free allocation for CBAM goods from 2034
+
+# Cross-sectoral correction factor (Directive 2003/87/EC Art. 10a(5)). The
+# Commission has not yet published 2026–2030 values; Guidance No. 4 Table 2-1
+# lists 1.0 as preliminary. Replace when published — do not leave stale.
+CSCF_BY_YEAR: dict[int, float] = {}
+CSCF_PRELIMINARY_DEFAULT = 1.0
+
+# Convenience view kept for callers/tests that reason in "share of the
+# benchmark that is no longer free" terms (2.5% in 2026 → 100% in 2034).
+# Informational only — never multiply the tariff by this.
+CBAM_PHASE_IN_FACTOR_BY_YEAR = {
+    y: round(1.0 - f, 3) for y, f in CBAM_FACTOR_FREE_ALLOCATION_BY_YEAR.items()
+}
+CBAM_PHASE_IN_FACTOR_FULL_FROM_YEAR = CBAM_FACTOR_ZERO_FROM_YEAR
 
 
 def normalize_cn_code(cn_code: str) -> str:
@@ -148,10 +176,21 @@ class CBAMInput:
     measured_intensity_tco2e_per_tonne: Optional[float] = None
 
 
+def cbam_factor_for_year(year: int) -> float:
+    """Share of the benchmark still granted as free allocation in `year`."""
+    if year >= CBAM_FACTOR_ZERO_FROM_YEAR:
+        return 0.0
+    return CBAM_FACTOR_FREE_ALLOCATION_BY_YEAR[year]
+
+
+def cscf_for_year(year: int) -> float:
+    return CSCF_BY_YEAR.get(year, CSCF_PRELIMINARY_DEFAULT)
+
+
 def phase_in_factor_for_year(year: int) -> float:
-    if year >= CBAM_PHASE_IN_FACTOR_FULL_FROM_YEAR:
-        return 1.0
-    return CBAM_PHASE_IN_FACTOR_BY_YEAR[year]
+    """1 − CBAM factor: the share of the benchmark the importer now pays for.
+    Informational; the engine never multiplies the tariff by it."""
+    return round(1.0 - cbam_factor_for_year(year), 3)
 
 
 @dataclass
@@ -160,15 +199,23 @@ class CBAMResult:
     # "measured" or "china_default" (= EU Annex I China×CN default path)
     data_source: str
     benchmark_tco2e_per_tonne: float
+    # Certificates owed per tonne THIS year = max(0, SEE − free allocation)
     taxable_emissions_tco2e_per_tonne: float
     certificate_price_eur_per_tco2e: float
     markup_applied: float
+    # 1 − CBAM factor (2.5% in 2026). Display only — see module notes.
     phase_in_factor: float
+    # Net cost this year = taxable × price
     tariff_cost_eur_per_tonne: float
+    # 2034 steady state: no free allocation → SEE × price
     gross_tariff_cost_eur_per_tonne: float
     annual_exposure_eur: float
     # Pre-mark-up Annex I cell when on default path; None if measured
     annex_i_base_see_tco2e_per_tonne: float | None = None
+    # Free-allocation deduction actually applied (IR 2025/2620 Eq. 2)
+    cbam_factor: float = 0.0
+    cscf: float = CSCF_PRELIMINARY_DEFAULT
+    free_allocation_tco2e_per_tonne: float = 0.0
 
 
 def calculate_cbam_exposure(
@@ -201,18 +248,24 @@ def calculate_cbam_exposure(
         intensity = annex_base * (1.0 + markup)
         source = "china_default"
 
-    # Step 2 — subtract free-allocation BM for the declared route
+    # Step 2 — free allocation adjustment (IR 2025/2620 Annex pt. 2, Eq. 2):
+    # SFA = CBAM_factor_y × CSCF_y × BM for the declared route. This is the
+    # only place the phase-in enters — as a shrinking deduction, not a
+    # multiplier on the liability. Everyone, measured or default.
     benchmark = EU_BENCHMARK_TCO2E_PER_TONNE[inp.route]
-    taxable = max(0.0, intensity - benchmark)
+    cbam_factor = cbam_factor_for_year(inp.year)
+    cscf = cscf_for_year(inp.year)
+    free_allocation = cbam_factor * cscf * benchmark
+    taxable = max(0.0, intensity - free_allocation)
 
-    # Step 3 — certificate cost (mark-up already in intensity when default;
-    # do NOT multiply by (1+markup) again)
-    gross_tariff_cost = taxable * certificate_price_eur_per_tco2e
-
-    # Step 4 — phase-in factor (Art. 31(3)) — everyone, measured or default
-    phase_in = phase_in_factor_for_year(inp.year)
-    tariff_cost = gross_tariff_cost * phase_in
+    # Step 3 — certificate cost this year (mark-up already in intensity when
+    # default; do NOT multiply by (1+markup) again)
+    tariff_cost = taxable * certificate_price_eur_per_tco2e
     annual_exposure = tariff_cost * inp.annual_export_tonnes
+
+    # Step 4 — 2034 steady state for planning: CBAM factor = 0, so the whole
+    # SEE is priced.
+    gross_tariff_cost = intensity * certificate_price_eur_per_tco2e
 
     return CBAMResult(
         intensity_tco2e_per_tonne=intensity,
@@ -221,11 +274,14 @@ def calculate_cbam_exposure(
         taxable_emissions_tco2e_per_tonne=taxable,
         certificate_price_eur_per_tco2e=certificate_price_eur_per_tco2e,
         markup_applied=markup,
-        phase_in_factor=phase_in,
+        phase_in_factor=phase_in_factor_for_year(inp.year),
         tariff_cost_eur_per_tonne=tariff_cost,
         gross_tariff_cost_eur_per_tonne=gross_tariff_cost,
         annual_exposure_eur=annual_exposure,
         annex_i_base_see_tco2e_per_tonne=annex_base,
+        cbam_factor=cbam_factor,
+        cscf=cscf,
+        free_allocation_tco2e_per_tonne=free_allocation,
     )
 
 
@@ -238,6 +294,7 @@ if __name__ == "__main__":
     )
     result = calculate_cbam_exposure(example, certificate_price_eur_per_tco2e=75.36)
     print(result)
-    # intensity = 3.187 × 1.10 = 3.5057 ≈ Annex I 2026 column 3.506
-    # taxable = 3.5057 − 1.370; gross = taxable × 75.36 (no second mark-up)
-    # net 2026 = gross × 0.025
+    # intensity = 3.187 × 1.10 = 3.5057 (≈ 3.506 with 2026 mark-up)
+    # free allocation 2026 = 0.975 × 1.0 × 1.370 = 1.33575
+    # taxable = 3.5057 − 1.33575 = 2.16995 tCO2e/t → × 75.36 ≈ €163.53/t
+    # 2034 steady state = 3.5057 × 75.36 ≈ €264.19/t

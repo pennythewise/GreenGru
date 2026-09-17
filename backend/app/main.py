@@ -1,12 +1,14 @@
 from contextlib import asynccontextmanager
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import init_db
 from app.routers import advisory, baowu, calculate, classify, companies, copilot, documents, graph_rag, intake, integration_v1, iot, ocr, pipeline, rag, routes, score, submissions
+from app.services.llm_client import LlmCallError
 
 settings = get_settings()
 
@@ -39,6 +41,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(LlmCallError)
+async def _llm_call_error(_: Request, exc: LlmCallError) -> JSONResponse:
+    # Model endpoint down / non-JSON reply: fail the stage loudly and retryably
+    # rather than 500 with half-committed pipeline rows.
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "LLM stage unavailable — retry this stage", "role": exc.role, "model": exc.model, "reason": exc.reason},
+    )
+
 
 app.include_router(companies.router)
 app.include_router(submissions.router)
